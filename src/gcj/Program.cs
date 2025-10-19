@@ -18,8 +18,8 @@ if (!File.Exists(dbPath))
     return;
 }
 
-// Configure DbContext options
-var optionsBuilder = new DbContextOptionsBuilder<GCodeJournalDbContext>().UseSqlite($"Data Source={dbPath}").EnableDetailedErrors();
+// Configure DbContext options - enable lazy-loading proxies
+var optionsBuilder = new DbContextOptionsBuilder<GCodeJournalDbContext>().UseLazyLoadingProxies().UseSqlite($"Data Source={dbPath}").EnableDetailedErrors();
 
 if (config.GetValue("EnableQueryLogging", false)) // Enable query logging if specified in config
 {
