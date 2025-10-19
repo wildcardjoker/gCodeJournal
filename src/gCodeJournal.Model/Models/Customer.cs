@@ -1,5 +1,9 @@
 ﻿namespace gCodeJournal.Model;
 
+#region Using Directives
+using System.ComponentModel.DataAnnotations;
+#endregion
+
 /// <summary>
 ///     Represents a customer who requests printing projects.
 /// </summary>
@@ -21,6 +25,7 @@ public class Customer
     ///     Gets or sets the customer's display name.
     /// </summary>
     /// <value>A non-null string containing the customer's name.</value>
+    [StringLength(100)]
     public string Name {get; set;} = null!;
 
     /// <summary>

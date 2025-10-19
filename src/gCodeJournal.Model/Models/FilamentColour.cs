@@ -2,6 +2,10 @@
 
 namespace gCodeJournal.Model;
 
+#region Using Directives
+using System.ComponentModel.DataAnnotations;
+#endregion
+
 /// <summary>
 ///     Represents a colour used for 3D printing filament.
 /// </summary>
@@ -17,6 +21,7 @@ public class FilamentColour
     /// <summary>
     ///     A human-readable description of this filament colour (for example, "Matte Black" or "Translucent Blue").
     /// </summary>
+    [StringLength(100)]
     public string Description {get; set;} = null!;
 
     /// <summary>
@@ -29,5 +34,10 @@ public class FilamentColour
     ///     Primary key identifier for this filament colour record.
     /// </summary>
     public int Id {get; set;}
+    #endregion
+
+    #region Overrides of Object
+    /// <inheritdoc />
+    public override string ToString() => Description;
     #endregion
 }

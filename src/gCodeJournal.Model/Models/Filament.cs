@@ -89,4 +89,9 @@ public class Filament
     /// </summary>
     public FilamentType Type {get; set;} = null!;
     #endregion
+
+    #region Overrides of Object
+    /// <inheritdoc />
+    public override string ToString() => $"{Manufacturer} {Type} ({Colour})";
+    #endregion
 }

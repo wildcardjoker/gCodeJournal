@@ -2,6 +2,10 @@
 
 namespace gCodeJournal.Model;
 
+#region Using Directives
+using System.ComponentModel.DataAnnotations;
+#endregion
+
 /// <summary>
 ///     Represents a manufacturer of 3D printing filament.
 /// </summary>
@@ -28,6 +32,12 @@ public class Manufacturer
     /// <summary>
     ///     A human-readable name for the manufacturer (for example, "Prusa" or "Hatchbox").
     /// </summary>
+    [StringLength(30)]
     public string Name {get; set;} = null!;
+    #endregion
+
+    #region Overrides of Object
+    /// <inheritdoc />
+    public override string ToString() => Name;
     #endregion
 }

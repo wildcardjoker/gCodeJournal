@@ -2,6 +2,10 @@
 
 namespace gCodeJournal.Model;
 
+#region Using Directives
+using System.ComponentModel.DataAnnotations;
+#endregion
+
 /// <summary>
 ///     Represents a material/type of 3D printing filament (for example, PLA, ABS).
 /// </summary>
@@ -16,6 +20,7 @@ public class FilamentType
     /// <summary>
     ///     A human-readable description or name for this filament type (for example, "PLA" or "PETG").
     /// </summary>
+    [StringLength(15)]
     public string Description {get; set;} = null!;
 
     /// <summary>
@@ -31,5 +36,10 @@ public class FilamentType
     ///     Primary key identifier for this filament type record.
     /// </summary>
     public int Id {get; set;}
+    #endregion
+
+    #region Overrides of Object
+    /// <inheritdoc />
+    public override string ToString() => Description;
     #endregion
 }
