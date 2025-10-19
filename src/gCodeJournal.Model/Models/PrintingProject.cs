@@ -39,7 +39,7 @@ public class PrintingProject
     ///     A non-null <see cref="Customer" /> instance when the entity is in a valid state.
     ///     The corresponding foreign key is <see cref="CustomerId" />.
     /// </value>
-    public Customer Customer {get; set;} = null!;
+    public virtual Customer Customer {get; set;} = null!;
 
     /// <summary>
     ///     Foreign key identifier for the <see cref="Customer" /> who requested the project.
@@ -60,7 +60,7 @@ public class PrintingProject
     ///     A collection of <see cref="Filament" /> instances; expected to be non-null when the entity
     ///     is in a valid state (may be empty if no specific filaments are recorded).
     /// </value>
-    public ICollection<Filament> Filaments {get; set;} = null!;
+    public virtual ICollection<Filament> Filaments {get; set;} = null!;
 
     /// <summary>
     ///     Primary key identifier for the printing project.
@@ -75,7 +75,7 @@ public class PrintingProject
     ///     A non-null <see cref="ModelDesign" /> instance describing the design metadata.
     ///     The corresponding foreign key is <see cref="ModelDesignId" />.
     /// </value>
-    public ModelDesign Model {get; set;} = null!;
+    public virtual ModelDesign Model {get; set;} = null!;
 
     /// <summary>
     ///     Foreign key identifier for the <see cref="Model" />.

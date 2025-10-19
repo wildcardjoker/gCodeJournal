@@ -30,7 +30,7 @@ public class FilamentType
     ///     Represents the set of <see cref="Filament" /> instances which reference this
     ///     filament type (for example, individual spools or purchases).
     /// </remarks>
-    public ICollection<Filament> Filaments {get; set;} = null!;
+    public virtual ICollection<Filament> Filaments {get; set;} = null!;
 
     /// <summary>
     ///     Primary key identifier for this filament type record.

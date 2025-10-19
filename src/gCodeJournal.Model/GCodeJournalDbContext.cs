@@ -129,7 +129,7 @@ public class GCodeJournalDbContext : DbContext
         {
             // Design-time fallback so migrations / tooling can run from this class library
             var dbPath = GetDefaultDbPath();
-            optionsBuilder.UseSqlite($"Data Source={dbPath}");
+            optionsBuilder.UseLazyLoadingProxies().UseSqlite($"Data Source={dbPath}");
         }
 
         base.OnConfiguring(optionsBuilder);
@@ -241,7 +241,7 @@ public class DesignTimeDbContextFactory : IDesignTimeDbContextFactory<GCodeJourn
     public GCodeJournalDbContext CreateDbContext(string[] args)
     {
         var optionsBuilder = new DbContextOptionsBuilder<GCodeJournalDbContext>();
-        optionsBuilder.UseSqlite($"Data Source={GCodeJournalDbContext.GetDefaultDbPath()}");
+        optionsBuilder.UseLazyLoadingProxies().UseSqlite($"Data Source={GCodeJournalDbContext.GetDefaultDbPath()}");
 
         return new GCodeJournalDbContext(optionsBuilder.Options);
     }

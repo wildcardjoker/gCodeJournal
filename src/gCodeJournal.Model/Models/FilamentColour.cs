@@ -28,7 +28,7 @@ public class FilamentColour
     ///     Navigation property: the filaments that use this colour.
     ///     This collection represents zero or more <see cref="Filament" /> instances associated with this colour.
     /// </summary>
-    public ICollection<Filament> Filaments {get; set;} = null!;
+    public virtual ICollection<Filament> Filaments {get; set;} = null!;
 
     /// <summary>
     ///     Primary key identifier for this filament colour record.

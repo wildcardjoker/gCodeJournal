@@ -35,6 +35,6 @@ public class Customer
     ///     A collection of <see cref="PrintingProject" /> instances related to this customer.
     ///     The property is expected to be non-null when the entity is in a valid state.
     /// </value>
-    public ICollection<PrintingProject> Projects {get; set;} = null!;
+    public virtual ICollection<PrintingProject> Projects {get; set;} = null!;
     #endregion
 }

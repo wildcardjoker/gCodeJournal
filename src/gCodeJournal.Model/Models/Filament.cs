@@ -18,7 +18,7 @@ public class Filament
     ///     This is a navigation property that references a <see cref="FilamentColour" />.
     ///     The corresponding foreign key is <see cref="FilamentColourId" />.
     /// </summary>
-    public FilamentColour Colour {get; set;} = null!;
+    public virtual FilamentColour Colour {get; set;} = null!;
 
     /// <summary>
     ///     The cost of the filament per unit weight.
@@ -47,7 +47,7 @@ public class Filament
     ///     This is a navigation property that references a <see cref="Manufacturer" />.
     ///     The corresponding foreign key is <see cref="ManufacturerId" />.
     /// </summary>
-    public Manufacturer Manufacturer {get; set;} = null!;
+    public virtual Manufacturer Manufacturer {get; set;} = null!;
 
     /// <summary>
     ///     Foreign key identifier for the <see cref="Manufacturer" /> property.
@@ -87,7 +87,7 @@ public class Filament
     ///     This is a navigation property that references a <see cref="FilamentType" />.
     ///     The corresponding foreign key is <see cref="FilamentTypeId" />.
     /// </summary>
-    public FilamentType Type {get; set;} = null!;
+    public virtual FilamentType Type {get; set;} = null!;
     #endregion
 
     #region Overrides of Object
