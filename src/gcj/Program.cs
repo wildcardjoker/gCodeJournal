@@ -40,12 +40,12 @@ Console.WriteLine("\nManufacturers:");
 var manufacturers = context.Manufacturers.OrderBy(m => m.Name);
 foreach (var manufacturer in manufacturers)
 {
-    Console.WriteLine($"  {manufacturer.Id}: {manufacturer.Name}");
+    Console.WriteLine($"  {manufacturer.Id}: {manufacturer}");
 }
 
 Console.WriteLine("\nFilaments:");
 var filaments = context.Filaments.OrderBy(f => f.Manufacturer);
-foreach (var filament in filaments.Include(filament => filament.Manufacturer).Include(filament => filament.Type).Include(filament => filament.Colour))
+foreach (var filament in filaments)
 {
     Console.WriteLine($"  {filament.Id}: {filament}");
 }
