@@ -3,7 +3,10 @@
 namespace gCodeJournal.Model;
 
 #region Using Directives
+#region Using Directives
 using System.ComponentModel.DataAnnotations;
+using JetBrains.Annotations;
+#endregion
 #endregion
 
 /// <summary>
@@ -14,6 +17,7 @@ using System.ComponentModel.DataAnnotations;
 ///     <see cref="Filament" /> records and to group available <see cref="FilamentColour" />
 ///     options for that material type.
 /// </remarks>
+[UsedImplicitly]
 public class FilamentType
 {
     #region Properties

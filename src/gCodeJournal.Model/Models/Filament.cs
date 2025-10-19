@@ -3,13 +3,17 @@
 namespace gCodeJournal.Model;
 
 #region Using Directives
+#region Using Directives
 using System.ComponentModel.DataAnnotations;
+using JetBrains.Annotations;
+#endregion
 #endregion
 
 /// <summary>
 ///     Represents a length or spool of 3D printing filament, including its
 ///     type, colour, manufacturer and cost information.
 /// </summary>
+[UsedImplicitly]
 public class Filament
 {
     #region Properties

@@ -4,6 +4,7 @@ namespace gCodeJournal.Model;
 
 #region Using Directives
 using System.ComponentModel.DataAnnotations;
+using JetBrains.Annotations;
 #endregion
 
 /// <summary>
@@ -15,6 +16,7 @@ using System.ComponentModel.DataAnnotations;
 ///     (<see cref="FilamentType" />). Typical values include human-readable names
 ///     such as "Matte Black" or "Translucent Blue".
 /// </remarks>
+[UsedImplicitly]
 public class FilamentColour
 {
     #region Properties

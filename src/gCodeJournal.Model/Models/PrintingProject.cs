@@ -2,6 +2,10 @@
 
 namespace gCodeJournal.Model;
 
+#region Using Directives
+using JetBrains.Annotations;
+#endregion
+
 /// <summary>
 ///     Represents a single printing job requested by a customer.
 /// </summary>
@@ -11,6 +15,7 @@ namespace gCodeJournal.Model;
 ///     the filament(s) used, cost information and timestamps for submission and completion.
 ///     Instances of this type are typically used as an entity within the application's persistence model.
 /// </remarks>
+[UsedImplicitly]
 public class PrintingProject
 {
     #region Properties

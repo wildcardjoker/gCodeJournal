@@ -3,7 +3,10 @@
 namespace gCodeJournal.Model;
 
 #region Using Directives
+#region Using Directives
 using System.ComponentModel.DataAnnotations;
+using JetBrains.Annotations;
+#endregion
 #endregion
 
 /// <summary>
@@ -14,6 +17,7 @@ using System.ComponentModel.DataAnnotations;
 ///     <see cref="Filament" /> records. Typical values include vendor or
 ///     brand names such as "Prusament" or "Hatchbox".
 /// </remarks>
+[UsedImplicitly]
 public class Manufacturer
 {
     #region Properties
