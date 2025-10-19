@@ -134,6 +134,77 @@ public class GCodeJournalDbContext : DbContext
 
         base.OnConfiguring(optionsBuilder);
     }
+
+    #region Overrides of DbContext
+    /// <inheritdoc />
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        // See Filament Colours
+        modelBuilder.Entity<FilamentColour>()
+                    .HasData(
+                        new FilamentColour {Id = 1, Description  = "Black"},
+                        new FilamentColour {Id = 2, Description  = "White"},
+                        new FilamentColour {Id = 3, Description  = "Red"},
+                        new FilamentColour {Id = 4, Description  = "Dark Blue"},
+                        new FilamentColour {Id = 5, Description  = "Light Blue"},
+                        new FilamentColour {Id = 6, Description  = "Light Green"},
+                        new FilamentColour {Id = 7, Description  = "Sea Green"},
+                        new FilamentColour {Id = 8, Description  = "Yellow"},
+                        new FilamentColour {Id = 9, Description  = "Purple"},
+                        new FilamentColour {Id = 10, Description = "Orange"},
+                        new FilamentColour {Id = 11, Description = "Pink"},
+                        new FilamentColour {Id = 12, Description = "Space Grey"},
+                        new FilamentColour {Id = 13, Description = "Silver"},
+                        new FilamentColour {Id = 14, Description = "Translucent"},
+                        new FilamentColour {Id = 15, Description = "Brown"},
+                        new FilamentColour {Id = 16, Description = "Wood"},
+                        new FilamentColour {Id = 17, Description = "Marble"});
+
+        // Seed Filament Types
+        modelBuilder.Entity<FilamentType>()
+                    .HasData(
+                        new FilamentType {Id = 1, Description = "PLA"},
+                        new FilamentType {Id = 2, Description = "ABS"},
+                        new FilamentType {Id = 3, Description = "PETG"},
+                        new FilamentType {Id = 4, Description = "TPU"},
+                        new FilamentType {Id = 5, Description = "Nylon"},
+                        new FilamentType {Id = 6, Description = "ASA"});
+
+        // Seed Manufacturers
+        modelBuilder.Entity<Manufacturer>()
+                    .HasData(
+                        new Manufacturer {Id = 1, Name = "Elegoo"},
+                        new Manufacturer {Id = 2, Name = "Esun"},
+                        new Manufacturer {Id = 3, Name = "SUNLU"},
+                        new Manufacturer {Id = 4, Name = "Flashforge"},
+                        new Manufacturer {Id = 5, Name = "Bambu Lab"},
+                        new Manufacturer {Id = 6, Name = "Polymaker"},
+                        new Manufacturer {Id = 7, Name = "Creality"});
+
+        // Seed some initial Filaments
+        modelBuilder.Entity<Filament>()
+        .HasData(
+            new Filament
+            {
+                Id               = 1,
+                ManufacturerId   = 1,
+                FilamentColourId = 2,
+                FilamentTypeId   = 1,
+                CostPerWeight    = 19.95M
+            },
+            new Filament
+            {
+                Id               = 2,
+                ManufacturerId   = 1,
+                FilamentColourId = 1,
+                FilamentTypeId   = 1,
+                CostPerWeight    = 19.95M
+            });
+
+        // Call the base method
+        base.OnModelCreating(modelBuilder);
+    }
+    #endregion
 }
 
 // ReSharper disable once UnusedType.Global
