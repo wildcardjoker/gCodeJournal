@@ -17,19 +17,20 @@ const string efOverrideKey = "Serilog:MinimumLevel:Override:Microsoft.EntityFram
 var          efLevel       = enableQueryLogging ? "Verbose" : "Warning";
 config = new ConfigurationBuilder().AddConfiguration(config).AddInMemoryCollection([new KeyValuePair<string, string?>(efOverrideKey, efLevel)]).Build();
 
-// Expand %LOCALAPPDATA% in Serilog file path if present
-// get the configured Serilog file path from IConfiguration (same key you used)
-var writeTos   = config.GetSection("Serilog:WriteTo").GetChildren();
-var fileSink   = writeTos.FirstOrDefault(s => string.Equals(s["Name"], "File", StringComparison.OrdinalIgnoreCase));
-var configured = fileSink?["Args:path"]; // may be "%LOCALAPPDATA%\\gCodeJournal\\gCodeJournal-.log"
-if (string.IsNullOrEmpty(configured))
+// Get the log file path from configuration
+var writeTos    = config.GetSection("Serilog:WriteTo").GetChildren();
+var fileSink    = writeTos.FirstOrDefault(s => string.Equals(s["Name"], "File", StringComparison.OrdinalIgnoreCase));
+var logFilePath = fileSink?["Args:path"]; // may be "%LOCALAPPDATA%\\gCodeJournal\\gCodeJournal-.log"
+if (string.IsNullOrEmpty(logFilePath))
 {
-    // handle missing path more gracefully: log, fallback path, or throw with clearer message
-    throw new InvalidOperationException("Serilog file sink path not configured (no 'File' sink found).");
+    var defaultPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "gCodeJournal", "gCodeJournal-.log");
+    Console.WriteLine("*** WARNING: The log file path wasn't specified (Serilog:WriteTo:File:Args:path)");
+    Console.WriteLine($"*** Defaulting to {defaultPath}");
+    logFilePath = defaultPath;
 }
 
 // expand environment variables (you already do this when configuring Serilog)
-var expanded = Environment.ExpandEnvironmentVariables(configured);
+var expanded = Environment.ExpandEnvironmentVariables(logFilePath);
 
 // If you used the Serilog rolling pattern "name-.log" compute today's concrete file name.
 // Serilog.Sinks.File usually appends the date as yyyyMMdd for RollingInterval.Day.
