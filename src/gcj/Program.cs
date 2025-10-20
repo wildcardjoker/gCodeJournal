@@ -1,4 +1,5 @@
 ﻿#region Using Directives
+using gcj;
 using gCodeJournal.Model;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -66,8 +67,7 @@ var dbPath = Environment.ExpandEnvironmentVariables(config["gcodeJournalDbPath"]
 
 if (!File.Exists(dbPath))
 {
-    logger.LogError("Could not find database {Path}", dbPath);
-    Console.WriteLine($"Could not find database {dbPath}!");
+    logger.LogAndDisplayToConsoleError($"Could not find database {dbPath}");
     Log.CloseAndFlush();
     return;
 }
@@ -86,26 +86,21 @@ optionsBuilder.EnableSensitiveDataLogging(); // shows parameter values in DEBUG 
 // Create DbContext and query some data
 var             options = optionsBuilder.Options;
 await using var context = new GCodeJournalDbContext(options);
-logger.LogInformation("Using DB path: {Path}", dbPath);
-Console.WriteLine($"Using DB path: {dbPath}");
+logger.LogAndDisplayToConsoleInfo($"Using DB path: {dbPath}");
 
 // Get and log Manufacturers and Filaments
-logger.LogInformation("Manufacturers:");
-Console.WriteLine("\nManufacturers:");
+logger.LogAndDisplayToConsoleInfo("\nManufacturers:");
 var manufacturers = context.Manufacturers.OrderBy(m => m.Name);
 foreach (var manufacturer in manufacturers)
 {
-    logger.LogInformation("  {Id}: {Manufacturer}", manufacturer.Id, manufacturer.ToString());
-    Console.WriteLine($"  {manufacturer.Id}: {manufacturer}");
+    logger.LogAndDisplayToConsoleInfo($"  {manufacturer.Id}: {manufacturer}");
 }
 
-logger.LogInformation("Filaments:");
-Console.WriteLine("\nFilaments:");
+logger.LogAndDisplayToConsoleInfo("\nFilaments:");
 var filaments = context.Filaments.OrderBy(f => f.ManufacturerId);
 foreach (var filament in filaments)
 {
-    logger.LogInformation("  {Id}: {Filament}", filament.Id, filament.ToString());
-    Console.WriteLine($"  {filament.Id}: {filament}");
+    logger.LogAndDisplayToConsoleInfo($"  {filament.Id}: {filament}");
 }
 
 Log.CloseAndFlush();
