@@ -3,44 +3,70 @@ using gCodeJournal.Model;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Serilog;
 #endregion
 
-// Build a configuration object from JSON file
-IConfiguration config = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build();
+// build configuration
+var config = new ConfigurationBuilder().AddJsonFile("appsettings.json", false, true).Build();
 
-// Do we want to enable query logging?
+// runtime toggle for EF query logging (read early so we can adjust Serilog config)
 var enableQueryLogging = config.GetValue("EnableQueryLogging", false);
 
-// Create LoggerFactory configured from appsettings.json
+// Always set Serilog override for EF command category depending on runtime flag
+var efOverrideKey = "Serilog:MinimumLevel:Override:Microsoft.EntityFrameworkCore.Database.Command";
+var efLevel       = enableQueryLogging ? "Verbose" : "Warning";
+config = new ConfigurationBuilder().AddConfiguration(config).AddInMemoryCollection(new KeyValuePair<string, string?>[] {new (efOverrideKey, efLevel)}).Build();
+
+// Expand %LOCALAPPDATA% in Serilog file path if present
+// get the configured Serilog file path from IConfiguration (same key you used)
+var writeTos   = config.GetSection("Serilog:WriteTo").GetChildren();
+var fileSink   = writeTos.FirstOrDefault(s => string.Equals(s["Name"], "File", StringComparison.OrdinalIgnoreCase));
+var configured = fileSink?["Args:path"]; // may be "%LOCALAPPDATA%\\gCodeJournal\\gCodeJournal-.log"
+if (string.IsNullOrEmpty(configured))
+{
+    // handle missing path more gracefully: log, fallback path, or throw with clearer message
+    throw new InvalidOperationException("Serilog file sink path not configured (no 'File' sink found).");
+}
+
+// expand environment variables (you already do this when configuring Serilog)
+var expanded = Environment.ExpandEnvironmentVariables(configured);
+
+// If you used the Serilog rolling pattern "name-.log" compute today's concrete file name.
+// Serilog.Sinks.File usually appends the date as yyyyMMdd for RollingInterval.Day.
+var activeLogFile = expanded;
+if (expanded.EndsWith("-.log", StringComparison.OrdinalIgnoreCase))
+{
+    activeLogFile = expanded.Replace("-.log", $"-{DateTime.Now:yyyyMMdd}.log");
+}
+
+// Now you have the path to the file Serilog will write to (or wrote to) today:
+Console.WriteLine($"Serilog configured file (expanded): {expanded}");
+Console.WriteLine($"Current log file: {activeLogFile}");
+
+// Configure Serilog from configuration
+Log.Logger = new LoggerConfiguration().ReadFrom.Configuration(config).Enrich.FromLogContext().CreateLogger();
+
 using var loggerFactory = LoggerFactory.Create(builder =>
                                                {
-                                                   builder.AddConfiguration(config.GetSection("Logging")); // Get logging config from appsettings.json
-                                                   builder.AddConsole();                                   // Log to console
+                                                   // wire Serilog into Microsoft logging
+                                                   builder.AddSerilog(Log.Logger);
 
-                                                   // Adjust EF query logging at runtime:
-                                                   // - when EnableQueryLogging == true, allow Trace (or whatever level you prefer)
-                                                   // - when false, raise EF Command logging to Warning to suppress SQL output
-                                                   builder.AddFilter(
-                                                       "Microsoft.EntityFrameworkCore.Database.Command",
-
-                                                       // prevent SQL text from being logged unless enabled
-                                                       enableQueryLogging ? LogLevel.Trace : LogLevel.Warning);
+                                                   // Adjust EF command logging based on runtime flag for Microsoft logging pipeline too
+                                                   if (!enableQueryLogging)
+                                                   {
+                                                       builder.AddFilter("Microsoft.EntityFrameworkCore.Database.Command", LogLevel.Warning);
+                                                   }
                                                });
 
 var logger = loggerFactory.CreateLogger("gcj");
-if (config.GetValue("EnableQueryLogging", false)) // Enable query logging if specified in config
-{
-    //optionsBuilder.LogTo(Console.WriteLine, [DbLoggerCategory.Database.Command.Name], LogLevel.Information);
-    // Modify loglevel to prevent logging queries
-}
 
 // Get database path from config, with a default value
-// Expands %VAR% on Windows or other env vars
 var dbPath = Environment.ExpandEnvironmentVariables(config["gcodeJournalDbPath"] ?? "gCodeJournal.db");
 
 if (!File.Exists(dbPath))
 {
     logger.LogError("Could not find database {Path}", dbPath);
+    Log.CloseAndFlush();
     return;
 }
 
@@ -58,19 +84,23 @@ optionsBuilder.EnableSensitiveDataLogging(); // shows parameter values in DEBUG 
 var             options = optionsBuilder.Options;
 await using var context = new GCodeJournalDbContext(options);
 logger.LogInformation("Using DB path: {Path}", dbPath);
-
-logger.LogInformation("\nManufacturers:");
+Console.WriteLine($"Using DB path: {dbPath}");
+logger.LogInformation("Manufacturers:");
+Console.WriteLine("\nManufacturers:");
 var manufacturers = context.Manufacturers.OrderBy(m => m.Name);
 foreach (var manufacturer in manufacturers)
 {
-    //logger.LogInformation("  {Id}: {Manufacturer}", manufacturer.Id, manufacturer);
+    logger.LogInformation("  {Id}: {Manufacturer}", manufacturer.Id, manufacturer.ToString());
     Console.WriteLine($"  {manufacturer.Id}: {manufacturer}");
 }
 
-logger.LogInformation("\nFilaments:");
-var filaments = context.Filaments.OrderBy(f => f.Manufacturer.Name);
+logger.LogInformation("Filaments:");
+Console.WriteLine("\nFilaments:");
+var filaments = context.Filaments.OrderBy(f => f.ManufacturerId);
 foreach (var filament in filaments)
 {
-    //logger.LogInformation("  {Id}: {Filament}", filament.Id, filament);
+    logger.LogInformation("  {Id}: {Filament}", filament.Id, filament.ToString());
     Console.WriteLine($"  {filament.Id}: {filament}");
 }
+
+Log.CloseAndFlush();
