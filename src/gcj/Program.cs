@@ -20,7 +20,7 @@ config = new ConfigurationBuilder().AddConfiguration(config).AddInMemoryCollecti
 // Get the log file path from configuration
 var writeTos    = config.GetSection("Serilog:WriteTo").GetChildren();
 var fileSink    = writeTos.FirstOrDefault(s => string.Equals(s["Name"], "File", StringComparison.OrdinalIgnoreCase));
-var logFilePath = fileSink?["Args:path"]; // may be "%LOCALAPPDATA%\\gCodeJournal\\gCodeJournal-.log"
+var logFilePath = fileSink?["Args:path"]; // Get the path to the log file. Can be null or empty (not configured)
 if (string.IsNullOrEmpty(logFilePath))
 {
     var defaultPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "gCodeJournal", "gCodeJournal-.log");
@@ -29,7 +29,7 @@ if (string.IsNullOrEmpty(logFilePath))
     logFilePath = defaultPath;
 }
 
-// expand environment variables (you already do this when configuring Serilog)
+// expand environment variables
 var expanded = Environment.ExpandEnvironmentVariables(logFilePath);
 
 // If you used the Serilog rolling pattern "name-.log" compute today's concrete file name.
@@ -67,6 +67,7 @@ var dbPath = Environment.ExpandEnvironmentVariables(config["gcodeJournalDbPath"]
 if (!File.Exists(dbPath))
 {
     logger.LogError("Could not find database {Path}", dbPath);
+    Console.WriteLine($"Could not find database {dbPath}!");
     Log.CloseAndFlush();
     return;
 }
@@ -82,10 +83,13 @@ logger.LogWarning("*** DEBUG: sensitive data will be logged ***");
 optionsBuilder.EnableSensitiveDataLogging(); // shows parameter values in DEBUG mode
 #endif
 
+// Create DbContext and query some data
 var             options = optionsBuilder.Options;
 await using var context = new GCodeJournalDbContext(options);
 logger.LogInformation("Using DB path: {Path}", dbPath);
 Console.WriteLine($"Using DB path: {dbPath}");
+
+// Get and log Manufacturers and Filaments
 logger.LogInformation("Manufacturers:");
 Console.WriteLine("\nManufacturers:");
 var manufacturers = context.Manufacturers.OrderBy(m => m.Name);
