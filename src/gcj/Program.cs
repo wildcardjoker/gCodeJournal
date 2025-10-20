@@ -13,9 +13,9 @@ var config = new ConfigurationBuilder().AddJsonFile("appsettings.json", false, t
 var enableQueryLogging = config.GetValue("EnableQueryLogging", false);
 
 // Always set Serilog override for EF command category depending on runtime flag
-var efOverrideKey = "Serilog:MinimumLevel:Override:Microsoft.EntityFrameworkCore.Database.Command";
-var efLevel       = enableQueryLogging ? "Verbose" : "Warning";
-config = new ConfigurationBuilder().AddConfiguration(config).AddInMemoryCollection(new KeyValuePair<string, string?>[] {new (efOverrideKey, efLevel)}).Build();
+const string efOverrideKey = "Serilog:MinimumLevel:Override:Microsoft.EntityFrameworkCore.Database.Command";
+var          efLevel       = enableQueryLogging ? "Verbose" : "Warning";
+config = new ConfigurationBuilder().AddConfiguration(config).AddInMemoryCollection([new KeyValuePair<string, string?>(efOverrideKey, efLevel)]).Build();
 
 // Expand %LOCALAPPDATA% in Serilog file path if present
 // get the configured Serilog file path from IConfiguration (same key you used)
