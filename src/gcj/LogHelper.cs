@@ -18,7 +18,7 @@ using Microsoft.Extensions.Logging;
 ///     while temporarily changing the console foreground color according to the <see cref="LogLevel" />.
 /// </remarks>
 [UsedImplicitly]
-public static class LogHelper
+public static partial class LogHelper
 {
     /// <summary>
     ///     Logs a message at <see cref="LogLevel.Critical" /> and displays it to the console.
@@ -103,21 +103,21 @@ public static class LogHelper
     {
         var map  = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         var next = 0;
-        return Regex.Replace(
-            template,
-            @"\{([a-zA-Z0-9_]+)([^}]*)\}",
-            m =>
-            {
-                var name = m.Groups[1].Value;
-                if (!map.TryGetValue(name, out var idx))
+        return NamedArgumentToPositionalRegex()
+            .Replace(
+                template,
+                m =>
                 {
-                    idx       = next++;
-                    map[name] = idx;
-                }
+                    var name = m.Groups[1].Value;
+                    if (!map.TryGetValue(name, out var idx))
+                    {
+                        idx       = next++;
+                        map[name] = idx;
+                    }
 
-                var tail = m.Groups[2].Value; // may contain :format or ,alignment
-                return "{" + idx + tail + "}";
-            });
+                    var tail = m.Groups[2].Value; // may contain :format or ,alignment
+                    return "{" + idx + tail + "}";
+                });
     }
 
     /// <summary>
@@ -189,4 +189,7 @@ public static class LogHelper
             Console.ForegroundColor = originalColor;
         }
     }
+
+    [GeneratedRegex(@"\{([a-zA-Z0-9_]+)([^}]*)\}")]
+    private static partial Regex NamedArgumentToPositionalRegex();
 }
