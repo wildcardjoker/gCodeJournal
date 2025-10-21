@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Serilog;
+using Spectre.Console;
 #endregion
 
 // build configuration
@@ -24,8 +25,8 @@ var logFilePath = fileSink?["Args:path"]; // Get the path to the log file. Can b
 if (string.IsNullOrEmpty(logFilePath))
 {
     var defaultPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "gCodeJournal", "gCodeJournal-.log");
-    Console.WriteLine("*** WARNING: The log file path wasn't specified (Serilog:WriteTo:File:Args:path)");
-    Console.WriteLine($"*** Defaulting to {defaultPath}");
+    AnsiConsole.MarkupLine(":warning: WARNING: The log file path wasn't specified (Serilog:WriteTo:File:Args:path)");
+    AnsiConsole.MarkupLine($":warning: Defaulting to {defaultPath}");
     logFilePath = defaultPath;
 }
 
@@ -41,8 +42,8 @@ if (expanded.EndsWith("-.log", StringComparison.OrdinalIgnoreCase))
 }
 
 // Now you have the path to the file Serilog will write to (or wrote to) today:
-Console.WriteLine($"Serilog configured file (expanded): {expanded}");
-Console.WriteLine($"Current log file: {activeLogFile}");
+AnsiConsole.MarkupLine($":information:  Serilog configured file (expanded): {expanded}");
+AnsiConsole.MarkupLine($":information:  Current log file: {activeLogFile}");
 
 // Configure Serilog from configuration and ensure Console sink is enabled by default if not configured explicitly.
 var loggerConfig = new LoggerConfiguration().ReadFrom.Configuration(config).Enrich.FromLogContext();
