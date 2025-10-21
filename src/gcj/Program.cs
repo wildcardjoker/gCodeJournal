@@ -1,5 +1,4 @@
 ﻿#region Using Directives
-using gcj;
 using gCodeJournal.Model;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -45,8 +44,16 @@ if (expanded.EndsWith("-.log", StringComparison.OrdinalIgnoreCase))
 Console.WriteLine($"Serilog configured file (expanded): {expanded}");
 Console.WriteLine($"Current log file: {activeLogFile}");
 
-// Configure Serilog from configuration
-Log.Logger = new LoggerConfiguration().ReadFrom.Configuration(config).Enrich.FromLogContext().CreateLogger();
+// Configure Serilog from configuration and ensure Console sink is enabled by default if not configured explicitly.
+var loggerConfig = new LoggerConfiguration().ReadFrom.Configuration(config).Enrich.FromLogContext();
+
+// If no Console sink is configured in appsettings, add one so logs also go to the console.
+if (!writeTos.Any(s => string.Equals(s["Name"], "Console", StringComparison.OrdinalIgnoreCase)))
+{
+    loggerConfig = loggerConfig.WriteTo.Console();
+}
+
+Log.Logger = loggerConfig.CreateLogger();
 
 using var loggerFactory = LoggerFactory.Create(builder =>
                                                {
@@ -67,7 +74,7 @@ var dbPath = Environment.ExpandEnvironmentVariables(config["gcodeJournalDbPath"]
 
 if (!File.Exists(dbPath))
 {
-    logger.LogAndDisplayToConsoleError($"Could not find database {dbPath}");
+    logger.LogError("Could not find path {DbPath}", dbPath);
     Log.CloseAndFlush();
     return;
 }
@@ -86,21 +93,23 @@ optionsBuilder.EnableSensitiveDataLogging(); // shows parameter values in DEBUG 
 // Create DbContext and query some data
 var             options = optionsBuilder.Options;
 await using var context = new GCodeJournalDbContext(options);
-logger.LogAndDisplayToConsoleInfo($"Using DB path: {dbPath}");
+
+logger.LogInformation("Using DB path: {DbPath}", dbPath);
 
 // Get and log Manufacturers and Filaments
-logger.LogAndDisplayToConsoleInfo("\nManufacturers:");
+logger.LogInformation("Manufacturers:");
 var manufacturers = context.Manufacturers.OrderBy(m => m.Name);
 foreach (var manufacturer in manufacturers)
 {
-    logger.LogAndDisplayToConsoleInfo($"  {manufacturer.Id}: {manufacturer}");
+    logger.LogInformation("  {ManufacturerId}: {Manufacturer}", manufacturer.Id, manufacturer);
 }
 
-logger.LogAndDisplayToConsoleInfo("\nFilaments:");
+logger.LogInformation("Filaments:");
 var filaments = context.Filaments.OrderBy(f => f.ManufacturerId);
 foreach (var filament in filaments)
 {
-    logger.LogAndDisplayToConsoleInfo($"  {filament.Id}: {filament}");
+    logger.LogInformation("  {FilamentId}: {Filament}", filament.Id, filament);
 }
 
+Log.Information("End of run");
 Log.CloseAndFlush();
