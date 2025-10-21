@@ -19,7 +19,7 @@ var          efLevel       = enableQueryLogging ? "Verbose" : "Warning";
 config = new ConfigurationBuilder().AddConfiguration(config).AddInMemoryCollection([new KeyValuePair<string, string?>(efOverrideKey, efLevel)]).Build();
 
 // Get the log file path from configuration
-var writeTos    = config.GetSection("Serilog:WriteTo").GetChildren();
+var writeTos    = config.GetSection("Serilog:WriteTo").GetChildren().ToList();
 var fileSink    = writeTos.FirstOrDefault(s => string.Equals(s["Name"], "File", StringComparison.OrdinalIgnoreCase));
 var logFilePath = fileSink?["Args:path"]; // Get the path to the log file. Can be null or empty (not configured)
 if (string.IsNullOrEmpty(logFilePath))
