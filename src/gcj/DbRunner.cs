@@ -1,10 +1,8 @@
-#region Using Directives
-#endregion
-
 namespace gcj;
 
 #region Using Directives
 using Microsoft.Extensions.Logging;
+using Spectre.Console;
 #endregion
 
 public static partial class Program

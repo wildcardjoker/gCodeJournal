@@ -1,10 +1,4 @@
 ﻿#region Using Directives
-using ILogger = Microsoft.Extensions.Logging.ILogger;
-#endregion
-
-namespace gcj;
-
-#region Using Directives
 using gCodeJournal.Model;
 using gCodeJournal.ViewModel;
 using Microsoft.EntityFrameworkCore;
@@ -12,8 +6,10 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Serilog;
 using Spectre.Console;
-using ILogger = ILogger;
+using ILogger = Microsoft.Extensions.Logging.ILogger;
 #endregion
+
+namespace gcj;
 
 /// <summary>
 ///     Represents the main application class for gCodeJournal.
@@ -23,7 +19,7 @@ using ILogger = ILogger;
 ///     the application's configuration, logging, and database context. It includes functionality
 ///     for configuring Serilog, setting up Entity Framework Core, and executing database operations.
 /// </remarks>
-public partial class Program
+public static partial class Program
 {
     #region Fields
     private static GCodeJournalViewModel _context = null!;
@@ -117,12 +113,14 @@ public partial class Program
         optionsBuilder.EnableSensitiveDataLogging(); // shows parameter values in DEBUG mode
 #endif
 
-        // Run DB queries via helper
-        var options = optionsBuilder.Options;
+        // Compose: create a DbContext instance and pass it to the ViewModel
+        var dbContext = new GCodeJournalDbContext(optionsBuilder.Options);
+        _context = new GCodeJournalViewModel(dbContext);
+
         AnsiConsole.MarkupLine($":information:  Using DB path: {dbPath}");
         _logger.LogTrace("Using DB Path {DBPath}", dbPath);
-        _context = new GCodeJournalViewModel(options);
-        await using (_context.ConfigureAwait(false))
+
+        await using (dbContext)
         {
             await LogCustomerDetailsAsync().ConfigureAwait(false);
             await LogManufacturerDetailsAsync().ConfigureAwait(false);

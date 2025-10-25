@@ -3,6 +3,8 @@
 #region Using Directives
 using Microsoft.EntityFrameworkCore;
 using Model;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 #endregion
 
 /// <inheritdoc />
@@ -11,26 +13,24 @@ using Model;
 ///     <see cref="T:gCodeJournal.Model.GCodeJournalDbContext">GCodeJournalDbContext</see>
 ///     to provide additional functionality for managing and querying database entities related to the application.
 /// </summary>
-public class GCodeJournalViewModel : GCodeJournalDbContext
+public class GCodeJournalViewModel
 {
-    #region Constructors
-    /// <inheritdoc />
-    /// <summary>
-    ///     Initializes a new instance of the
-    ///     <see cref="T:gCodeJournal.ViewModel.GCodeJournalViewModel">GCodeJournalViewModel</see> class.
-    /// </summary>
-    public GCodeJournalViewModel() {}
+    private readonly GCodeJournalDbContext _db;
 
-    /// <inheritdoc />
     /// <summary>
     ///     Initializes a new instance of the
     ///     <see cref="T:gCodeJournal.ViewModel.GCodeJournalViewModel">GCodeJournalViewModel</see> class using the specified
     ///     database context
     ///     options.
     /// </summary>
-    /// <param name="options">The options to configure the database context.</param>
-    public GCodeJournalViewModel(DbContextOptions<GCodeJournalDbContext> options) : base(options) {}
-    #endregion
+    /// <param name="db">The database context to be used by the ViewModel.</param>
+    /// <exception cref="System.ArgumentNullException">
+    ///     Thrown when the <paramref name="db" /> parameter is <see langword="null" />.
+    /// </exception>
+    public GCodeJournalViewModel(GCodeJournalDbContext db)
+    {
+        _db = db ?? throw new System.ArgumentNullException(nameof(db));
+    }
 
     /// <summary>
     ///     Asynchronously adds a new customer to the database.
@@ -52,8 +52,8 @@ public class GCodeJournalViewModel : GCodeJournalDbContext
     public async Task AddCustomerAsync(Customer customer)
     {
         ArgumentNullException.ThrowIfNull(customer);
-        await Customers.AddAsync(customer).ConfigureAwait(false);
-        await SaveChangesAsync().ConfigureAwait(false);
+        await _db.Customers.AddAsync(customer).ConfigureAwait(false);
+        await _db.SaveChangesAsync().ConfigureAwait(false);
     }
 
     /// <summary>
@@ -64,8 +64,8 @@ public class GCodeJournalViewModel : GCodeJournalDbContext
     public async Task AddFilamentAsync(Filament filament)
     {
         ArgumentNullException.ThrowIfNull(filament);
-        await Filaments.AddAsync(filament).ConfigureAwait(false);
-        await SaveChangesAsync().ConfigureAwait(false);
+        await _db.Filaments.AddAsync(filament).ConfigureAwait(false);
+        await _db.SaveChangesAsync().ConfigureAwait(false);
     }
 
     /// <summary>
@@ -82,8 +82,8 @@ public class GCodeJournalViewModel : GCodeJournalDbContext
     public async Task AddFilamentColourAsync(FilamentColour filamentColour)
     {
         ArgumentNullException.ThrowIfNull(filamentColour);
-        await FilamentColours.AddAsync(filamentColour).ConfigureAwait(false);
-        await SaveChangesAsync().ConfigureAwait(false);
+        await _db.FilamentColours.AddAsync(filamentColour).ConfigureAwait(false);
+        await _db.SaveChangesAsync().ConfigureAwait(false);
     }
 
     /// <summary>
@@ -99,8 +99,8 @@ public class GCodeJournalViewModel : GCodeJournalDbContext
     public async Task AddFilamentTypeAsync(FilamentType filamentType)
     {
         ArgumentNullException.ThrowIfNull(filamentType);
-        await FilamentTypes.AddAsync(filamentType).ConfigureAwait(false);
-        await SaveChangesAsync().ConfigureAwait(false);
+        await _db.FilamentTypes.AddAsync(filamentType).ConfigureAwait(false);
+        await _db.SaveChangesAsync().ConfigureAwait(false);
     }
 
     /// <summary>
@@ -123,8 +123,8 @@ public class GCodeJournalViewModel : GCodeJournalDbContext
     public async Task AddModelDesignAsync(ModelDesign filamentColour)
     {
         ArgumentNullException.ThrowIfNull(filamentColour);
-        await ModelDesigns.AddAsync(filamentColour).ConfigureAwait(false);
-        await SaveChangesAsync().ConfigureAwait(false);
+        await _db.ModelDesigns.AddAsync(filamentColour).ConfigureAwait(false);
+        await _db.SaveChangesAsync().ConfigureAwait(false);
     }
 
     /// <summary>
@@ -146,8 +146,8 @@ public class GCodeJournalViewModel : GCodeJournalDbContext
     public async Task AddPrintingProjectAsync(PrintingProject project)
     {
         ArgumentNullException.ThrowIfNull(project);
-        await PrintingProjects.AddAsync(project).ConfigureAwait(false);
-        await SaveChangesAsync().ConfigureAwait(false);
+        await _db.PrintingProjects.AddAsync(project).ConfigureAwait(false);
+        await _db.SaveChangesAsync().ConfigureAwait(false);
     }
 
     /// <summary>
@@ -163,7 +163,7 @@ public class GCodeJournalViewModel : GCodeJournalDbContext
     /// </remarks>
     public Task<List<Customer>> GetCustomersAsync()
     {
-        return Customers.OrderBy(c => c.Name).ToListAsync();
+        return _db.Customers.OrderBy(c => c.Name).ToListAsync();
     }
 
     /// <summary>
@@ -181,7 +181,7 @@ public class GCodeJournalViewModel : GCodeJournalDbContext
     /// </remarks>
     public Task<List<FilamentColour>> GetFilamentColoursAsync()
     {
-        return FilamentColours.OrderBy(fc => fc.Description).ToListAsync();
+        return _db.FilamentColours.OrderBy(fc => fc.Description).ToListAsync();
     }
 
     /// <summary>
@@ -193,7 +193,7 @@ public class GCodeJournalViewModel : GCodeJournalDbContext
     /// </returns>
     public Task<List<Filament>> GetFilamentsAsync()
     {
-        return Filaments.OrderBy(f => f.Manufacturer).ThenBy(c => c.Colour).ToListAsync();
+        return _db.Filaments.OrderBy(f => f.Manufacturer).ThenBy(c => c.Colour).ToListAsync();
     }
 
     /// <summary>
@@ -210,7 +210,7 @@ public class GCodeJournalViewModel : GCodeJournalDbContext
     /// </remarks>
     public Task<List<FilamentType>> GetFilamentTypesAsync()
     {
-        return FilamentTypes.OrderBy(ft => ft.Description).ToListAsync();
+        return _db.FilamentTypes.OrderBy(ft => ft.Description).ToListAsync();
     }
 
     /// <summary>
@@ -222,7 +222,7 @@ public class GCodeJournalViewModel : GCodeJournalDbContext
     /// </returns>
     public Task<List<Manufacturer>> GetManufacturersAsync()
     {
-        return Manufacturers.OrderBy(m => m.Name).ToListAsync();
+        return _db.Manufacturers.OrderBy(m => m.Name).ToListAsync();
     }
 
     /// <summary>
@@ -240,7 +240,7 @@ public class GCodeJournalViewModel : GCodeJournalDbContext
     /// </remarks>
     public Task<List<ModelDesign>> GetModelDesignsAsync()
     {
-        return ModelDesigns.OrderBy(md => md.Description).ToListAsync();
+        return _db.ModelDesigns.OrderBy(md => md.Description).ToListAsync();
     }
 
     /// <summary>
@@ -257,6 +257,6 @@ public class GCodeJournalViewModel : GCodeJournalDbContext
     /// </returns>
     public Task<List<PrintingProject>> GetPrintingProjectsAsync()
     {
-        return PrintingProjects.OrderBy(pp => pp.Model.Description).ThenBy(c => c.Customer).ThenBy(f => f.Filaments.OrderBy(f1 => f1.ToString())).ToListAsync();
+        return _db.PrintingProjects.OrderBy(pp => pp.Model.Description).ThenBy(c => c.Customer).ThenBy(f => f.Filaments.OrderBy(f1 => f1.ToString())).ToListAsync();
     }
 }
