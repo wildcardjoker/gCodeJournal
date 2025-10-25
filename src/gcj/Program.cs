@@ -1,10 +1,10 @@
 ﻿#region Using Directives
-using gcj;
 using gCodeJournal.Model;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Serilog;
+using Spectre.Console;
 #endregion
 
 // build configuration
@@ -19,14 +19,14 @@ var          efLevel       = enableQueryLogging ? "Verbose" : "Warning";
 config = new ConfigurationBuilder().AddConfiguration(config).AddInMemoryCollection([new KeyValuePair<string, string?>(efOverrideKey, efLevel)]).Build();
 
 // Get the log file path from configuration
-var writeTos    = config.GetSection("Serilog:WriteTo").GetChildren();
+var writeTos    = config.GetSection("Serilog:WriteTo").GetChildren().ToList();
 var fileSink    = writeTos.FirstOrDefault(s => string.Equals(s["Name"], "File", StringComparison.OrdinalIgnoreCase));
 var logFilePath = fileSink?["Args:path"]; // Get the path to the log file. Can be null or empty (not configured)
 if (string.IsNullOrEmpty(logFilePath))
 {
     var defaultPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "gCodeJournal", "gCodeJournal-.log");
-    Console.WriteLine("*** WARNING: The log file path wasn't specified (Serilog:WriteTo:File:Args:path)");
-    Console.WriteLine($"*** Defaulting to {defaultPath}");
+    AnsiConsole.MarkupLine(":warning: WARNING: The log file path wasn't specified (Serilog:WriteTo:File:Args:path)");
+    AnsiConsole.MarkupLine($":warning: Defaulting to {defaultPath}");
     logFilePath = defaultPath;
 }
 
@@ -42,11 +42,19 @@ if (expanded.EndsWith("-.log", StringComparison.OrdinalIgnoreCase))
 }
 
 // Now you have the path to the file Serilog will write to (or wrote to) today:
-Console.WriteLine($"Serilog configured file (expanded): {expanded}");
-Console.WriteLine($"Current log file: {activeLogFile}");
+AnsiConsole.MarkupLine($":information:  Serilog configured file (expanded): {expanded}");
+AnsiConsole.MarkupLine($":information:  Current log file: {activeLogFile}");
 
-// Configure Serilog from configuration
-Log.Logger = new LoggerConfiguration().ReadFrom.Configuration(config).Enrich.FromLogContext().CreateLogger();
+// Configure Serilog from configuration and ensure Console sink is enabled by default if not configured explicitly.
+var loggerConfig = new LoggerConfiguration().ReadFrom.Configuration(config).Enrich.FromLogContext();
+
+// If no Console sink is configured in appsettings, add one so logs also go to the console.
+if (!writeTos.Any(s => string.Equals(s["Name"], "Console", StringComparison.OrdinalIgnoreCase)))
+{
+    loggerConfig = loggerConfig.WriteTo.Console();
+}
+
+Log.Logger = loggerConfig.CreateLogger();
 
 using var loggerFactory = LoggerFactory.Create(builder =>
                                                {
@@ -67,7 +75,7 @@ var dbPath = Environment.ExpandEnvironmentVariables(config["gcodeJournalDbPath"]
 
 if (!File.Exists(dbPath))
 {
-    logger.LogAndDisplayToConsoleError($"Could not find database {dbPath}");
+    logger.LogError("Could not find path {DbPath}", dbPath);
     Log.CloseAndFlush();
     return;
 }
@@ -86,21 +94,23 @@ optionsBuilder.EnableSensitiveDataLogging(); // shows parameter values in DEBUG 
 // Create DbContext and query some data
 var             options = optionsBuilder.Options;
 await using var context = new GCodeJournalDbContext(options);
-logger.LogAndDisplayToConsoleInfo($"Using DB path: {dbPath}");
+
+logger.LogInformation("Using DB path: {DbPath}", dbPath);
 
 // Get and log Manufacturers and Filaments
-logger.LogAndDisplayToConsoleInfo("\nManufacturers:");
+logger.LogInformation("Manufacturers:");
 var manufacturers = context.Manufacturers.OrderBy(m => m.Name);
 foreach (var manufacturer in manufacturers)
 {
-    logger.LogAndDisplayToConsoleInfo($"  {manufacturer.Id}: {manufacturer}");
+    logger.LogInformation("  {ManufacturerId}: {Manufacturer}", manufacturer.Id, manufacturer);
 }
 
-logger.LogAndDisplayToConsoleInfo("\nFilaments:");
+logger.LogInformation("Filaments:");
 var filaments = context.Filaments.OrderBy(f => f.ManufacturerId);
 foreach (var filament in filaments)
 {
-    logger.LogAndDisplayToConsoleInfo($"  {filament.Id}: {filament}");
+    logger.LogInformation("  {FilamentId}: {Filament}", filament.Id, filament);
 }
 
+Log.Information("End of run");
 Log.CloseAndFlush();
