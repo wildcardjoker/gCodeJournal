@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 ///     <see cref="T:gCodeJournal.Model.GCodeJournalDbContext">GCodeJournalDbContext</see>
 ///     to provide additional functionality for managing and querying database entities related to the application.
 /// </summary>
-public class GCodeJournalViewModel
+public class GCodeJournalViewModel : IGCodeJournalViewModel
 {
     private readonly GCodeJournalDbContext _db;
 
@@ -31,6 +31,9 @@ public class GCodeJournalViewModel
     {
         _db = db ?? throw new System.ArgumentNullException(nameof(db));
     }
+
+    // Interface-compatible method
+    public Task AddFilament(Filament filament) => AddFilamentAsync(filament);
 
     /// <summary>
     ///     Asynchronously adds a new customer to the database.

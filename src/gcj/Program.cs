@@ -27,8 +27,8 @@ using ILogger = Microsoft.Extensions.Logging.ILogger;
 public static partial class Program
 {
     #region Fields
-    private static GCodeJournalViewModel _context = null!;
-    private static ILogger               _logger  = null!;
+    private static IGCodeJournalViewModel _context = null!;
+    private static ILogger                _logger  = null!;
     #endregion
 
     /// <summary>
@@ -125,7 +125,7 @@ public static partial class Program
                                                                  .UseSqlite($"Data Source={dbPath}")
                                                                  .EnableDetailedErrors()
                                                                  .UseLoggerFactory(loggerFactory));
-        services.AddScoped<GCodeJournalViewModel>();
+        services.AddScoped<IGCodeJournalViewModel, GCodeJournalViewModel>();
 
         using var provider = services.BuildServiceProvider();
         using var scope    = provider.CreateScope();
@@ -133,7 +133,7 @@ public static partial class Program
         // Resolve logger and viewmodel from DI
         var loggerFactoryFromDI = scope.ServiceProvider.GetRequiredService<ILoggerFactory>();
         _logger  = loggerFactoryFromDI.CreateLogger("gcj");
-        _context = scope.ServiceProvider.GetRequiredService<GCodeJournalViewModel>();
+        _context = scope.ServiceProvider.GetRequiredService<IGCodeJournalViewModel>();
 
         AnsiConsole.MarkupLine($":information:  Using DB path: {dbPath}");
         _logger.LogTrace("Using DB Path {DBPath}", dbPath);
