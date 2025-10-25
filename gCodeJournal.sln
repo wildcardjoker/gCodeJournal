@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "gCodeJournal.Model", "src\g
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "gcj", "src\gcj\gcj.csproj", "{8A2B8FE3-5E28-D5AA-EE9E-4C311FC24859}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "gCodeJournal.ViewModel", "src\gCodeJournal.ViewModel\gCodeJournal.ViewModel.csproj", "{682064A0-4643-490B-85B8-3B21363FCA38}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -41,6 +43,18 @@ Global
 		{8A2B8FE3-5E28-D5AA-EE9E-4C311FC24859}.Release|x64.Build.0 = Release|Any CPU
 		{8A2B8FE3-5E28-D5AA-EE9E-4C311FC24859}.Release|x86.ActiveCfg = Release|Any CPU
 		{8A2B8FE3-5E28-D5AA-EE9E-4C311FC24859}.Release|x86.Build.0 = Release|Any CPU
+		{682064A0-4643-490B-85B8-3B21363FCA38}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{682064A0-4643-490B-85B8-3B21363FCA38}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{682064A0-4643-490B-85B8-3B21363FCA38}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{682064A0-4643-490B-85B8-3B21363FCA38}.Debug|x64.Build.0 = Debug|Any CPU
+		{682064A0-4643-490B-85B8-3B21363FCA38}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{682064A0-4643-490B-85B8-3B21363FCA38}.Debug|x86.Build.0 = Debug|Any CPU
+		{682064A0-4643-490B-85B8-3B21363FCA38}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{682064A0-4643-490B-85B8-3B21363FCA38}.Release|Any CPU.Build.0 = Release|Any CPU
+		{682064A0-4643-490B-85B8-3B21363FCA38}.Release|x64.ActiveCfg = Release|Any CPU
+		{682064A0-4643-490B-85B8-3B21363FCA38}.Release|x64.Build.0 = Release|Any CPU
+		{682064A0-4643-490B-85B8-3B21363FCA38}.Release|x86.ActiveCfg = Release|Any CPU
+		{682064A0-4643-490B-85B8-3B21363FCA38}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
