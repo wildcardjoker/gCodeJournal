@@ -34,18 +34,6 @@ if (string.IsNullOrEmpty(logFilePath))
 // Get and display the expanded log file path
 AnsiConsole.MarkupLine($":information:  Serilog configured file (expanded): {Path.GetDirectoryName(Environment.ExpandEnvironmentVariables(logFilePath))}");
 
-// If you used the Serilog rolling pattern "name-.log" compute today's concrete file name.
-// Serilog.Sinks.File usually appends the date as yyyyMMdd for RollingInterval.Day.
-var activeLogFile = expanded;
-if (expanded.EndsWith("-.log", StringComparison.OrdinalIgnoreCase))
-{
-    activeLogFile = expanded.Replace("-.log", $"-{DateTime.Now:yyyyMMdd}.log");
-}
-
-// Now you have the path to the file Serilog will write to (or wrote to) today:
-AnsiConsole.MarkupLine($":information:  Serilog configured file (expanded): {expanded}");
-AnsiConsole.MarkupLine($":information:  Current log file: {activeLogFile}");
-
 // Configure Serilog from configuration and ensure Console sink is enabled by default if not configured explicitly.
 var loggerConfig = new LoggerConfiguration().ReadFrom.Configuration(config).Enrich.FromLogContext();
 
@@ -97,7 +85,8 @@ optionsBuilder.EnableSensitiveDataLogging(); // shows parameter values in DEBUG 
 var             options = optionsBuilder.Options;
 await using var context = new GCodeJournalViewModel(options);
 
-logger.LogInformation("Using DB path: {DbPath}", dbPath);
+AnsiConsole.MarkupLine($":information:  Using DB path: {dbPath}");
+logger.LogTrace("Using DB Path {DBPath}", dbPath);
 
 // Extract data from the database before writing to the console; this will log any warnings if we're logging sensitive data
 var customers = await context.GetCustomersAsync().ConfigureAwait(false);
