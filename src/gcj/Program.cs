@@ -31,8 +31,8 @@ if (string.IsNullOrEmpty(logFilePath))
     logFilePath = defaultPath;
 }
 
-// expand environment variables
-var expanded = Environment.ExpandEnvironmentVariables(logFilePath);
+// Get and display the expanded log file path
+AnsiConsole.MarkupLine($":information:  Serilog configured file (expanded): {Path.GetDirectoryName(Environment.ExpandEnvironmentVariables(logFilePath))}");
 
 // If you used the Serilog rolling pattern "name-.log" compute today's concrete file name.
 // Serilog.Sinks.File usually appends the date as yyyyMMdd for RollingInterval.Day.
