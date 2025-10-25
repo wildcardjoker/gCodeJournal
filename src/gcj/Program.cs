@@ -1,5 +1,6 @@
 ﻿#region Using Directives
 using gCodeJournal.Model;
+using gCodeJournal.ViewModel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -87,29 +88,38 @@ var optionsBuilder = new DbContextOptionsBuilder<GCodeJournalDbContext>().UseLaz
                                                                          .UseLoggerFactory(loggerFactory);
 
 #if DEBUG
-logger.LogWarning("*** DEBUG: sensitive data will be logged ***");
+
+//logger.LogWarning("*** DEBUG: sensitive data will be logged ***");
 optionsBuilder.EnableSensitiveDataLogging(); // shows parameter values in DEBUG mode
 #endif
 
-// Create DbContext and query some data
+// Create ViewModel (which inherits GCodeJournalDbContext) and query some data
 var             options = optionsBuilder.Options;
-await using var context = new GCodeJournalDbContext(options);
+await using var context = new GCodeJournalViewModel(options);
 
 logger.LogInformation("Using DB path: {DbPath}", dbPath);
 
+// Extract data from the database before writing to the console; this will log any warnings if we're logging sensitive data
+var customers = await context.GetCustomersAsync().ConfigureAwait(false);
+logger.LogInformation("Customers");
+foreach (var customer in customers)
+{
+    logger.LogInformation(" {CustomerId}: {Customer}", customer.Id, customer.Name);
+}
+
 // Get and log Manufacturers and Filaments
+var manufacturers = await context.GetManufacturersAsync().ConfigureAwait(false);
 logger.LogInformation("Manufacturers:");
-var manufacturers = context.Manufacturers.OrderBy(m => m.Name);
 foreach (var manufacturer in manufacturers)
 {
-    logger.LogInformation("  {ManufacturerId}: {Manufacturer}", manufacturer.Id, manufacturer);
+    logger.LogInformation(" {ManufacturerId}: {Manufacturer}", manufacturer.Id, manufacturer);
 }
 
 logger.LogInformation("Filaments:");
-var filaments = context.Filaments.OrderBy(f => f.ManufacturerId);
+var filaments = await context.GetFilamentsAsync().ConfigureAwait(false);
 foreach (var filament in filaments)
 {
-    logger.LogInformation("  {FilamentId}: {Filament}", filament.Id, filament);
+    logger.LogInformation(" {FilamentId}: {Filament}", filament.Id, filament);
 }
 
 Log.Information("End of run");
