@@ -13,7 +13,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Serilog;
 using Spectre.Console;
-using ILogger = Microsoft.Extensions.Logging.ILogger;
+using ILogger = ILogger;
 #endregion
 
 /// <summary>
@@ -70,7 +70,7 @@ public static partial class Program
         }
 
         // Get and display the expanded log file path
-        AnsiConsole.MarkupLine($":information:  Serilog configured file (expanded): {Path.GetDirectoryName(Environment.ExpandEnvironmentVariables(logFilePath))}");
+        AnsiConsole.MarkupLine($":information:  Log file location: {Path.GetDirectoryName(Environment.ExpandEnvironmentVariables(logFilePath))}");
 
         // Configure Serilog from configuration and ensure Console sink is enabled by default if not configured explicitly.
         var loggerConfig = new LoggerConfiguration().ReadFrom.Configuration(config).Enrich.FromLogContext();
@@ -127,8 +127,8 @@ public static partial class Program
                                                                  .UseLoggerFactory(loggerFactory));
         services.AddScoped<IGCodeJournalViewModel, GCodeJournalViewModel>();
 
-        using var provider = services.BuildServiceProvider();
-        using var scope    = provider.CreateScope();
+        await using var provider = services.BuildServiceProvider();
+        using var       scope    = provider.CreateScope();
 
         // Resolve logger and viewmodel from DI
         var loggerFactoryFromDI = scope.ServiceProvider.GetRequiredService<ILoggerFactory>();

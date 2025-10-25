@@ -3,8 +3,6 @@
 #region Using Directives
 using Microsoft.EntityFrameworkCore;
 using Model;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 #endregion
 
 /// <inheritdoc />
@@ -15,8 +13,11 @@ using System.Threading.Tasks;
 /// </summary>
 public class GCodeJournalViewModel : IGCodeJournalViewModel
 {
+    #region Fields
     private readonly GCodeJournalDbContext _db;
+    #endregion
 
+    #region Constructors
     /// <summary>
     ///     Initializes a new instance of the
     ///     <see cref="T:gCodeJournal.ViewModel.GCodeJournalViewModel">GCodeJournalViewModel</see> class using the specified
@@ -27,13 +28,58 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
     /// <exception cref="System.ArgumentNullException">
     ///     Thrown when the <paramref name="db" /> parameter is <see langword="null" />.
     /// </exception>
-    public GCodeJournalViewModel(GCodeJournalDbContext db)
+    public GCodeJournalViewModel(GCodeJournalDbContext db) => _db = db ?? throw new ArgumentNullException(nameof(db));
+    #endregion
+
+    #region IGCodeJournalViewModel Members
+    /// <inheritdoc />
+    public async Task AddFilamentAsync(Filament filament)
     {
-        _db = db ?? throw new System.ArgumentNullException(nameof(db));
+        ArgumentNullException.ThrowIfNull(filament);
+        await _db.Filaments.AddAsync(filament).ConfigureAwait(false);
+        await _db.SaveChangesAsync().ConfigureAwait(false);
     }
 
-    // Interface-compatible method
-    public Task AddFilament(Filament filament) => AddFilamentAsync(filament);
+    /// <summary>
+    ///     Retrieves a list of customers from the database, ordered by their names.
+    /// </summary>
+    /// <returns>
+    ///     A task that represents the asynchronous operation. The task result contains a list of
+    ///     <see cref="T:gCodeJournal.Model.Customer">Customer</see> entities, ordered by their names.
+    /// </returns>
+    /// <remarks>
+    ///     This method queries the <see cref="P:gCodeJournal.Model.GCodeJournalDbContext.Customers">Customers</see> DbSet
+    ///     and orders the results by the <see cref="P:gCodeJournal.Model.Customer.Name">Name</see> property.
+    /// </remarks>
+    public Task<List<Customer>> GetAllCustomersAsync()
+    {
+        return _db.Customers.OrderBy(c => c.Name).ToListAsync();
+    }
+
+    /// <summary>
+    ///     Retrieves a list of filaments from the database, ordered by manufacturer and color.
+    /// </summary>
+    /// <returns>
+    ///     A task representing the asynchronous operation. The task result contains a list of <see cref="Filament" />
+    ///     entities.
+    /// </returns>
+    public Task<List<Filament>> GetAllFilamentsAsync()
+    {
+        return _db.Filaments.OrderBy(f => f.Manufacturer).ThenBy(c => c.Colour).ToListAsync();
+    }
+
+    /// <summary>
+    ///     Retrieves a list of manufacturers from the database, ordered by name.
+    /// </summary>
+    /// <returns>
+    ///     A task representing the asynchronous operation. The task result contains a list of <see cref="Manufacturer" />
+    ///     entities.
+    /// </returns>
+    public Task<List<Manufacturer>> GetAllManufacturersAsync()
+    {
+        return _db.Manufacturers.OrderBy(m => m.Name).ToListAsync();
+    }
+    #endregion
 
     /// <summary>
     ///     Asynchronously adds a new customer to the database.
@@ -56,18 +102,6 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
     {
         ArgumentNullException.ThrowIfNull(customer);
         await _db.Customers.AddAsync(customer).ConfigureAwait(false);
-        await _db.SaveChangesAsync().ConfigureAwait(false);
-    }
-
-    /// <summary>
-    ///     Adds a new filament to the database.
-    /// </summary>
-    /// <param name="filament">The filament entity to be added.</param>
-    /// <exception cref="ArgumentNullException">Thrown if the <paramref name="filament" /> is null.</exception>
-    public async Task AddFilamentAsync(Filament filament)
-    {
-        ArgumentNullException.ThrowIfNull(filament);
-        await _db.Filaments.AddAsync(filament).ConfigureAwait(false);
         await _db.SaveChangesAsync().ConfigureAwait(false);
     }
 
@@ -154,22 +188,6 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
     }
 
     /// <summary>
-    ///     Retrieves a list of customers from the database, ordered by their names.
-    /// </summary>
-    /// <returns>
-    ///     A task that represents the asynchronous operation. The task result contains a list of
-    ///     <see cref="T:gCodeJournal.Model.Customer">Customer</see> entities, ordered by their names.
-    /// </returns>
-    /// <remarks>
-    ///     This method queries the <see cref="P:gCodeJournal.Model.GCodeJournalDbContext.Customers">Customers</see> DbSet
-    ///     and orders the results by the <see cref="P:gCodeJournal.Model.Customer.Name">Name</see> property.
-    /// </remarks>
-    public Task<List<Customer>> GetCustomersAsync()
-    {
-        return _db.Customers.OrderBy(c => c.Name).ToListAsync();
-    }
-
-    /// <summary>
     ///     Retrieves a list of filament colours from the database, ordered by their description.
     /// </summary>
     /// <returns>
@@ -188,18 +206,6 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
     }
 
     /// <summary>
-    ///     Retrieves a list of filaments from the database, ordered by manufacturer and color.
-    /// </summary>
-    /// <returns>
-    ///     A task representing the asynchronous operation. The task result contains a list of <see cref="Filament" />
-    ///     entities.
-    /// </returns>
-    public Task<List<Filament>> GetFilamentsAsync()
-    {
-        return _db.Filaments.OrderBy(f => f.Manufacturer).ThenBy(c => c.Colour).ToListAsync();
-    }
-
-    /// <summary>
     ///     Retrieves a list of all available filament types from the database, ordered by their description.
     /// </summary>
     /// <returns>
@@ -214,18 +220,6 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
     public Task<List<FilamentType>> GetFilamentTypesAsync()
     {
         return _db.FilamentTypes.OrderBy(ft => ft.Description).ToListAsync();
-    }
-
-    /// <summary>
-    ///     Retrieves a list of manufacturers from the database, ordered by name.
-    /// </summary>
-    /// <returns>
-    ///     A task representing the asynchronous operation. The task result contains a list of <see cref="Manufacturer" />
-    ///     entities.
-    /// </returns>
-    public Task<List<Manufacturer>> GetManufacturersAsync()
-    {
-        return _db.Manufacturers.OrderBy(m => m.Name).ToListAsync();
     }
 
     /// <summary>

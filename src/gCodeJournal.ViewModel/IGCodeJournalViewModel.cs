@@ -6,9 +6,9 @@ namespace gCodeJournal.ViewModel
 {
  public interface IGCodeJournalViewModel
  {
- Task AddFilament(Filament filament);
- Task<List<Filament>> GetFilamentsAsync();
- Task<List<Manufacturer>> GetManufacturersAsync();
- Task<List<Customer>> GetCustomersAsync();
+ Task AddFilamentAsync(Filament filament);
+ Task<List<Filament>> GetAllFilamentsAsync();
+ Task<List<Manufacturer>> GetAllManufacturersAsync();
+ Task<List<Customer>> GetAllCustomersAsync();
  }
 }

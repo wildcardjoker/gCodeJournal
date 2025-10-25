@@ -2,7 +2,6 @@ namespace gcj;
 
 #region Using Directives
 using Microsoft.Extensions.Logging;
-using Spectre.Console;
 #endregion
 
 public static partial class Program
@@ -10,7 +9,7 @@ public static partial class Program
     private static async Task LogCustomerDetailsAsync()
     {
         // Extract data from the database before writing to the console; this will log any warnings if we're logging sensitive data
-        var customers = await _context.GetCustomersAsync().ConfigureAwait(false);
+        var customers = await _context.GetAllCustomersAsync().ConfigureAwait(false);
         _logger.LogInformation("Customers:");
         foreach (var customer in customers)
         {
@@ -21,7 +20,7 @@ public static partial class Program
     private static async Task LogFilamentDetailsAsync()
     {
         _logger.LogInformation("Filaments:");
-        var filaments = await _context.GetFilamentsAsync().ConfigureAwait(false);
+        var filaments = await _context.GetAllFilamentsAsync().ConfigureAwait(false);
         foreach (var filament in filaments)
         {
             _logger.LogInformation(" {FilamentId}: {Filament}", filament.Id, filament);
@@ -31,7 +30,7 @@ public static partial class Program
     private static async Task LogManufacturerDetailsAsync()
     {
         // Get and log Manufacturers and Filaments
-        var manufacturers = await _context.GetManufacturersAsync().ConfigureAwait(false);
+        var manufacturers = await _context.GetAllManufacturersAsync().ConfigureAwait(false);
         _logger.LogInformation("Manufacturers:");
         foreach (var manufacturer in manufacturers)
         {
