@@ -10,5 +10,9 @@ namespace gCodeJournal.ViewModel
  Task<List<Filament>> GetAllFilamentsAsync();
  Task<List<Manufacturer>> GetAllManufacturersAsync();
  Task<List<Customer>> GetAllCustomersAsync();
+ Task<List<FilamentColour>> GetAllFilamentColoursAsync();
+ Task<List<FilamentType>> GetAllFilamentTypesAsync();
+ Task<List<ModelDesign>> GetAllModelDesignsAsync();
+ Task<List<PrintingProject>> GetAllPrintingProjectsAsync();
  }
 }

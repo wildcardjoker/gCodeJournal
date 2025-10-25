@@ -3,6 +3,8 @@
 #region Using Directives
 using Microsoft.EntityFrameworkCore;
 using Model;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 #endregion
 
 /// <inheritdoc />
@@ -51,10 +53,7 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
     ///     This method queries the <see cref="P:gCodeJournal.Model.GCodeJournalDbContext.Customers">Customers</see> DbSet
     ///     and orders the results by the <see cref="P:gCodeJournal.Model.Customer.Name">Name</see> property.
     /// </remarks>
-    public Task<List<Customer>> GetAllCustomersAsync()
-    {
-        return _db.Customers.OrderBy(c => c.Name).ToListAsync();
-    }
+    public Task<List<Customer>> GetAllCustomersAsync() => _db.Customers.OrderBy(c => c.Name).ToListAsync();
 
     /// <summary>
     ///     Retrieves a list of filaments from the database, ordered by manufacturer and color.
@@ -63,10 +62,7 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
     ///     A task representing the asynchronous operation. The task result contains a list of <see cref="Filament" />
     ///     entities.
     /// </returns>
-    public Task<List<Filament>> GetAllFilamentsAsync()
-    {
-        return _db.Filaments.OrderBy(f => f.Manufacturer).ThenBy(c => c.Colour).ToListAsync();
-    }
+    public Task<List<Filament>> GetAllFilamentsAsync() => _db.Filaments.OrderBy(f => f.Manufacturer).ThenBy(c => c.Colour).ToListAsync();
 
     /// <summary>
     ///     Retrieves a list of manufacturers from the database, ordered by name.
@@ -75,11 +71,7 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
     ///     A task representing the asynchronous operation. The task result contains a list of <see cref="Manufacturer" />
     ///     entities.
     /// </returns>
-    public Task<List<Manufacturer>> GetAllManufacturersAsync()
-    {
-        return _db.Manufacturers.OrderBy(m => m.Name).ToListAsync();
-    }
-    #endregion
+    public Task<List<Manufacturer>> GetAllManufacturersAsync() => _db.Manufacturers.OrderBy(m => m.Name).ToListAsync();
 
     /// <summary>
     ///     Asynchronously adds a new customer to the database.
@@ -200,10 +192,7 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
     ///     DbSet and returns the results as a list. The results are sorted alphabetically by the
     ///     <see cref="P:gCodeJournal.Model.FilamentColour.Description">Description</see>.
     /// </remarks>
-    public Task<List<FilamentColour>> GetFilamentColoursAsync()
-    {
-        return _db.FilamentColours.OrderBy(fc => fc.Description).ToListAsync();
-    }
+    public Task<List<FilamentColour>> GetAllFilamentColoursAsync() => _db.FilamentColours.OrderBy(fc => fc.Description).ToListAsync();
 
     /// <summary>
     ///     Retrieves a list of all available filament types from the database, ordered by their description.
@@ -217,10 +206,7 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
     ///     DbSet and orders the results by the <see cref="P:gCodeJournal.Model.FilamentType.Description">Description</see>
     ///     property.
     /// </remarks>
-    public Task<List<FilamentType>> GetFilamentTypesAsync()
-    {
-        return _db.FilamentTypes.OrderBy(ft => ft.Description).ToListAsync();
-    }
+    public Task<List<FilamentType>> GetAllFilamentTypesAsync() => _db.FilamentTypes.OrderBy(ft => ft.Description).ToListAsync();
 
     /// <summary>
     ///     Retrieves a list of <see cref="T:gCodeJournal.Model.ModelDesign">ModelDesign</see> entities
@@ -235,10 +221,7 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
     ///     DbSet, orders the results by the <see cref="P:gCodeJournal.Model.ModelDesign.Description">Description</see>
     ///     property, and returns the results as a list.
     /// </remarks>
-    public Task<List<ModelDesign>> GetModelDesignsAsync()
-    {
-        return _db.ModelDesigns.OrderBy(md => md.Description).ToListAsync();
-    }
+    public Task<List<ModelDesign>> GetAllModelDesignsAsync() => _db.ModelDesigns.OrderBy(md => md.Description).ToListAsync();
 
     /// <summary>
     ///     Retrieves a list of <see cref="PrintingProject" /> entities from the database.
@@ -252,8 +235,6 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
     ///     A <see cref="Task{TResult}" /> representing the asynchronous operation. The task result contains
     ///     a list of <see cref="PrintingProject" /> entities.
     /// </returns>
-    public Task<List<PrintingProject>> GetPrintingProjectsAsync()
-    {
-        return _db.PrintingProjects.OrderBy(pp => pp.Model.Description).ThenBy(c => c.Customer).ThenBy(f => f.Filaments.OrderBy(f1 => f1.ToString())).ToListAsync();
-    }
+    public Task<List<PrintingProject>> GetAllPrintingProjectsAsync() => _db.PrintingProjects.OrderBy(pp => pp.Model.Description).ThenBy(c => c.Customer).ThenBy(f => f.Filaments.OrderBy(f1 => f1.ToString())).ToListAsync();
+    #endregion
 }
