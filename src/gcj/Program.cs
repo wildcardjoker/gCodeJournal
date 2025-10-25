@@ -1,15 +1,20 @@
 ﻿#region Using Directives
+using ILogger = Microsoft.Extensions.Logging.ILogger;
+#endregion
+
+namespace gcj;
+
+#region Using Directives
 using gCodeJournal.Model;
 using gCodeJournal.ViewModel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Serilog;
 using Spectre.Console;
 using ILogger = Microsoft.Extensions.Logging.ILogger;
 #endregion
-
-namespace gcj;
 
 /// <summary>
 ///     Represents the main application class for gCodeJournal.
@@ -90,14 +95,13 @@ public static partial class Program
                                                            }
                                                        });
 
-        _logger = loggerFactory.CreateLogger("gcj");
-
         // Get database path from config, with a default value
         var dbPath = Environment.ExpandEnvironmentVariables(config["gcodeJournalDbPath"] ?? "gCodeJournal.db");
 
         if (!File.Exists(dbPath))
         {
-            _logger.LogError("Could not find path {DbPath}", dbPath);
+            var tempLogger = loggerFactory.CreateLogger("gcj");
+            tempLogger.LogError("Could not find path {DbPath}", dbPath);
             await Log.CloseAndFlushAsync().ConfigureAwait(false);
             return;
         }
@@ -113,21 +117,31 @@ public static partial class Program
         optionsBuilder.EnableSensitiveDataLogging(); // shows parameter values in DEBUG mode
 #endif
 
-        // Compose: create a DbContext instance and pass it to the ViewModel
-        var dbContext = new GCodeJournalDbContext(optionsBuilder.Options);
-        _context = new GCodeJournalViewModel(dbContext);
+        // Setup DI
+        var services = new ServiceCollection();
+        services.AddSingleton(loggerFactory);
+        services.AddLogging(b => b.AddSerilog(Log.Logger));
+        services.AddDbContext<GCodeJournalDbContext>(opts => opts.UseLazyLoadingProxies()
+                                                                 .UseSqlite($"Data Source={dbPath}")
+                                                                 .EnableDetailedErrors()
+                                                                 .UseLoggerFactory(loggerFactory));
+        services.AddScoped<GCodeJournalViewModel>();
+
+        using var provider = services.BuildServiceProvider();
+        using var scope    = provider.CreateScope();
+
+        // Resolve logger and viewmodel from DI
+        var loggerFactoryFromDI = scope.ServiceProvider.GetRequiredService<ILoggerFactory>();
+        _logger  = loggerFactoryFromDI.CreateLogger("gcj");
+        _context = scope.ServiceProvider.GetRequiredService<GCodeJournalViewModel>();
 
         AnsiConsole.MarkupLine($":information:  Using DB path: {dbPath}");
         _logger.LogTrace("Using DB Path {DBPath}", dbPath);
 
-        await using (dbContext)
-        {
-            await LogCustomerDetailsAsync().ConfigureAwait(false);
-            await LogManufacturerDetailsAsync().ConfigureAwait(false);
-            await LogFilamentDetailsAsync().ConfigureAwait(false);
-        }
-
-        Log.Information("End of run");
+        // Execute using resolved scope (DbContext will be disposed when scope is disposed)
+        await LogCustomerDetailsAsync().ConfigureAwait(false);
+        await LogManufacturerDetailsAsync().ConfigureAwait(false);
+        await LogFilamentDetailsAsync().ConfigureAwait(false);
         await Log.CloseAndFlushAsync().ConfigureAwait(false);
     }
 }
