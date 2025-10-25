@@ -77,7 +77,6 @@ var optionsBuilder = new DbContextOptionsBuilder<GCodeJournalDbContext>().UseLaz
 
 #if DEBUG
 
-//logger.LogWarning("*** DEBUG: sensitive data will be logged ***");
 optionsBuilder.EnableSensitiveDataLogging(); // shows parameter values in DEBUG mode
 #endif
 
