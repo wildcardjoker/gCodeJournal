@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using DTOs;
 using System.Linq;
 using Mapping;
+using System;
 #endregion
 
 /// <inheritdoc />
@@ -40,8 +41,12 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
         await _db.SaveChangesAsync().ConfigureAwait(false);
     }
 
-    // DTO-based overload
-    public Task AddFilamentAsync(FilamentDto filamentDto) => AddFilamentAsync(filamentDto.ToEntity());
+    // DTO-based overload with validation
+    public Task AddFilamentAsync(FilamentDto filamentDto)
+    {
+        ValidateFilamentDto(filamentDto);
+        return AddFilamentAsync(filamentDto.ToEntity());
+    }
 
     /// <inheritdoc />
     public Task<List<CustomerDto>> GetAllCustomersAsync()
@@ -146,8 +151,12 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
         await _db.SaveChangesAsync().ConfigureAwait(false);
     }
 
-    // DTO-based overload
-    public Task AddCustomerAsync(CustomerDto customerDto) => AddCustomerAsync(customerDto.ToEntity());
+    // DTO-based overload with validation
+    public Task AddCustomerAsync(CustomerDto customerDto)
+    {
+        ValidateCustomerDto(customerDto);
+        return AddCustomerAsync(customerDto.ToEntity());
+    }
 
     /// <inheritdoc />
     public async Task AddFilamentColourAsync(FilamentColour filamentColour)
@@ -157,8 +166,12 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
         await _db.SaveChangesAsync().ConfigureAwait(false);
     }
 
-    // DTO-based overload
-    public Task AddFilamentColourAsync(FilamentColourDto filamentColourDto) => AddFilamentColourAsync(filamentColourDto.ToEntity());
+    // DTO-based overload with validation
+    public Task AddFilamentColourAsync(FilamentColourDto filamentColourDto)
+    {
+        ValidateFilamentColourDto(filamentColourDto);
+        return AddFilamentColourAsync(filamentColourDto.ToEntity());
+    }
 
     /// <inheritdoc />
     public async Task AddFilamentTypeAsync(FilamentType filamentType)
@@ -168,8 +181,12 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
         await _db.SaveChangesAsync().ConfigureAwait(false);
     }
 
-    // DTO-based overload
-    public Task AddFilamentTypeAsync(FilamentTypeDto filamentTypeDto) => AddFilamentTypeAsync(filamentTypeDto.ToEntity());
+    // DTO-based overload with validation
+    public Task AddFilamentTypeAsync(FilamentTypeDto filamentTypeDto)
+    {
+        ValidateFilamentTypeDto(filamentTypeDto);
+        return AddFilamentTypeAsync(filamentTypeDto.ToEntity());
+    }
 
     /// <inheritdoc />
     public async Task AddModelDesignAsync(ModelDesign modelDesign)
@@ -179,8 +196,12 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
         await _db.SaveChangesAsync().ConfigureAwait(false);
     }
 
-    // DTO-based overload
-    public Task AddModelDesignAsync(ModelDesignDto modelDesignDto) => AddModelDesignAsync(modelDesignDto.ToEntity());
+    // DTO-based overload with validation
+    public Task AddModelDesignAsync(ModelDesignDto modelDesignDto)
+    {
+        ValidateModelDesignDto(modelDesignDto);
+        return AddModelDesignAsync(modelDesignDto.ToEntity());
+    }
 
     /// <inheritdoc />
     public async Task AddPrintingProjectAsync(PrintingProject project)
@@ -190,7 +211,55 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
         await _db.SaveChangesAsync().ConfigureAwait(false);
     }
 
-    // DTO-based overload
-    public Task AddPrintingProjectAsync(PrintingProjectDto projectDto) => AddPrintingProjectAsync(projectDto.ToEntity());
+    // DTO-based overload with validation
+    public Task AddPrintingProjectAsync(PrintingProjectDto projectDto)
+    {
+        ValidatePrintingProjectDto(projectDto);
+        return AddPrintingProjectAsync(projectDto.ToEntity());
+    }
+    #endregion
+
+    #region Validation helpers
+    private static void ValidateCustomerDto(CustomerDto dto)
+    {
+        if (dto is null) throw new ArgumentNullException(nameof(dto));
+        if (string.IsNullOrWhiteSpace(dto.Name)) throw new ArgumentException("Customer name is required", nameof(dto));
+    }
+
+    private static void ValidateFilamentColourDto(FilamentColourDto dto)
+    {
+        if (dto is null) throw new ArgumentNullException(nameof(dto));
+        if (string.IsNullOrWhiteSpace(dto.Description)) throw new ArgumentException("Filament colour description is required", nameof(dto));
+    }
+
+    private static void ValidateFilamentTypeDto(FilamentTypeDto dto)
+    {
+        if (dto is null) throw new ArgumentNullException(nameof(dto));
+        if (string.IsNullOrWhiteSpace(dto.Description)) throw new ArgumentException("Filament type description is required", nameof(dto));
+    }
+
+    private static void ValidateModelDesignDto(ModelDesignDto dto)
+    {
+        if (dto is null) throw new ArgumentNullException(nameof(dto));
+        if (string.IsNullOrWhiteSpace(dto.Description)) throw new ArgumentException("ModelDesign description is required", nameof(dto));
+        if (dto.Length <0) throw new ArgumentException("ModelDesign length must be non-negative", nameof(dto));
+    }
+
+    private static void ValidateFilamentDto(FilamentDto dto)
+    {
+        if (dto is null) throw new ArgumentNullException(nameof(dto));
+        if (dto.CostPerWeight <0) throw new ArgumentException("Filament cost must be non-negative", nameof(dto));
+        if (dto.Manufacturer is null) throw new ArgumentException("Filament manufacturer is required", nameof(dto));
+        if (dto.FilamentColour is null) throw new ArgumentException("Filament colour is required", nameof(dto));
+        if (dto.FilamentType is null) throw new ArgumentException("Filament type is required", nameof(dto));
+    }
+
+    private static void ValidatePrintingProjectDto(PrintingProjectDto dto)
+    {
+        if (dto is null) throw new ArgumentNullException(nameof(dto));
+        if (dto.Cost <0) throw new ArgumentException("Printing project cost must be non-negative", nameof(dto));
+        if (dto.Customer is null) throw new ArgumentException("Printing project must have a customer", nameof(dto));
+        if (dto.ModelDesign is null) throw new ArgumentException("Printing project must have a model design", nameof(dto));
+    }
     #endregion
 }
