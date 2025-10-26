@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using DTOs;
 using System.Linq;
+using Mapping;
 #endregion
 
 /// <inheritdoc />
@@ -38,6 +39,9 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
         await _db.Filaments.AddAsync(filament).ConfigureAwait(false);
         await _db.SaveChangesAsync().ConfigureAwait(false);
     }
+
+    // DTO-based overload
+    public Task AddFilamentAsync(FilamentDto filamentDto) => AddFilamentAsync(filamentDto.ToEntity());
 
     /// <inheritdoc />
     public Task<List<CustomerDto>> GetAllCustomersAsync()
@@ -142,6 +146,9 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
         await _db.SaveChangesAsync().ConfigureAwait(false);
     }
 
+    // DTO-based overload
+    public Task AddCustomerAsync(CustomerDto customerDto) => AddCustomerAsync(customerDto.ToEntity());
+
     /// <inheritdoc />
     public async Task AddFilamentColourAsync(FilamentColour filamentColour)
     {
@@ -149,6 +156,9 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
         await _db.FilamentColours.AddAsync(filamentColour).ConfigureAwait(false);
         await _db.SaveChangesAsync().ConfigureAwait(false);
     }
+
+    // DTO-based overload
+    public Task AddFilamentColourAsync(FilamentColourDto filamentColourDto) => AddFilamentColourAsync(filamentColourDto.ToEntity());
 
     /// <inheritdoc />
     public async Task AddFilamentTypeAsync(FilamentType filamentType)
@@ -158,6 +168,9 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
         await _db.SaveChangesAsync().ConfigureAwait(false);
     }
 
+    // DTO-based overload
+    public Task AddFilamentTypeAsync(FilamentTypeDto filamentTypeDto) => AddFilamentTypeAsync(filamentTypeDto.ToEntity());
+
     /// <inheritdoc />
     public async Task AddModelDesignAsync(ModelDesign modelDesign)
     {
@@ -166,6 +179,9 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
         await _db.SaveChangesAsync().ConfigureAwait(false);
     }
 
+    // DTO-based overload
+    public Task AddModelDesignAsync(ModelDesignDto modelDesignDto) => AddModelDesignAsync(modelDesignDto.ToEntity());
+
     /// <inheritdoc />
     public async Task AddPrintingProjectAsync(PrintingProject project)
     {
@@ -173,5 +189,8 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
         await _db.PrintingProjects.AddAsync(project).ConfigureAwait(false);
         await _db.SaveChangesAsync().ConfigureAwait(false);
     }
+
+    // DTO-based overload
+    public Task AddPrintingProjectAsync(PrintingProjectDto projectDto) => AddPrintingProjectAsync(projectDto.ToEntity());
     #endregion
 }

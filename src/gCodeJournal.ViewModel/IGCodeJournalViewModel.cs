@@ -57,6 +57,49 @@ namespace gCodeJournal.ViewModel
         /// <returns>A task representing the asynchronous operation.</returns>
         Task AddPrintingProjectAsync(PrintingProject project);
 
+        // Add operations (DTO-based overloads)
+        /// <summary>
+        ///     Adds a new customer asynchronously using DTO.
+        /// </summary>
+        /// <param name="customerDto">The customer DTO to add.</param>
+        /// <returns>A task representing the asynchronous operation.</returns>
+        Task AddCustomerAsync(CustomerDto customerDto);
+
+        /// <summary>
+        ///     Adds a new filament asynchronously using DTO.
+        /// </summary>
+        /// <param name="filamentDto">The filament DTO to add.</param>
+        /// <returns>A task representing the asynchronous operation.</returns>
+        Task AddFilamentAsync(FilamentDto filamentDto);
+
+        /// <summary>
+        ///     Adds a new filament color asynchronously using DTO.
+        /// </summary>
+        /// <param name="filamentColourDto">The filament color DTO to add.</param>
+        /// <returns>A task representing the asynchronous operation.</returns>
+        Task AddFilamentColourAsync(FilamentColourDto filamentColourDto);
+
+        /// <summary>
+        ///     Adds a new filament type asynchronously using DTO.
+        /// </summary>
+        /// <param name="filamentTypeDto">The filament type DTO to add.</param>
+        /// <returns>A task representing the asynchronous operation.</returns>
+        Task AddFilamentTypeAsync(FilamentTypeDto filamentTypeDto);
+
+        /// <summary>
+        ///     Adds a new model design asynchronously using DTO.
+        /// </summary>
+        /// <param name="modelDesignDto">The model design DTO to add.</param>
+        /// <returns>A task representing the asynchronous operation.</returns>
+        Task AddModelDesignAsync(ModelDesignDto modelDesignDto);
+
+        /// <summary>
+        ///     Adds a new printing project asynchronously using DTO.
+        /// </summary>
+        /// <param name="projectDto">The printing project DTO to add.</param>
+        /// <returns>A task representing the asynchronous operation.</returns>
+        Task AddPrintingProjectAsync(PrintingProjectDto projectDto);
+
         // Retrieval operations (DTO-based)
         /// <summary>
         ///     Retrieves all customers asynchronously.
