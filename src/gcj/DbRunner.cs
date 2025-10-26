@@ -2,39 +2,40 @@ namespace gcj;
 
 #region Using Directives
 using Microsoft.Extensions.Logging;
+using gCodeJournal.ViewModel;
 #endregion
 
 public static partial class Program
 {
-    private static async Task LogCustomerDetailsAsync()
+    private static async Task LogCustomerDetailsAsync(IGCodeJournalViewModel vm, ILogger logger)
     {
         // Extract data from the database before writing to the console; this will log any warnings if we're logging sensitive data
-        var customers = await _context.GetAllCustomersAsync().ConfigureAwait(false);
-        _logger.LogInformation("Customers:");
+        var customers = await vm.GetAllCustomersAsync().ConfigureAwait(false);
+        logger.LogInformation("Customers:");
         foreach (var customer in customers)
         {
-            _logger.LogInformation(" {CustomerId}: {Customer}", customer.Id, customer.Name);
+            logger.LogInformation(" {CustomerId}: {Customer}", customer.Id, customer.Name);
         }
     }
 
-    private static async Task LogFilamentDetailsAsync()
+    private static async Task LogFilamentDetailsAsync(IGCodeJournalViewModel vm, ILogger logger)
     {
-        _logger.LogInformation("Filaments:");
-        var filaments = await _context.GetAllFilamentsAsync().ConfigureAwait(false);
+        logger.LogInformation("Filaments:");
+        var filaments = await vm.GetAllFilamentsAsync().ConfigureAwait(false);
         foreach (var filament in filaments)
         {
-            _logger.LogInformation(" {FilamentId}: {Filament}", filament.Id, filament);
+            logger.LogInformation(" {FilamentId}: {Filament}", filament.Id, filament);
         }
     }
 
-    private static async Task LogManufacturerDetailsAsync()
+    private static async Task LogManufacturerDetailsAsync(IGCodeJournalViewModel vm, ILogger logger)
     {
         // Get and log Manufacturers and Filaments
-        var manufacturers = await _context.GetAllManufacturersAsync().ConfigureAwait(false);
-        _logger.LogInformation("Manufacturers:");
+        var manufacturers = await vm.GetAllManufacturersAsync().ConfigureAwait(false);
+        logger.LogInformation("Manufacturers:");
         foreach (var manufacturer in manufacturers)
         {
-            _logger.LogInformation(" {ManufacturerId}: {Manufacturer}", manufacturer.Id, manufacturer);
+            logger.LogInformation(" {ManufacturerId}: {Manufacturer}", manufacturer.Id, manufacturer);
         }
     }
 }
