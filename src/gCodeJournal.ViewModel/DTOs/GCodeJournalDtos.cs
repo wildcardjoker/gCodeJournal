@@ -5,28 +5,60 @@ namespace gCodeJournal.ViewModel.DTOs
     /// </summary>
     /// <param name="Id">The unique identifier of the customer.</param>
     /// <param name="Name">The name of the customer.</param>
-    public record CustomerDto(int Id, string Name);
+    public record CustomerDto(int Id, string Name)
+    {
+        /// <summary>
+        ///     Returns the string representation of the customer.
+        /// </summary>
+        /// <returns>The name of the customer.</returns>
+        public override string ToString() => Name;
+    }
 
     /// <summary>
     ///     Represents a manufacturer with an ID and a name.
     /// </summary>
     /// <param name="Id">The unique identifier of the manufacturer.</param>
     /// <param name="Name">The name of the manufacturer.</param>
-    public record ManufacturerDto(int Id, string Name);
+    public record ManufacturerDto(int Id, string Name)
+    {
+        /// <summary>
+        ///     Returns a string representation of the manufacturer.
+        /// </summary>
+        /// <returns>The name of the manufacturer.</returns>
+        public override string ToString() => Name;
+    }
 
     /// <summary>
     ///     Represents a filament color with an ID and a description.
     /// </summary>
     /// <param name="Id">The unique identifier of the filament color.</param>
     /// <param name="Description">The description of the filament color.</param>
-    public record FilamentColourDto(int Id, string Description);
+    public record FilamentColourDto(int Id, string Description)
+    {
+        /// <summary>
+        ///     Returns a string representation of the filament color.
+        /// </summary>
+        /// <returns>
+        ///     The description of the filament color.
+        /// </returns>
+        public override string ToString() => Description;
+    }
 
     /// <summary>
     ///     Represents a filament type with an ID and a description.
     /// </summary>
     /// <param name="Id">The unique identifier of the filament type.</param>
     /// <param name="Description">The description of the filament type.</param>
-    public record FilamentTypeDto(int Id, string Description);
+    public record FilamentTypeDto(int Id, string Description)
+    {
+        /// <summary>
+        ///     Returns a string representation of the filament type.
+        /// </summary>
+        /// <returns>
+        ///     The description of the filament type.
+        /// </returns>
+        public override string ToString() => Description;
+    }
 
     /// <summary>
     ///     Represents a filament with various properties such as cost, product ID, reorder link, color, type, and
@@ -46,7 +78,16 @@ namespace gCodeJournal.ViewModel.DTOs
         string?           ReorderLink,
         FilamentColourDto FilamentColour,
         FilamentTypeDto   FilamentType,
-        ManufacturerDto   Manufacturer);
+        ManufacturerDto   Manufacturer)
+    {
+        /// <summary>
+        ///     Returns a string representation of the filament, including its manufacturer, type, and color.
+        /// </summary>
+        /// <returns>
+        ///     A string in the format: "{Manufacturer} {FilamentType} ({FilamentColour})".
+        /// </returns>
+        public override string ToString() => $"{Manufacturer} {FilamentType} ({FilamentColour})";
+    }
 
     /// <summary>
     ///     Represents a model design with properties such as description, length, summary, and URL.
@@ -56,7 +97,16 @@ namespace gCodeJournal.ViewModel.DTOs
     /// <param name="Length">The length of the model design.</param>
     /// <param name="Summary">A summary of the model design.</param>
     /// <param name="Url">The URL associated with the model design (optional).</param>
-    public record ModelDesignDto(int Id, string Description, decimal Length, string Summary, string? Url);
+    public record ModelDesignDto(int Id, string Description, decimal Length, string Summary, string? Url)
+    {
+        /// <summary>
+        ///     Returns a string representation of the model design.
+        /// </summary>
+        /// <returns>
+        ///     The description of the model design.
+        /// </returns>
+        public override string ToString() => Description;
+    }
 
     /// <summary>
     ///     Represents a printing project with various properties such as cost, submission and completion dates, customer,
@@ -76,5 +126,21 @@ namespace gCodeJournal.ViewModel.DTOs
         DateTime?         Completed,
         CustomerDto?      Customer,
         ModelDesignDto?   ModelDesign,
-        List<FilamentDto> Filaments);
+        List<FilamentDto> Filaments)
+    {
+        /// <summary>
+        ///     Returns a string representation of the printing project.
+        /// </summary>
+        /// <returns>
+        ///     A string that includes the model description, customer name, and a list of filaments used in the project.
+        ///     If the model or customer is not specified, placeholders ("&lt;no model&gt;" or "&lt;no customer&gt;") are used.
+        /// </returns>
+        public override string ToString()
+        {
+            var model     = ModelDesign?.Description ?? "<no model>";
+            var customer  = Customer?.Name           ?? "<no customer>";
+            var filaments = Filaments.OrderBy(f => f.Manufacturer).ThenBy(f1 => f1.FilamentType).ThenBy(f2 => f2.FilamentColour).ToList();
+            return $"{model} for {customer} {string.Join("/", filaments)}";
+        }
+    }
 }
