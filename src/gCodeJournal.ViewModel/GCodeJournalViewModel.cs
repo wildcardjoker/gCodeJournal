@@ -3,260 +3,194 @@
 #region Using Directives
 using Microsoft.EntityFrameworkCore;
 using Model;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using DTOs;
+using System.Linq;
+using Mapping;
 #endregion
 
 /// <inheritdoc />
-/// <summary>
-///     Represents the ViewModel for the GCodeJournal application. This class extends the
-///     <see cref="T:gCodeJournal.Model.GCodeJournalDbContext">GCodeJournalDbContext</see>
-///     to provide additional functionality for managing and querying database entities related to the application.
-/// </summary>
-public class GCodeJournalViewModel : GCodeJournalDbContext
+public class GCodeJournalViewModel : IGCodeJournalViewModel
 {
-    #region Constructors
-    /// <inheritdoc />
-    /// <summary>
-    ///     Initializes a new instance of the
-    ///     <see cref="T:gCodeJournal.ViewModel.GCodeJournalViewModel">GCodeJournalViewModel</see> class.
-    /// </summary>
-    public GCodeJournalViewModel() {}
+    #region Fields
+    private readonly GCodeJournalDbContext _db;
+    #endregion
 
-    /// <inheritdoc />
+    #region Constructors
     /// <summary>
     ///     Initializes a new instance of the
     ///     <see cref="T:gCodeJournal.ViewModel.GCodeJournalViewModel">GCodeJournalViewModel</see> class using the specified
     ///     database context
     ///     options.
     /// </summary>
-    /// <param name="options">The options to configure the database context.</param>
-    public GCodeJournalViewModel(DbContextOptions<GCodeJournalDbContext> options) : base(options) {}
+    /// <param name="db">The database context to be used by the ViewModel.</param>
+    /// <exception cref="System.ArgumentNullException">
+    ///     Thrown when the <paramref name="db" /> parameter is <see langword="null" />.
+    /// </exception>
+    public GCodeJournalViewModel(GCodeJournalDbContext db) => _db = db ?? throw new ArgumentNullException(nameof(db));
     #endregion
 
-    /// <summary>
-    ///     Asynchronously adds a new customer to the database.
-    /// </summary>
-    /// <param name="customer">
-    ///     The <see cref="T:gCodeJournal.Model.Customer">Customer</see> instance to add.
-    ///     This parameter must not be <see langword="null" />.
-    /// </param>
-    /// <exception cref="T:System.ArgumentNullException">
-    ///     Thrown when the <paramref name="customer" /> parameter is <see langword="null" />.
-    /// </exception>
-    /// <remarks>
-    ///     This method adds the specified customer to the <see cref="P:gCodeJournal.Model.GCodeJournalDbContext.Customers" />
-    ///     collection and persists the changes to the database.
-    /// </remarks>
-    /// <returns>
-    ///     A <see cref="T:System.Threading.Tasks.Task" /> that represents the asynchronous operation.
-    /// </returns>
-    public async Task AddCustomerAsync(Customer customer)
-    {
-        ArgumentNullException.ThrowIfNull(customer);
-        await Customers.AddAsync(customer).ConfigureAwait(false);
-        await SaveChangesAsync().ConfigureAwait(false);
-    }
-
-    /// <summary>
-    ///     Adds a new filament to the database.
-    /// </summary>
-    /// <param name="filament">The filament entity to be added.</param>
-    /// <exception cref="ArgumentNullException">Thrown if the <paramref name="filament" /> is null.</exception>
+    #region IGCodeJournalViewModel Members
+    /// <inheritdoc />
     public async Task AddFilamentAsync(Filament filament)
     {
         ArgumentNullException.ThrowIfNull(filament);
-        await Filaments.AddAsync(filament).ConfigureAwait(false);
-        await SaveChangesAsync().ConfigureAwait(false);
+        await _db.Filaments.AddAsync(filament).ConfigureAwait(false);
+        await _db.SaveChangesAsync().ConfigureAwait(false);
     }
 
-    /// <summary>
-    ///     Adds a new filament colour to the database.
-    /// </summary>
-    /// <param name="filamentColour">The filament colour entity to be added.</param>
-    /// <exception cref="ArgumentNullException">
-    ///     Thrown if the <paramref name="filamentColour" /> is <c>null</c>.
-    /// </exception>
-    /// <remarks>
-    ///     This method ensures that the provided <see cref="FilamentColour" /> entity is added to the
-    ///     <see cref="GCodeJournalDbContext.FilamentColours" /> collection and persists the changes to the database.
-    /// </remarks>
+    // DTO-based overload
+    public Task AddFilamentAsync(FilamentDto filamentDto) => AddFilamentAsync(filamentDto.ToEntity());
+
+    /// <inheritdoc />
+    public Task<List<CustomerDto>> GetAllCustomersAsync()
+    {
+        return _db.Customers
+            .OrderBy(c => c.Name)
+            .Select(c => new CustomerDto(c.Id, c.Name))
+            .ToListAsync();
+    }
+
+    /// <inheritdoc />
+    public Task<List<FilamentDto>> GetAllFilamentsAsync()
+    {
+        return _db.Filaments
+            .Include(f => f.Colour)
+            .Include(f => f.Manufacturer)
+            .Include(f => f.Type)
+            .OrderBy(f => f.ManufacturerId)
+            .Select(f => new FilamentDto(
+                f.Id,
+                f.CostPerWeight,
+                f.ProductId,
+                f.ReorderLink,
+                new FilamentColourDto(f.Colour.Id, f.Colour.Description),
+                new FilamentTypeDto(f.Type.Id, f.Type.Description),
+                new ManufacturerDto(f.Manufacturer.Id, f.Manufacturer.Name)
+            ))
+            .ToListAsync();
+    }
+
+    /// <inheritdoc />
+    public Task<List<ManufacturerDto>> GetAllManufacturersAsync()
+    {
+        return _db.Manufacturers
+            .OrderBy(m => m.Name)
+            .Select(m => new ManufacturerDto(m.Id, m.Name))
+            .ToListAsync();
+    }
+
+    /// <inheritdoc />
+    public Task<List<FilamentColourDto>> GetAllFilamentColoursAsync()
+    {
+        return _db.FilamentColours
+            .OrderBy(fc => fc.Description)
+            .Select(fc => new FilamentColourDto(fc.Id, fc.Description))
+            .ToListAsync();
+    }
+
+    /// <inheritdoc />
+    public Task<List<FilamentTypeDto>> GetAllFilamentTypesAsync()
+    {
+        return _db.FilamentTypes
+            .OrderBy(ft => ft.Description)
+            .Select(ft => new FilamentTypeDto(ft.Id, ft.Description))
+            .ToListAsync();
+    }
+
+    /// <inheritdoc />
+    public Task<List<ModelDesignDto>> GetAllModelDesignsAsync()
+    {
+        return _db.ModelDesigns
+            .OrderBy(md => md.Description)
+            .Select(md => new ModelDesignDto(md.Id, md.Description, md.Length, md.Summary, md.Url))
+            .ToListAsync();
+    }
+
+    /// <inheritdoc />
+    public Task<List<PrintingProjectDto>> GetAllPrintingProjectsAsync()
+    {
+        return _db.PrintingProjects
+            .Include(p => p.Customer)
+            .Include(p => p.Model)
+            .Include(p => p.Filaments).ThenInclude(f => f.Manufacturer)
+            .Include(p => p.Filaments).ThenInclude(f => f.Colour)
+            .Include(p => p.Filaments).ThenInclude(f => f.Type)
+            .Select(p => new PrintingProjectDto(
+                p.Id,
+                p.Cost,
+                p.Submitted,
+                p.Completed,
+                p.Customer == null ? null : new CustomerDto(p.Customer.Id, p.Customer.Name),
+                p.Model == null ? null : new ModelDesignDto(p.Model.Id, p.Model.Description, p.Model.Length, p.Model.Summary, p.Model.Url),
+                p.Filaments.Select(f => new FilamentDto(
+                    f.Id,
+                    f.CostPerWeight,
+                    f.ProductId,
+                    f.ReorderLink,
+                    new FilamentColourDto(f.Colour.Id, f.Colour.Description),
+                    new FilamentTypeDto(f.Type.Id, f.Type.Description),
+                    new ManufacturerDto(f.Manufacturer.Id, f.Manufacturer.Name)
+                )).ToList()
+            ))
+            .ToListAsync();
+    }
+
+    // keep some legacy add methods on the ViewModel — they remain entity-based
+    /// <inheritdoc />
+    public async Task AddCustomerAsync(Customer customer)
+    {
+        ArgumentNullException.ThrowIfNull(customer);
+        await _db.Customers.AddAsync(customer).ConfigureAwait(false);
+        await _db.SaveChangesAsync().ConfigureAwait(false);
+    }
+
+    // DTO-based overload
+    public Task AddCustomerAsync(CustomerDto customerDto) => AddCustomerAsync(customerDto.ToEntity());
+
+    /// <inheritdoc />
     public async Task AddFilamentColourAsync(FilamentColour filamentColour)
     {
         ArgumentNullException.ThrowIfNull(filamentColour);
-        await FilamentColours.AddAsync(filamentColour).ConfigureAwait(false);
-        await SaveChangesAsync().ConfigureAwait(false);
+        await _db.FilamentColours.AddAsync(filamentColour).ConfigureAwait(false);
+        await _db.SaveChangesAsync().ConfigureAwait(false);
     }
 
-    /// <summary>
-    ///     Adds a new filament type to the database.
-    /// </summary>
-    /// <param name="filamentType">The filament type entity to be added.</param>
-    /// <exception cref="ArgumentNullException">Thrown if the <paramref name="filamentType" /> is null.</exception>
-    /// <remarks>
-    ///     This method ensures that the provided <see cref="T:gCodeJournal.Model.FilamentType" />
-    ///     is added to the <see cref="P:gCodeJournal.Model.GCodeJournalDbContext.FilamentTypes" /> collection
-    ///     and persists the changes to the database.
-    /// </remarks>
+    // DTO-based overload
+    public Task AddFilamentColourAsync(FilamentColourDto filamentColourDto) => AddFilamentColourAsync(filamentColourDto.ToEntity());
+
+    /// <inheritdoc />
     public async Task AddFilamentTypeAsync(FilamentType filamentType)
     {
         ArgumentNullException.ThrowIfNull(filamentType);
-        await FilamentTypes.AddAsync(filamentType).ConfigureAwait(false);
-        await SaveChangesAsync().ConfigureAwait(false);
+        await _db.FilamentTypes.AddAsync(filamentType).ConfigureAwait(false);
+        await _db.SaveChangesAsync().ConfigureAwait(false);
     }
 
-    /// <summary>
-    ///     Adds a new <see cref="T:gCodeJournal.Model.ModelDesign">ModelDesign</see> entity to the database.
-    /// </summary>
-    /// <param name="filamentColour">
-    ///     The <see cref="T:gCodeJournal.Model.ModelDesign">ModelDesign</see> instance to be added.
-    /// </param>
-    /// <exception cref="T:System.ArgumentNullException">
-    ///     Thrown when the <paramref name="filamentColour" /> parameter is <see langword="null" />.
-    /// </exception>
-    /// <remarks>
-    ///     This method asynchronously adds the provided <see cref="T:gCodeJournal.Model.ModelDesign">ModelDesign</see>
-    ///     to the <see cref="P:gCodeJournal.Model.GCodeJournalDbContext.ModelDesigns">ModelDesigns</see> DbSet
-    ///     and commits the changes to the database.
-    /// </remarks>
-    /// <returns>
-    ///     A <see cref="T:System.Threading.Tasks.Task">Task</see> that represents the asynchronous operation.
-    /// </returns>
-    public async Task AddModelDesignAsync(ModelDesign filamentColour)
+    // DTO-based overload
+    public Task AddFilamentTypeAsync(FilamentTypeDto filamentTypeDto) => AddFilamentTypeAsync(filamentTypeDto.ToEntity());
+
+    /// <inheritdoc />
+    public async Task AddModelDesignAsync(ModelDesign modelDesign)
     {
-        ArgumentNullException.ThrowIfNull(filamentColour);
-        await ModelDesigns.AddAsync(filamentColour).ConfigureAwait(false);
-        await SaveChangesAsync().ConfigureAwait(false);
+        ArgumentNullException.ThrowIfNull(modelDesign);
+        await _db.ModelDesigns.AddAsync(modelDesign).ConfigureAwait(false);
+        await _db.SaveChangesAsync().ConfigureAwait(false);
     }
 
-    /// <summary>
-    ///     Asynchronously adds a new printing project to the database.
-    /// </summary>
-    /// <param name="project">
-    ///     The <see cref="T:gCodeJournal.Model.PrintingProject" /> instance representing the printing project to be added.
-    /// </param>
-    /// <exception cref="ArgumentNullException">
-    ///     Thrown when the <paramref name="project" /> parameter is <c>null</c>.
-    /// </exception>
-    /// <remarks>
-    ///     This method adds the specified <see cref="T:gCodeJournal.Model.PrintingProject" /> to the database context and
-    ///     saves the changes.
-    /// </remarks>
-    /// <returns>
-    ///     A <see cref="T:System.Threading.Tasks.Task" /> representing the asynchronous operation.
-    /// </returns>
+    // DTO-based overload
+    public Task AddModelDesignAsync(ModelDesignDto modelDesignDto) => AddModelDesignAsync(modelDesignDto.ToEntity());
+
+    /// <inheritdoc />
     public async Task AddPrintingProjectAsync(PrintingProject project)
     {
         ArgumentNullException.ThrowIfNull(project);
-        await PrintingProjects.AddAsync(project).ConfigureAwait(false);
-        await SaveChangesAsync().ConfigureAwait(false);
+        await _db.PrintingProjects.AddAsync(project).ConfigureAwait(false);
+        await _db.SaveChangesAsync().ConfigureAwait(false);
     }
 
-    /// <summary>
-    ///     Retrieves a list of customers from the database, ordered by their names.
-    /// </summary>
-    /// <returns>
-    ///     A task that represents the asynchronous operation. The task result contains a list of
-    ///     <see cref="T:gCodeJournal.Model.Customer">Customer</see> entities, ordered by their names.
-    /// </returns>
-    /// <remarks>
-    ///     This method queries the <see cref="P:gCodeJournal.Model.GCodeJournalDbContext.Customers">Customers</see> DbSet
-    ///     and orders the results by the <see cref="P:gCodeJournal.Model.Customer.Name">Name</see> property.
-    /// </remarks>
-    public Task<List<Customer>> GetCustomersAsync()
-    {
-        return Customers.OrderBy(c => c.Name).ToListAsync();
-    }
-
-    /// <summary>
-    ///     Retrieves a list of filament colours from the database, ordered by their description.
-    /// </summary>
-    /// <returns>
-    ///     A task that represents the asynchronous operation. The task result contains a list of
-    ///     <see cref="T:gCodeJournal.Model.FilamentColour">FilamentColour</see> objects, ordered by their description.
-    /// </returns>
-    /// <remarks>
-    ///     This method queries the
-    ///     <see cref="P:gCodeJournal.Model.GCodeJournalDbContext.FilamentColours">FilamentColours</see>
-    ///     DbSet and returns the results as a list. The results are sorted alphabetically by the
-    ///     <see cref="P:gCodeJournal.Model.FilamentColour.Description">Description</see>.
-    /// </remarks>
-    public Task<List<FilamentColour>> GetFilamentColoursAsync()
-    {
-        return FilamentColours.OrderBy(fc => fc.Description).ToListAsync();
-    }
-
-    /// <summary>
-    ///     Retrieves a list of filaments from the database, ordered by manufacturer and color.
-    /// </summary>
-    /// <returns>
-    ///     A task representing the asynchronous operation. The task result contains a list of <see cref="Filament" />
-    ///     entities.
-    /// </returns>
-    public Task<List<Filament>> GetFilamentsAsync()
-    {
-        return Filaments.OrderBy(f => f.Manufacturer).ThenBy(c => c.Colour).ToListAsync();
-    }
-
-    /// <summary>
-    ///     Retrieves a list of all available filament types from the database, ordered by their description.
-    /// </summary>
-    /// <returns>
-    ///     A task that represents the asynchronous operation. The task result contains a list of
-    ///     <see cref="T:gCodeJournal.Model.FilamentType">FilamentType</see> objects.
-    /// </returns>
-    /// <remarks>
-    ///     This method queries the <see cref="P:gCodeJournal.Model.GCodeJournalDbContext.FilamentTypes">FilamentTypes</see>
-    ///     DbSet and orders the results by the <see cref="P:gCodeJournal.Model.FilamentType.Description">Description</see>
-    ///     property.
-    /// </remarks>
-    public Task<List<FilamentType>> GetFilamentTypesAsync()
-    {
-        return FilamentTypes.OrderBy(ft => ft.Description).ToListAsync();
-    }
-
-    /// <summary>
-    ///     Retrieves a list of manufacturers from the database, ordered by name.
-    /// </summary>
-    /// <returns>
-    ///     A task representing the asynchronous operation. The task result contains a list of <see cref="Manufacturer" />
-    ///     entities.
-    /// </returns>
-    public Task<List<Manufacturer>> GetManufacturersAsync()
-    {
-        return Manufacturers.OrderBy(m => m.Name).ToListAsync();
-    }
-
-    /// <summary>
-    ///     Retrieves a list of <see cref="T:gCodeJournal.Model.ModelDesign">ModelDesign</see> entities
-    ///     ordered by their description.
-    /// </summary>
-    /// <returns>
-    ///     A task that represents the asynchronous operation. The task result contains a list of
-    ///     <see cref="T:gCodeJournal.Model.ModelDesign">ModelDesign</see> objects.
-    /// </returns>
-    /// <remarks>
-    ///     This method queries the <see cref="P:gCodeJournal.Model.GCodeJournalDbContext.ModelDesigns">ModelDesigns</see>
-    ///     DbSet, orders the results by the <see cref="P:gCodeJournal.Model.ModelDesign.Description">Description</see>
-    ///     property, and returns the results as a list.
-    /// </remarks>
-    public Task<List<ModelDesign>> GetModelDesignsAsync()
-    {
-        return ModelDesigns.OrderBy(md => md.Description).ToListAsync();
-    }
-
-    /// <summary>
-    ///     Retrieves a list of <see cref="PrintingProject" /> entities from the database.
-    /// </summary>
-    /// <remarks>
-    ///     The resulting list is ordered by the description of the associated <see cref="ModelDesign" />,
-    ///     followed by the <see cref="Customer" /> who requested the project, and then by the associated
-    ///     <see cref="Filament" /> entities in ascending order.
-    /// </remarks>
-    /// <returns>
-    ///     A <see cref="Task{TResult}" /> representing the asynchronous operation. The task result contains
-    ///     a list of <see cref="PrintingProject" /> entities.
-    /// </returns>
-    public Task<List<PrintingProject>> GetPrintingProjectsAsync()
-    {
-        return PrintingProjects.OrderBy(pp => pp.Model.Description).ThenBy(c => c.Customer).ThenBy(f => f.Filaments.OrderBy(f1 => f1.ToString())).ToListAsync();
-    }
+    // DTO-based overload
+    public Task AddPrintingProjectAsync(PrintingProjectDto projectDto) => AddPrintingProjectAsync(projectDto.ToEntity());
+    #endregion
 }
