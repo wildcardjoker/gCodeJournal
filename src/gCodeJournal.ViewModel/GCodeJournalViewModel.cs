@@ -5,6 +5,7 @@ using DTOs;
 using Mapping;
 using Microsoft.EntityFrameworkCore;
 using Model;
+using System.ComponentModel.DataAnnotations;
 #endregion
 
 /// <inheritdoc />
@@ -39,9 +40,13 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
     }
 
     /// <inheritdoc />
-    public async Task AddCustomerAsync(CustomerDto customerDto)
+    public async Task<ValidationResult> AddCustomerAsync(CustomerDto customerDto)
     {
-        ValidateCustomerDto(customerDto);
+        var validation = ValidateCustomerDto(customerDto);
+        if (validation != ValidationResult.Success)
+        {
+            return validation;
+        }
 
         Customer? existing = null;
         if (customerDto.Id != 0)
@@ -53,11 +58,12 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
         existing ??= await _db.Customers.FirstOrDefaultAsync(c => c.Name.ToLower() == customerDto.Name.ToLower()).ConfigureAwait(false);
         if (existing != null)
         {
-            return; // already exists
+            return ValidationResult.Success; // already exists — treat as successful no-op
         }
 
         await _db.Customers.AddAsync(customerDto.ToEntity()).ConfigureAwait(false);
         await _db.SaveChangesAsync().ConfigureAwait(false);
+        return ValidationResult.Success;
     }
 
     /// <inheritdoc />
@@ -69,9 +75,13 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
     }
 
     /// <inheritdoc />
-    public async Task AddFilamentAsync(FilamentDto filamentDto)
+    public async Task<ValidationResult> AddFilamentAsync(FilamentDto filamentDto)
     {
-        ValidateFilamentDto(filamentDto);
+        var validation = ValidateFilamentDto(filamentDto);
+        if (validation != ValidationResult.Success)
+        {
+            return validation;
+        }
 
         // Build filament entity and attach existing related entities if present
         var filament = new Filament {CostPerWeight = filamentDto.CostPerWeight, ProductId = filamentDto.ProductId, ReorderLink = filamentDto.ReorderLink};
@@ -99,6 +109,7 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
 
         await _db.Filaments.AddAsync(filament).ConfigureAwait(false);
         await _db.SaveChangesAsync().ConfigureAwait(false);
+        return ValidationResult.Success;
     }
 
     /// <inheritdoc />
@@ -110,9 +121,13 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
     }
 
     /// <inheritdoc />
-    public async Task AddFilamentColourAsync(FilamentColourDto filamentColourDto)
+    public async Task<ValidationResult> AddFilamentColourAsync(FilamentColourDto filamentColourDto)
     {
-        ValidateFilamentColourDto(filamentColourDto);
+        var validation = ValidateFilamentColourDto(filamentColourDto);
+        if (validation != ValidationResult.Success)
+        {
+            return validation;
+        }
 
         FilamentColour? existing = null;
         if (filamentColourDto.Id != 0)
@@ -124,11 +139,12 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
         existing ??= await _db.FilamentColours.FirstOrDefaultAsync(fc => fc.Description.ToLower() == filamentColourDto.Description.ToLower()).ConfigureAwait(false);
         if (existing != null)
         {
-            return;
+            return ValidationResult.Success;
         }
 
         await _db.FilamentColours.AddAsync(filamentColourDto.ToEntity()).ConfigureAwait(false);
         await _db.SaveChangesAsync().ConfigureAwait(false);
+        return ValidationResult.Success;
     }
 
     /// <inheritdoc />
@@ -140,9 +156,13 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
     }
 
     /// <inheritdoc />
-    public async Task AddFilamentTypeAsync(FilamentTypeDto filamentTypeDto)
+    public async Task<ValidationResult> AddFilamentTypeAsync(FilamentTypeDto filamentTypeDto)
     {
-        ValidateFilamentTypeDto(filamentTypeDto);
+        var validation = ValidateFilamentTypeDto(filamentTypeDto);
+        if (validation != ValidationResult.Success)
+        {
+            return validation;
+        }
 
         FilamentType? existing = null;
         if (filamentTypeDto.Id != 0)
@@ -154,11 +174,12 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
         existing ??= await _db.FilamentTypes.FirstOrDefaultAsync(ft => ft.Description.ToLower() == filamentTypeDto.Description.ToLower()).ConfigureAwait(false);
         if (existing != null)
         {
-            return;
+            return ValidationResult.Success;
         }
 
         await _db.FilamentTypes.AddAsync(filamentTypeDto.ToEntity()).ConfigureAwait(false);
         await _db.SaveChangesAsync().ConfigureAwait(false);
+        return ValidationResult.Success;
     }
 
     /// <inheritdoc />
@@ -170,9 +191,13 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
     }
 
     /// <inheritdoc />
-    public async Task AddModelDesignAsync(ModelDesignDto modelDesignDto)
+    public async Task<ValidationResult> AddModelDesignAsync(ModelDesignDto modelDesignDto)
     {
-        ValidateModelDesignDto(modelDesignDto);
+        var validation = ValidateModelDesignDto(modelDesignDto);
+        if (validation != ValidationResult.Success)
+        {
+            return validation;
+        }
 
         ModelDesign? existing = null;
         if (modelDesignDto.Id != 0)
@@ -184,11 +209,12 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
         existing ??= await _db.ModelDesigns.FirstOrDefaultAsync(md => md.Description.ToLower() == modelDesignDto.Description.ToLower()).ConfigureAwait(false);
         if (existing != null)
         {
-            return;
+            return ValidationResult.Success;
         }
 
         await _db.ModelDesigns.AddAsync(modelDesignDto.ToEntity()).ConfigureAwait(false);
         await _db.SaveChangesAsync().ConfigureAwait(false);
+        return ValidationResult.Success;
     }
 
     /// <inheritdoc />
@@ -200,9 +226,13 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
     }
 
     /// <inheritdoc />
-    public async Task AddPrintingProjectAsync(PrintingProjectDto projectDto)
+    public async Task<ValidationResult> AddPrintingProjectAsync(PrintingProjectDto projectDto)
     {
-        ValidatePrintingProjectDto(projectDto);
+        var validation = ValidatePrintingProjectDto(projectDto);
+        if (validation != ValidationResult.Success)
+        {
+            return validation;
+        }
 
         // Resolve or create Customer
         Customer? customer = null;
@@ -292,6 +322,7 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
 
         await _db.PrintingProjects.AddAsync(project).ConfigureAwait(false);
         await _db.SaveChangesAsync().ConfigureAwait(false);
+        return ValidationResult.Success;
     }
 
     /// <inheritdoc />
@@ -374,88 +405,136 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
     #endregion
 
     #region Validation helpers
-    private static void ValidateCustomerDto(CustomerDto dto)
+    private static ValidationResult ValidateCustomerDto(CustomerDto dto)
     {
-        ArgumentNullException.ThrowIfNull(dto);
+        if (dto is null)
+        {
+            return new ValidationResult("Customer DTO is required");
+        }
+
         if (string.IsNullOrWhiteSpace(dto.Name))
         {
-            throw new ArgumentException("Customer name is required", nameof(dto));
+            return new ValidationResult("Customer name is required", new[] { nameof(dto.Name) });
         }
+
+        return ValidationResult.Success!;
     }
 
-    private static void ValidateFilamentColourDto(FilamentColourDto dto)
+    private static ValidationResult ValidateFilamentColourDto(FilamentColourDto dto)
     {
-        ArgumentNullException.ThrowIfNull(dto);
+        if (dto is null)
+        {
+            return new ValidationResult("Filament colour DTO is required");
+        }
+
         if (string.IsNullOrWhiteSpace(dto.Description))
         {
-            throw new ArgumentException("Filament colour description is required", nameof(dto));
+            return new ValidationResult("Filament colour description is required", new[] { nameof(dto.Description) });
         }
+
+        return ValidationResult.Success!;
     }
 
-    private static void ValidateFilamentTypeDto(FilamentTypeDto dto)
+    private static ValidationResult ValidateFilamentTypeDto(FilamentTypeDto dto)
     {
-        ArgumentNullException.ThrowIfNull(dto);
+        if (dto is null)
+        {
+            return new ValidationResult("Filament type DTO is required");
+        }
+
         if (string.IsNullOrWhiteSpace(dto.Description))
         {
-            throw new ArgumentException("Filament type description is required", nameof(dto));
+            return new ValidationResult("Filament type description is required", new[] { nameof(dto.Description) });
         }
+
+        return ValidationResult.Success!;
     }
 
-    private static void ValidateModelDesignDto(ModelDesignDto dto)
+    private static ValidationResult ValidateModelDesignDto(ModelDesignDto dto)
     {
-        ArgumentNullException.ThrowIfNull(dto);
+        if (dto is null)
+        {
+            return new ValidationResult("ModelDesign DTO is required");
+        }
+
         if (string.IsNullOrWhiteSpace(dto.Description))
         {
-            throw new ArgumentException("ModelDesign description is required", nameof(dto));
+            return new ValidationResult("ModelDesign description is required", new[] { nameof(dto.Description) });
         }
 
         if (dto.Length < 0)
         {
-            throw new ArgumentException("ModelDesign length must be non-negative", nameof(dto));
+            return new ValidationResult("ModelDesign length must be non-negative", new[] { nameof(dto.Length) });
         }
+
+        return ValidationResult.Success!;
     }
 
-    private static void ValidateFilamentDto(FilamentDto dto)
+    private static ValidationResult ValidateFilamentDto(FilamentDto dto)
     {
-        ArgumentNullException.ThrowIfNull(dto);
+        if (dto is null)
+        {
+            return new ValidationResult("Filament DTO is required");
+        }
+
+        var errors = new List<ValidationResult>();
         if (dto.CostPerWeight < 0)
         {
-            throw new ArgumentException("Filament cost must be non-negative", nameof(dto));
+            errors.Add(new ValidationResult("Filament cost must be non-negative", new[] { nameof(dto.CostPerWeight) }));
         }
 
         if (dto.Manufacturer is null)
         {
-            throw new ArgumentException("Filament manufacturer is required", nameof(dto));
+            errors.Add(new ValidationResult("Filament manufacturer is required", new[] { nameof(dto.Manufacturer) }));
         }
 
         if (dto.FilamentColour is null)
         {
-            throw new ArgumentException("Filament colour is required", nameof(dto));
+            errors.Add(new ValidationResult("Filament colour is required", new[] { nameof(dto.FilamentColour) }));
         }
 
         if (dto.FilamentType is null)
         {
-            throw new ArgumentException("Filament type is required", nameof(dto));
+            errors.Add(new ValidationResult("Filament type is required", new[] { nameof(dto.FilamentType) }));
         }
+
+        if (errors.Count > 0)
+        {
+            return new ValidationResult(string.Join("; ", errors.Select(e => e.ErrorMessage)));
+        }
+
+        return ValidationResult.Success!;
     }
 
-    private static void ValidatePrintingProjectDto(PrintingProjectDto dto)
+    private static ValidationResult ValidatePrintingProjectDto(PrintingProjectDto dto)
     {
-        ArgumentNullException.ThrowIfNull(dto);
+        if (dto is null)
+        {
+            return new ValidationResult("PrintingProject DTO is required");
+        }
+
+        var errors = new List<ValidationResult>();
         if (dto.Cost < 0)
         {
-            throw new ArgumentException("Printing project cost must be non-negative", nameof(dto));
+            errors.Add(new ValidationResult("Printing project cost must be non-negative", new[] { nameof(dto.Cost) }));
         }
 
         if (dto.Customer is null)
         {
-            throw new ArgumentException("Printing project must have a customer", nameof(dto));
+            errors.Add(new ValidationResult("Printing project must have a customer", new[] { nameof(dto.Customer) }));
         }
 
         if (dto.ModelDesign is null)
         {
-            throw new ArgumentException("Printing project must have a model design", nameof(dto));
+            errors.Add(new ValidationResult("Printing project must have a model design", new[] { nameof(dto.ModelDesign) }));
         }
+
+        if (errors.Count > 0)
+        {
+            return new ValidationResult(string.Join("; ", errors.Select(e => e.ErrorMessage)));
+        }
+
+        return ValidationResult.Success!;
     }
     #endregion
 
