@@ -49,7 +49,8 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
             existing = await _db.Customers.FindAsync(customerDto.Id).ConfigureAwait(false);
         }
 
-        existing ??= await _db.Customers.FirstOrDefaultAsync(c => c.Name == customerDto.Name).ConfigureAwait(false);
+        // perform case-insensitive lookup
+        existing ??= await _db.Customers.FirstOrDefaultAsync(c => c.Name.ToLower() == customerDto.Name.ToLower()).ConfigureAwait(false);
         if (existing != null)
         {
             return; // already exists
@@ -119,7 +120,8 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
             existing = await _db.FilamentColours.FindAsync(filamentColourDto.Id).ConfigureAwait(false);
         }
 
-        existing ??= await _db.FilamentColours.FirstOrDefaultAsync(fc => fc.Description == filamentColourDto.Description).ConfigureAwait(false);
+        // case-insensitive lookup
+        existing ??= await _db.FilamentColours.FirstOrDefaultAsync(fc => fc.Description.ToLower() == filamentColourDto.Description.ToLower()).ConfigureAwait(false);
         if (existing != null)
         {
             return;
@@ -148,7 +150,8 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
             existing = await _db.FilamentTypes.FindAsync(filamentTypeDto.Id).ConfigureAwait(false);
         }
 
-        existing ??= await _db.FilamentTypes.FirstOrDefaultAsync(ft => ft.Description == filamentTypeDto.Description).ConfigureAwait(false);
+        // case-insensitive lookup
+        existing ??= await _db.FilamentTypes.FirstOrDefaultAsync(ft => ft.Description.ToLower() == filamentTypeDto.Description.ToLower()).ConfigureAwait(false);
         if (existing != null)
         {
             return;
@@ -177,7 +180,8 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
             existing = await _db.ModelDesigns.FindAsync(modelDesignDto.Id).ConfigureAwait(false);
         }
 
-        existing ??= await _db.ModelDesigns.FirstOrDefaultAsync(md => md.Description == modelDesignDto.Description).ConfigureAwait(false);
+        // case-insensitive lookup
+        existing ??= await _db.ModelDesigns.FirstOrDefaultAsync(md => md.Description.ToLower() == modelDesignDto.Description.ToLower()).ConfigureAwait(false);
         if (existing != null)
         {
             return;
@@ -209,7 +213,8 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
                 customer = await _db.Customers.FindAsync(projectDto.Customer.Id).ConfigureAwait(false);
             }
 
-            customer ??= await _db.Customers.FirstOrDefaultAsync(c => c.Name == projectDto.Customer.Name).ConfigureAwait(false);
+            // case-insensitive lookup
+            customer ??= await _db.Customers.FirstOrDefaultAsync(c => c.Name.ToLower() == projectDto.Customer.Name.ToLower()).ConfigureAwait(false);
             if (customer == null)
             {
                 customer = projectDto.Customer.ToEntity();
@@ -226,7 +231,8 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
                 model = await _db.ModelDesigns.FindAsync(projectDto.ModelDesign.Id).ConfigureAwait(false);
             }
 
-            model ??= await _db.ModelDesigns.FirstOrDefaultAsync(md => md.Description == projectDto.ModelDesign.Description).ConfigureAwait(false);
+            // case-insensitive lookup
+            model ??= await _db.ModelDesigns.FirstOrDefaultAsync(md => md.Description.ToLower() == projectDto.ModelDesign.Description.ToLower()).ConfigureAwait(false);
             if (model == null)
             {
                 model = projectDto.ModelDesign.ToEntity();
@@ -463,7 +469,8 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
             existing = await _db.Manufacturers.FindAsync(dto.Id).ConfigureAwait(false);
         }
 
-        existing ??= await _db.Manufacturers.FirstOrDefaultAsync(m => m.Name == dto.Name).ConfigureAwait(false);
+        // case-insensitive lookup
+        existing ??= await _db.Manufacturers.FirstOrDefaultAsync(m => m.Name.ToLower() == dto.Name.ToLower()).ConfigureAwait(false);
         if (existing != null)
         {
             return existing;
@@ -485,7 +492,8 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
             existing = await _db.FilamentColours.FindAsync(dto.Id).ConfigureAwait(false);
         }
 
-        existing ??= await _db.FilamentColours.FirstOrDefaultAsync(fc => fc.Description == dto.Description).ConfigureAwait(false);
+        // case-insensitive lookup
+        existing ??= await _db.FilamentColours.FirstOrDefaultAsync(fc => fc.Description.ToLower() == dto.Description.ToLower()).ConfigureAwait(false);
         if (existing != null)
         {
             return existing;
@@ -505,7 +513,8 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
             existing = await _db.FilamentTypes.FindAsync(dto.Id).ConfigureAwait(false);
         }
 
-        existing ??= await _db.FilamentTypes.FirstOrDefaultAsync(ft => ft.Description == dto.Description).ConfigureAwait(false);
+        // case-insensitive lookup
+        existing ??= await _db.FilamentTypes.FirstOrDefaultAsync(ft => ft.Description.ToLower() == dto.Description.ToLower()).ConfigureAwait(false);
         if (existing != null)
         {
             return existing;
