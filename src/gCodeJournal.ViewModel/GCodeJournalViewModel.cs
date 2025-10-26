@@ -3,6 +3,10 @@
 #region Using Directives
 using Microsoft.EntityFrameworkCore;
 using Model;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using DTOs;
+using System.Linq;
 #endregion
 
 /// <inheritdoc />
@@ -28,18 +32,113 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
 
     #region IGCodeJournalViewModel Members
     /// <inheritdoc />
-    public async Task AddCustomerAsync(Customer customer)
-    {
-        ArgumentNullException.ThrowIfNull(customer);
-        await _db.Customers.AddAsync(customer).ConfigureAwait(false);
-        await _db.SaveChangesAsync().ConfigureAwait(false);
-    }
-
-    /// <inheritdoc />
     public async Task AddFilamentAsync(Filament filament)
     {
         ArgumentNullException.ThrowIfNull(filament);
         await _db.Filaments.AddAsync(filament).ConfigureAwait(false);
+        await _db.SaveChangesAsync().ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public Task<List<CustomerDto>> GetAllCustomersAsync()
+    {
+        return _db.Customers
+            .OrderBy(c => c.Name)
+            .Select(c => new CustomerDto(c.Id, c.Name))
+            .ToListAsync();
+    }
+
+    /// <inheritdoc />
+    public Task<List<FilamentDto>> GetAllFilamentsAsync()
+    {
+        return _db.Filaments
+            .Include(f => f.Colour)
+            .Include(f => f.Manufacturer)
+            .Include(f => f.Type)
+            .OrderBy(f => f.ManufacturerId)
+            .Select(f => new FilamentDto(
+                f.Id,
+                f.CostPerWeight,
+                f.ProductId,
+                f.ReorderLink,
+                new FilamentColourDto(f.Colour.Id, f.Colour.Description),
+                new FilamentTypeDto(f.Type.Id, f.Type.Description),
+                new ManufacturerDto(f.Manufacturer.Id, f.Manufacturer.Name)
+            ))
+            .ToListAsync();
+    }
+
+    /// <inheritdoc />
+    public Task<List<ManufacturerDto>> GetAllManufacturersAsync()
+    {
+        return _db.Manufacturers
+            .OrderBy(m => m.Name)
+            .Select(m => new ManufacturerDto(m.Id, m.Name))
+            .ToListAsync();
+    }
+
+    /// <inheritdoc />
+    public Task<List<FilamentColourDto>> GetAllFilamentColoursAsync()
+    {
+        return _db.FilamentColours
+            .OrderBy(fc => fc.Description)
+            .Select(fc => new FilamentColourDto(fc.Id, fc.Description))
+            .ToListAsync();
+    }
+
+    /// <inheritdoc />
+    public Task<List<FilamentTypeDto>> GetAllFilamentTypesAsync()
+    {
+        return _db.FilamentTypes
+            .OrderBy(ft => ft.Description)
+            .Select(ft => new FilamentTypeDto(ft.Id, ft.Description))
+            .ToListAsync();
+    }
+
+    /// <inheritdoc />
+    public Task<List<ModelDesignDto>> GetAllModelDesignsAsync()
+    {
+        return _db.ModelDesigns
+            .OrderBy(md => md.Description)
+            .Select(md => new ModelDesignDto(md.Id, md.Description, md.Length, md.Summary, md.Url))
+            .ToListAsync();
+    }
+
+    /// <inheritdoc />
+    public Task<List<PrintingProjectDto>> GetAllPrintingProjectsAsync()
+    {
+        return _db.PrintingProjects
+            .Include(p => p.Customer)
+            .Include(p => p.Model)
+            .Include(p => p.Filaments).ThenInclude(f => f.Manufacturer)
+            .Include(p => p.Filaments).ThenInclude(f => f.Colour)
+            .Include(p => p.Filaments).ThenInclude(f => f.Type)
+            .Select(p => new PrintingProjectDto(
+                p.Id,
+                p.Cost,
+                p.Submitted,
+                p.Completed,
+                p.Customer == null ? null : new CustomerDto(p.Customer.Id, p.Customer.Name),
+                p.Model == null ? null : new ModelDesignDto(p.Model.Id, p.Model.Description, p.Model.Length, p.Model.Summary, p.Model.Url),
+                p.Filaments.Select(f => new FilamentDto(
+                    f.Id,
+                    f.CostPerWeight,
+                    f.ProductId,
+                    f.ReorderLink,
+                    new FilamentColourDto(f.Colour.Id, f.Colour.Description),
+                    new FilamentTypeDto(f.Type.Id, f.Type.Description),
+                    new ManufacturerDto(f.Manufacturer.Id, f.Manufacturer.Name)
+                )).ToList()
+            ))
+            .ToListAsync();
+    }
+
+    // keep some legacy add methods on the ViewModel — they remain entity-based
+    /// <inheritdoc />
+    public async Task AddCustomerAsync(Customer customer)
+    {
+        ArgumentNullException.ThrowIfNull(customer);
+        await _db.Customers.AddAsync(customer).ConfigureAwait(false);
         await _db.SaveChangesAsync().ConfigureAwait(false);
     }
 
@@ -74,29 +173,5 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
         await _db.PrintingProjects.AddAsync(project).ConfigureAwait(false);
         await _db.SaveChangesAsync().ConfigureAwait(false);
     }
-
-    /// <inheritdoc />
-    public Task<List<Customer>> GetAllCustomersAsync() => _db.Customers.OrderBy(c => c.Name).ToListAsync();
-
-    /// <inheritdoc />
-    public Task<List<FilamentColour>> GetAllFilamentColoursAsync() => _db.FilamentColours.OrderBy(fc => fc.Description).ToListAsync();
-
-    /// <inheritdoc />
-    public Task<List<Filament>> GetAllFilamentsAsync() => _db.Filaments.OrderBy(f => f.Manufacturer).ThenBy(c => c.Colour).ToListAsync();
-
-    /// <inheritdoc />
-    public Task<List<FilamentType>> GetAllFilamentTypesAsync() => _db.FilamentTypes.OrderBy(ft => ft.Description).ToListAsync();
-
-    /// <inheritdoc />
-    public Task<List<Manufacturer>> GetAllManufacturersAsync() => _db.Manufacturers.OrderBy(m => m.Name).ToListAsync();
-
-    /// <inheritdoc />
-    public Task<List<ModelDesign>> GetAllModelDesignsAsync() => _db.ModelDesigns.OrderBy(md => md.Description).ToListAsync();
-
-    /// <inheritdoc />
-    public Task<List<PrintingProject>> GetAllPrintingProjectsAsync() => _db.PrintingProjects.OrderBy(pp => pp.Model.Description)
-                                                                           .ThenBy(c => c.Customer)
-                                                                           .ThenBy(f => f.Filaments.OrderBy(f1 => f1))
-                                                                           .ToListAsync();
     #endregion
 }
