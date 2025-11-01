@@ -1,8 +1,4 @@
-﻿#region Using Directives
-using ILogger = Microsoft.Extensions.Logging.ILogger;
-#endregion
-
-namespace gcj;
+﻿namespace gcj;
 
 #region Using Directives
 using gCodeJournal.Model;
@@ -12,7 +8,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Serilog;
-using ILogger = ILogger;
 #endregion
 
 /// <summary>
@@ -25,11 +20,6 @@ using ILogger = ILogger;
 /// </remarks>
 public static partial class Program
 {
-    #region Fields
-    private static IGCodeJournalViewModel _context = null!;
-    private static ILogger                _logger  = null!;
-    #endregion
-
     /// <summary>
     ///     The entry point of the application.
     /// </summary>
