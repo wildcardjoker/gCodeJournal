@@ -11,11 +11,11 @@
     {
         #region Constants
         private const string MainMenuLevel = "Main Menu";
+        private const string MenuCustomers = "Customers";
+        private const string MenuExit      = "Exit";
 
         // Main menu item constants
-        private const string MenuColours           = "Colours";
-        private const string MenuCustomers         = "Customers";
-        private const string MenuExit              = "Exit";
+        private const string MenuFilamentColours   = "Filament Colours";
         private const string MenuFilaments         = "Filaments";
         private const string MenuManufacturers     = "Manufacturers";
         private const string MenuModelDesigns      = "Model Designs";
@@ -32,7 +32,7 @@
         [
             MenuCustomers,
             MenuManufacturers,
-            MenuColours,
+            MenuFilamentColours,
             MenuFilaments,
             MenuModelDesigns,
             MenuPrintingProjects,
