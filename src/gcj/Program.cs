@@ -83,6 +83,7 @@ public static partial class Program
 
         // Setup DI
         var services = new ServiceCollection();
+
         // Register Serilog as the logging provider and clear default providers to avoid duplicate output
         services.AddLogging(b => b.ClearProviders().AddSerilog(Log.Logger));
         services.AddDbContext<GCodeJournalDbContext>(opts => opts.UseLazyLoadingProxies()
@@ -96,10 +97,12 @@ public static partial class Program
         // Create an application logger from the provider
         var loggerFactoryFromDI = provider.GetRequiredService<ILoggerFactory>();
         var appLogger           = loggerFactoryFromDI.CreateLogger("gcj");
-
+        appLogger.LogTrace($"{ThisAssembly.AssemblyTitle} {ThisAssembly.AssemblyInformationalVersion} ({ThisAssembly.AssemblyConfiguration}) started");
         $"Using DB path: {dbPath}".DisplayInfoMessage();
         appLogger.LogTrace("Using DB Path {DBPath}", dbPath);
 
+        await DisplayMenuAsync(provider, appLogger).ConfigureAwait(false);
+        appLogger.LogTrace("Run finished");
         // Execute each logging operation inside its own scope so DbContext is disposed after use
         using (var scope = provider.CreateScope())
         {
