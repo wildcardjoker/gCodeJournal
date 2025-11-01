@@ -1,8 +1,9 @@
 namespace gcj;
 
 #region Using Directives
-using Microsoft.Extensions.Logging;
 using gCodeJournal.ViewModel;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 #endregion
 
 public static partial class Program
@@ -37,5 +38,15 @@ public static partial class Program
         {
             logger.LogInformation(" {ManufacturerId}: {Manufacturer}", manufacturer.Id, manufacturer);
         }
+    }
+
+    private static async Task ProcessDatabaseActionAsync(string section, string action, ServiceProvider provider, ILogger appLogger)
+    {
+        using var scope = provider.CreateScope();
+        var       vm    = scope.ServiceProvider.GetRequiredService<IGCodeJournalViewModel>();
+
+        // Process based on section and action
+        // For now, we'll just log some details as a demonstration
+        await LogFilamentDetailsAsync(vm, appLogger).ConfigureAwait(false);
     }
 }

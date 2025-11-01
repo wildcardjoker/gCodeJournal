@@ -3,6 +3,7 @@
     #region Using Directives
     using Humanizer;
     using Microsoft.Extensions.DependencyInjection;
+    using Microsoft.Extensions.Logging;
     using Spectre.Console;
     #endregion
 
@@ -48,14 +49,14 @@
         ];
         #endregion
 
-        private static async Task DisplayMenuAsync(ServiceProvider provider)
+        private static async Task DisplayMenuAsync(ServiceProvider provider, ILogger appLogger)
         {
             var subMenuSelection = await GetMenuSelectionAsync(MainMenuLevel, MainMenu).ConfigureAwait(false);
             while (!subMenuSelection.Equals(MenuExit))
             {
                 while (!subMenuSelection.Equals(SubMenuBackToMain))
                 {
-                    subMenuSelection = await GetSubMenuSelectionAsync(subMenuSelection).ConfigureAwait(false);
+                    subMenuSelection = await GetSubMenuSelectionAsync(subMenuSelection, provider, appLogger).ConfigureAwait(false);
                 }
 
                 subMenuSelection = await GetMenuSelectionAsync(MainMenuLevel, MainMenu).ConfigureAwait(false);
@@ -77,13 +78,16 @@
                           .ToArray();
         }
 
-        private static async Task<string> GetSubMenuSelectionAsync(string section)
+        private static async Task<string> GetSubMenuSelectionAsync(string section, ServiceProvider provider, ILogger appLogger)
         {
             var response = await GetMenuSelectionAsync(section, GetMenuWithSection(section, SubMenu)).ConfigureAwait(false);
             while (!response.Equals(SubMenuBackToMain))
             {
-                $"You've selected {response}".DisplayInfoMessage();
                 response = await GetMenuSelectionAsync(section, GetMenuWithSection(section, SubMenu)).ConfigureAwait(false);
+                if (!response.Equals(SubMenuBackToMain))
+                {
+                    await ProcessDatabaseActionAsync(section, response, provider, appLogger).ConfigureAwait(false);
+                }
             }
 
             return response;
