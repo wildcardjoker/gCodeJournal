@@ -78,14 +78,13 @@ public static partial class Program
         var optionsBuilder = ConfigureDbContextOptions(dbPath, loggerFactory);
 
 #if DEBUG
-
         optionsBuilder.EnableSensitiveDataLogging(); // shows parameter values in DEBUG mode
 #endif
 
         // Setup DI
         var services = new ServiceCollection();
-        services.AddSingleton(loggerFactory);
-        services.AddLogging(b => b.AddSerilog(Log.Logger));
+        // Register Serilog as the logging provider and clear default providers to avoid duplicate output
+        services.AddLogging(b => b.ClearProviders().AddSerilog(Log.Logger));
         services.AddDbContext<GCodeJournalDbContext>(opts => opts.UseLazyLoadingProxies()
                                                                  .UseSqlite($"Data Source={dbPath}")
                                                                  .EnableDetailedErrors()
