@@ -22,6 +22,16 @@ public static partial class Program
         }
     }
 
+    private static async Task LogFilamentColourDetailsAsync(IGCodeJournalViewModel vm, ILogger logger)
+    {
+        logger.LogInformation("Filament Colours:");
+        var colours = await vm.GetAllFilamentColoursAsync().ConfigureAwait(false);
+        foreach (var colour in colours)
+        {
+            logger.LogInformation(" {FilamentColourId}: {FilamentColour}", colour.Id, colour);
+        }
+    }
+
     private static async Task LogFilamentDetailsAsync(IGCodeJournalViewModel vm, ILogger logger)
     {
         logger.LogInformation("Filaments:");
@@ -29,6 +39,16 @@ public static partial class Program
         foreach (var filament in filaments)
         {
             logger.LogInformation(" {FilamentId}: {Filament}", filament.Id, filament);
+        }
+    }
+
+    private static async Task LogFilamentTypeDetailsAsync(IGCodeJournalViewModel vm, ILogger logger)
+    {
+        logger.LogInformation("Filament Types:");
+        var types = await vm.GetAllFilamentTypesAsync().ConfigureAwait(false);
+        foreach (var type in types)
+        {
+            logger.LogInformation(" {FilamentTypeId}: {FilamentType}", type.Id, type);
         }
     }
 
@@ -43,7 +63,27 @@ public static partial class Program
         }
     }
 
-    private static async Task ProcessDatabaseActionAsync(string section, string action, ServiceProvider provider, ILogger appLogger)
+    private static async Task LogModelDesignDetailsAsync(IGCodeJournalViewModel vm, ILogger logger)
+    {
+        logger.LogInformation("Model Designs:");
+        var models = await vm.GetAllModelDesignsAsync().ConfigureAwait(false);
+        foreach (var model in models)
+        {
+            logger.LogInformation(" {ModelDesignId}: {ModelDesign}", model.Id, model);
+        }
+    }
+
+    private static async Task LogPrintingProjectDetailsAsync(IGCodeJournalViewModel vm, ILogger logger)
+    {
+        logger.LogInformation("Printing Projects:");
+        var projects = await vm.GetAllPrintingProjectsAsync().ConfigureAwait(false);
+        foreach (var project in projects)
+        {
+            logger.LogInformation(" {PrintingProjectId}: {PrintingProject}", project.Id, project);
+        }
+    }
+
+    private static async Task ProcessDatabaseActionAsync(string commandRequested, ServiceProvider provider, ILogger appLogger)
     {
         using var scope = provider.CreateScope();
         var       vm    = scope.ServiceProvider.GetRequiredService<IGCodeJournalViewModel>();
@@ -51,39 +91,77 @@ public static partial class Program
         // The action coming from the menu will typically look like:
         //   "List All Customers" or "Add New Customer" etc.
         // We want to split that into the SubMenu part ("List All", "Add New", ...) and the remaining part ("Customers", "Customer"...).
-        var (firstPart, remainder) = SplitActionIntoSubmenuAndRemainder(action);
+        var (firstPart, remainder) = SplitActionIntoSubmenuAndRemainder(commandRequested);
 
         // Normalize values for decision-making
-        var subMenuKey = firstPart ?? string.Empty;
-        var target     = remainder ?? string.Empty;
+        var action = firstPart ?? string.Empty;
+        var target = remainder ?? string.Empty;
 
         // Log the split:
-        appLogger.LogDebug("Action split: Action='{SubMenu}', Target='{Target}'", subMenuKey, target);
+        appLogger.LogDebug("Action split: Action='{SubMenu}', Target='{Target}'", action, target);
 
         // Now branch on the submenu key and/or section/target as required
-        switch (subMenuKey.ToLowerInvariant())
+        switch (action.ToLowerInvariant())
         {
             case var s when s.Equals(SubMenuListAll, StringComparison.OrdinalIgnoreCase):
                 // list action -- you can use the 'section' or the 'target' to decide which list to call
-                if (section.Equals("Customers", StringComparison.OrdinalIgnoreCase) || target.Equals("Customers", StringComparison.OrdinalIgnoreCase))
+                if (action.Equals("customers", StringComparison.OrdinalIgnoreCase) || target.Equals("customers", StringComparison.OrdinalIgnoreCase))
                 {
                     await LogCustomerDetailsAsync(vm, appLogger).ConfigureAwait(false);
                     return;
                 }
 
-                if (section.Equals("Manufacturers", StringComparison.OrdinalIgnoreCase) || target.Equals("Manufacturers", StringComparison.OrdinalIgnoreCase))
+                // Handle filament colours (allow "filamentcolours" and "filamentcolors")
+                if (action.Equals("filamentcolours", StringComparison.OrdinalIgnoreCase)
+                    || target.Equals("filamentcolours", StringComparison.OrdinalIgnoreCase)
+                    || action.Equals("filamentcolors", StringComparison.OrdinalIgnoreCase)
+                    || target.Equals("filamentcolors", StringComparison.OrdinalIgnoreCase))
                 {
-                    await LogManufacturerDetailsAsync(vm, appLogger).ConfigureAwait(false);
+                    await LogFilamentColourDetailsAsync(vm, appLogger).ConfigureAwait(false);
                     return;
                 }
 
-                if (section.Equals("Filaments", StringComparison.OrdinalIgnoreCase) || target.Equals("Filaments", StringComparison.OrdinalIgnoreCase))
+                if (action.Equals("filaments", StringComparison.OrdinalIgnoreCase) || target.Equals("filaments", StringComparison.OrdinalIgnoreCase))
                 {
                     await LogFilamentDetailsAsync(vm, appLogger).ConfigureAwait(false);
                     return;
                 }
 
-                // ... handle other list targets
+                // Handle filament types
+                if (action.Equals("filamenttypes", StringComparison.OrdinalIgnoreCase) || target.Equals("filamenttypes", StringComparison.OrdinalIgnoreCase))
+                {
+                    await LogFilamentTypeDetailsAsync(vm, appLogger).ConfigureAwait(false);
+                    return;
+                }
+
+                if (action.Equals("manufacturers", StringComparison.OrdinalIgnoreCase) || target.Equals("manufacturers", StringComparison.OrdinalIgnoreCase))
+                {
+                    await LogManufacturerDetailsAsync(vm, appLogger).ConfigureAwait(false);
+                    return;
+                }
+
+                // Handle model designs
+                if (action.Equals("modeldesigns", StringComparison.OrdinalIgnoreCase)
+                    || target.Equals("modeldesigns", StringComparison.OrdinalIgnoreCase)
+                    || target.Equals("modeldesign",  StringComparison.OrdinalIgnoreCase))
+                {
+                    await LogModelDesignDetailsAsync(vm, appLogger).ConfigureAwait(false);
+                    return;
+                }
+
+                // Handle printing projects (also allow "projects")
+                if (action.Equals("printingprojects", StringComparison.OrdinalIgnoreCase)
+                    || target.Equals("printingprojects", StringComparison.OrdinalIgnoreCase)
+                    || action.Equals("projects", StringComparison.OrdinalIgnoreCase)
+                    || target.Equals("projects", StringComparison.OrdinalIgnoreCase))
+                {
+                    await LogPrintingProjectDetailsAsync(vm, appLogger).ConfigureAwait(false);
+                    return;
+                }
+
+                break;
+            default:
+                appLogger.LogWarning("Unknown section {Section}", action);
                 break;
 
             case var s when s.Equals(SubMenuAddNew, StringComparison.OrdinalIgnoreCase):
@@ -110,7 +188,7 @@ public static partial class Program
         }
 
         // Fallback behaviour: use section to decide what to do
-        switch (section)
+        switch (action)
         {
             case "Customers":
                 await LogCustomerDetailsAsync(vm, appLogger).ConfigureAwait(false);
@@ -122,7 +200,7 @@ public static partial class Program
                 await LogFilamentDetailsAsync(vm, appLogger).ConfigureAwait(false);
                 break;
             default:
-                appLogger.LogWarning(Emoji.Known.Warning + "  Unhandled section '{Section}' / action '{Action}'", section, action);
+                appLogger.LogWarning(Emoji.Known.Warning + "  Unhandled section '{Section}' / action '{Action}'", action, commandRequested);
                 break;
         }
     }

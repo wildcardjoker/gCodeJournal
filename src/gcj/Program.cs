@@ -103,25 +103,6 @@ public static partial class Program
 
         await DisplayMenuAsync(provider, appLogger).ConfigureAwait(false);
         appLogger.LogTrace("Run finished");
-        // Execute each logging operation inside its own scope so DbContext is disposed after use
-        using (var scope = provider.CreateScope())
-        {
-            var vm = scope.ServiceProvider.GetRequiredService<IGCodeJournalViewModel>();
-            await LogCustomerDetailsAsync(vm, appLogger).ConfigureAwait(false);
-        }
-
-        using (var scope = provider.CreateScope())
-        {
-            var vm = scope.ServiceProvider.GetRequiredService<IGCodeJournalViewModel>();
-            await LogManufacturerDetailsAsync(vm, appLogger).ConfigureAwait(false);
-        }
-
-        using (var scope = provider.CreateScope())
-        {
-            var vm = scope.ServiceProvider.GetRequiredService<IGCodeJournalViewModel>();
-            await LogFilamentDetailsAsync(vm, appLogger).ConfigureAwait(false);
-        }
-
         await Log.CloseAndFlushAsync().ConfigureAwait(false);
     }
 }
