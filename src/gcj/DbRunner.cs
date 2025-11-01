@@ -111,11 +111,11 @@ public static partial class Program
                     return;
                 }
 
-                // Handle filament colours (allow "filamentcolours" and "filamentcolors")
-                if (action.Equals("filamentcolours", StringComparison.OrdinalIgnoreCase)
-                    || target.Equals("filamentcolours", StringComparison.OrdinalIgnoreCase)
-                    || action.Equals("filamentcolors", StringComparison.OrdinalIgnoreCase)
-                    || target.Equals("filamentcolors", StringComparison.OrdinalIgnoreCase))
+                // Handle filament colours (allow "filamentColours" and "filamentColors")
+                if (action.Equals("filamentColours", StringComparison.OrdinalIgnoreCase)
+                    || target.Equals("filamentColours", StringComparison.OrdinalIgnoreCase)
+                    || action.Equals("filamentColors", StringComparison.OrdinalIgnoreCase)
+                    || target.Equals("filamentColors", StringComparison.OrdinalIgnoreCase))
                 {
                     await LogFilamentColourDetailsAsync(vm, appLogger).ConfigureAwait(false);
                     return;
@@ -128,7 +128,7 @@ public static partial class Program
                 }
 
                 // Handle filament types
-                if (action.Equals("filamenttypes", StringComparison.OrdinalIgnoreCase) || target.Equals("filamenttypes", StringComparison.OrdinalIgnoreCase))
+                if (action.Equals("filamentTypes", StringComparison.OrdinalIgnoreCase) || target.Equals("filamentTypes", StringComparison.OrdinalIgnoreCase))
                 {
                     await LogFilamentTypeDetailsAsync(vm, appLogger).ConfigureAwait(false);
                     return;
@@ -141,17 +141,17 @@ public static partial class Program
                 }
 
                 // Handle model designs
-                if (action.Equals("modeldesigns", StringComparison.OrdinalIgnoreCase)
-                    || target.Equals("modeldesigns", StringComparison.OrdinalIgnoreCase)
-                    || target.Equals("modeldesign",  StringComparison.OrdinalIgnoreCase))
+                if (action.Equals("modelDesigns", StringComparison.OrdinalIgnoreCase)
+                    || target.Equals("modelDesigns", StringComparison.OrdinalIgnoreCase)
+                    || target.Equals("modelDesign",  StringComparison.OrdinalIgnoreCase))
                 {
                     await LogModelDesignDetailsAsync(vm, appLogger).ConfigureAwait(false);
                     return;
                 }
 
                 // Handle printing projects (also allow "projects")
-                if (action.Equals("printingprojects", StringComparison.OrdinalIgnoreCase)
-                    || target.Equals("printingprojects", StringComparison.OrdinalIgnoreCase)
+                if (action.Equals("printingProjects", StringComparison.OrdinalIgnoreCase)
+                    || target.Equals("printingProjects", StringComparison.OrdinalIgnoreCase)
                     || action.Equals("projects", StringComparison.OrdinalIgnoreCase)
                     || target.Equals("projects", StringComparison.OrdinalIgnoreCase))
                 {
