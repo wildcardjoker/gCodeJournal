@@ -10,13 +10,12 @@
     public static partial class Program
     {
         #region Constants
-        private const string MainMenuLevel = "Main Menu";
-        private const string MenuCustomers = "Customers";
-        private const string MenuExit      = "Exit";
-
-        // Main menu item constants
+        private const string MainMenuLevel         = "Main Menu";
+        private const string MenuCustomers         = "Customers";
+        private const string MenuExit              = "Exit";
         private const string MenuFilamentColours   = "Filament Colours";
         private const string MenuFilaments         = "Filaments";
+        private const string MenuFilamentTypes     = "Filament Types";
         private const string MenuManufacturers     = "Manufacturers";
         private const string MenuModelDesigns      = "Model Designs";
         private const string MenuPrintingProjects  = "Printing Projects";
@@ -34,6 +33,7 @@
             MenuManufacturers,
             MenuFilamentColours,
             MenuFilaments,
+            MenuFilamentTypes,
             MenuModelDesigns,
             MenuPrintingProjects,
             MenuExit
