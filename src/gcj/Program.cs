@@ -12,7 +12,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Serilog;
-using Spectre.Console;
 using ILogger = ILogger;
 #endregion
 
@@ -57,7 +56,7 @@ public static partial class Program
 
         // Ensure log file path and display location
         var logFilePath = EnsureLogFilePath(config);
-        AnsiConsole.MarkupLine($":information: Log file location: {Path.GetDirectoryName(Environment.ExpandEnvironmentVariables(logFilePath))}");
+        $"Log file location: {Path.GetDirectoryName(Environment.ExpandEnvironmentVariables(logFilePath))}".DisplayInfoMessage();
 
         // Configure Serilog
         ConfigureSerilog(config);
@@ -99,7 +98,7 @@ public static partial class Program
         var loggerFactoryFromDI = provider.GetRequiredService<ILoggerFactory>();
         var appLogger           = loggerFactoryFromDI.CreateLogger("gcj");
 
-        AnsiConsole.MarkupLine($":information: Using DB path: {dbPath}");
+        $"Using DB path: {dbPath}".DisplayInfoMessage();
         appLogger.LogTrace("Using DB Path {DBPath}", dbPath);
 
         // Execute each logging operation inside its own scope so DbContext is disposed after use
