@@ -2,6 +2,7 @@
 {
     #region Using Directives
     using Humanizer;
+    using Microsoft.Extensions.DependencyInjection;
     using Spectre.Console;
     #endregion
 
@@ -47,17 +48,17 @@
         ];
         #endregion
 
-        private static async Task DisplayMenuAsync()
+        private static async Task DisplayMenuAsync(ServiceProvider provider)
         {
-            var response = await GetMenuSelectionAsync(MainMenuLevel, MainMenu).ConfigureAwait(false);
-            while (!response.Equals(MenuExit))
+            var subMenuSelection = await GetMenuSelectionAsync(MainMenuLevel, MainMenu).ConfigureAwait(false);
+            while (!subMenuSelection.Equals(MenuExit))
             {
-                while (!response.Equals(SubMenuBackToMain))
+                while (!subMenuSelection.Equals(SubMenuBackToMain))
                 {
-                    response = await DisplaySubMenuAsync(response).ConfigureAwait(false);
+                    subMenuSelection = await DisplaySubMenuAsync(subMenuSelection).ConfigureAwait(false);
                 }
 
-                response = await GetMenuSelectionAsync(MainMenuLevel, MainMenu).ConfigureAwait(false);
+                subMenuSelection = await GetMenuSelectionAsync(MainMenuLevel, MainMenu).ConfigureAwait(false);
             }
         }
 
