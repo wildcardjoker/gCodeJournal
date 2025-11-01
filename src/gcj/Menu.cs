@@ -1,6 +1,7 @@
 ﻿namespace gcj
 {
     #region Using Directives
+    using Humanizer;
     using Spectre.Console;
     #endregion
 
@@ -62,11 +63,11 @@
 
         private static async Task<string> DisplaySubMenuAsync(string section)
         {
-            var response = await GetMenuSelectionAsync(section, SubMenu).ConfigureAwait(false);
+            var response = await GetMenuSelectionAsync(section, GetMenuWithSection(section, SubMenu)).ConfigureAwait(false);
             while (!response.Equals(SubMenuBackToMain))
             {
                 $"You've selected {response}".DisplayInfoMessage();
-                response = await GetMenuSelectionAsync(section, SubMenu).ConfigureAwait(false);
+                response = await GetMenuSelectionAsync(section, GetMenuWithSection(section, SubMenu)).ConfigureAwait(false);
             }
 
             return response;
@@ -77,6 +78,14 @@
             var prompt   = new SelectionPrompt<string>().Title($"{menuLevel}: Please choose from the following options").PageSize(10).AddChoices(choices);
             var response = await AnsiConsole.PromptAsync(prompt).ConfigureAwait(false);
             return response;
+        }
+
+        private static string[] GetMenuWithSection(string menuLevel, string[] choices)
+        {
+            return choices.Select(choice => choice == SubMenuBackToMain
+                                                ? choice
+                                                : $"{choice} {(choice.StartsWith("List all", StringComparison.OrdinalIgnoreCase) ? menuLevel : menuLevel.Singularize())}")
+                          .ToArray();
         }
     }
 }
