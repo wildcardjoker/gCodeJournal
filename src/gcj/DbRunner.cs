@@ -3,8 +3,10 @@ namespace gcj;
 #region Using Directives
 using System.Globalization;
 using gCodeJournal.ViewModel;
+using Humanizer;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Spectre.Console;
 #endregion
 
 public static partial class Program
@@ -120,7 +122,7 @@ public static partial class Program
                 await LogFilamentDetailsAsync(vm, appLogger).ConfigureAwait(false);
                 break;
             default:
-                appLogger.LogWarning("Unhandled section '{Section}' / action '{Action}'", section, action);
+                appLogger.LogWarning(Emoji.Known.Warning + "  Unhandled section '{Section}' / action '{Action}'", section, action);
                 break;
         }
     }
@@ -149,7 +151,7 @@ public static partial class Program
                 continue;
             }
 
-            var remainder = trimmed[sub.Length..].Trim();
+            var remainder = trimmed[sub.Length..].Trim().Dehumanize();
             return (sub, remainder);
         }
 
