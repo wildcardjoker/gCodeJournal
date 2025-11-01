@@ -55,23 +55,11 @@
             {
                 while (!subMenuSelection.Equals(SubMenuBackToMain))
                 {
-                    subMenuSelection = await DisplaySubMenuAsync(subMenuSelection).ConfigureAwait(false);
+                    subMenuSelection = await GetSubMenuSelectionAsync(subMenuSelection).ConfigureAwait(false);
                 }
 
                 subMenuSelection = await GetMenuSelectionAsync(MainMenuLevel, MainMenu).ConfigureAwait(false);
             }
-        }
-
-        private static async Task<string> DisplaySubMenuAsync(string section)
-        {
-            var response = await GetMenuSelectionAsync(section, GetMenuWithSection(section, SubMenu)).ConfigureAwait(false);
-            while (!response.Equals(SubMenuBackToMain))
-            {
-                $"You've selected {response}".DisplayInfoMessage();
-                response = await GetMenuSelectionAsync(section, GetMenuWithSection(section, SubMenu)).ConfigureAwait(false);
-            }
-
-            return response;
         }
 
         private static async Task<string> GetMenuSelectionAsync(string menuLevel, string[] choices)
@@ -87,6 +75,18 @@
                                                 ? choice
                                                 : $"{choice} {(choice.StartsWith("List all", StringComparison.OrdinalIgnoreCase) ? menuLevel : menuLevel.Singularize())}")
                           .ToArray();
+        }
+
+        private static async Task<string> GetSubMenuSelectionAsync(string section)
+        {
+            var response = await GetMenuSelectionAsync(section, GetMenuWithSection(section, SubMenu)).ConfigureAwait(false);
+            while (!response.Equals(SubMenuBackToMain))
+            {
+                $"You've selected {response}".DisplayInfoMessage();
+                response = await GetMenuSelectionAsync(section, GetMenuWithSection(section, SubMenu)).ConfigureAwait(false);
+            }
+
+            return response;
         }
     }
 }
