@@ -83,11 +83,12 @@
             var response = await GetMenuSelectionAsync(section, GetMenuWithSection(section, SubMenu)).ConfigureAwait(false);
             while (!response.Equals(SubMenuBackToMain))
             {
-                response = await GetMenuSelectionAsync(section, GetMenuWithSection(section, SubMenu)).ConfigureAwait(false);
                 if (!response.Equals(SubMenuBackToMain))
                 {
                     await ProcessDatabaseActionAsync(section, response, provider, appLogger).ConfigureAwait(false);
                 }
+
+                response = await GetMenuSelectionAsync(section, GetMenuWithSection(section, SubMenu)).ConfigureAwait(false);
             }
 
             return response;
