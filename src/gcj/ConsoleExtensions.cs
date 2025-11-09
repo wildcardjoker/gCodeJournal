@@ -37,7 +37,7 @@
         public static Task<string?> GetInputFromConsoleAsync(this string promptMessage) => promptMessage.GetInputFromConsoleAsync<string?>();
 
         public static Task<T?> GetInputFromConsoleAsync<T>(this string promptMessage) =>
-            AnsiConsole.PromptAsync(new TextPrompt<T?>($"Please enter the {promptMessage} (ENTER for none):").AllowEmpty());
+            AnsiConsole.PromptAsync(new TextPrompt<T?>($"Please enter the {promptMessage} (ENTER for none):").AllowEmpty().DefaultValue(default));
 
         public static Task<string?> GetMultiLineInputAsync(this string promptMessage)
         {
