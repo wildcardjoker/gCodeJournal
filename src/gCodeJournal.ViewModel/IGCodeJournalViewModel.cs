@@ -1,11 +1,9 @@
 namespace gCodeJournal.ViewModel
 {
     #region Using Directives
-    using Model;
-    using DTOs;
-    using System.Collections.Generic;
-    using System.Threading.Tasks;
     using System.ComponentModel.DataAnnotations;
+    using DTOs;
+    using Model;
     #endregion
 
     /// <summary>
@@ -23,12 +21,33 @@ namespace gCodeJournal.ViewModel
         /// <returns>A task representing the asynchronous operation.</returns>
         Task AddCustomerAsync(Customer customer);
 
+        // Add operations (DTO-based overloads) - return ValidationResult instead of throwing
+        /// <summary>
+        ///     Adds a new customer asynchronously using DTO.
+        /// </summary>
+        /// <param name="customerDto">The customer DTO to add.</param>
+        /// <returns>
+        ///     A task representing the asynchronous operation; returns a ValidationResult indicating success or validation
+        ///     errors.
+        /// </returns>
+        Task<ValidationResult> AddCustomerAsync(CustomerDto customerDto);
+
         /// <summary>
         ///     Adds a new filament asynchronously.
         /// </summary>
         /// <param name="filament">The filament to add.</param>
         /// <returns>A task representing the asynchronous operation.</returns>
         Task AddFilamentAsync(Filament filament);
+
+        /// <summary>
+        ///     Adds a new filament asynchronously using DTO.
+        /// </summary>
+        /// <param name="filamentDto">The filament DTO to add.</param>
+        /// <returns>
+        ///     A task representing the asynchronous operation; returns a ValidationResult indicating success or validation
+        ///     errors.
+        /// </returns>
+        Task<ValidationResult> AddFilamentAsync(FilamentDto filamentDto);
 
         /// <summary>
         ///     Adds a new filament color asynchronously.
@@ -38,11 +57,53 @@ namespace gCodeJournal.ViewModel
         Task AddFilamentColourAsync(FilamentColour filamentColour);
 
         /// <summary>
+        ///     Adds a new filament color asynchronously using DTO.
+        /// </summary>
+        /// <param name="filamentColourDto">The filament color DTO to add.</param>
+        /// <returns>
+        ///     A task representing the asynchronous operation; returns a ValidationResult indicating success or validation
+        ///     errors.
+        /// </returns>
+        Task<ValidationResult> AddFilamentColourAsync(FilamentColourDto filamentColourDto);
+
+        /// <summary>
         ///     Adds a new filament type asynchronously.
         /// </summary>
         /// <param name="filamentType">The filament type to add.</param>
         /// <returns>A task representing the asynchronous operation.</returns>
         Task AddFilamentTypeAsync(FilamentType filamentType);
+
+        /// <summary>
+        ///     Adds a new filament type asynchronously using DTO.
+        /// </summary>
+        /// <param name="filamentTypeDto">The filament type DTO to add.</param>
+        /// <returns>
+        ///     A task representing the asynchronous operation; returns a ValidationResult indicating success or validation
+        ///     errors.
+        /// </returns>
+        Task<ValidationResult> AddFilamentTypeAsync(FilamentTypeDto filamentTypeDto);
+
+        /// <summary>
+        ///     Adds a new manufacturer asynchronously.
+        /// </summary>
+        /// <param name="manufacturer">The manufacturer entity to add.</param>
+        /// <remarks>
+        ///     The <paramref name="manufacturer" /> represents a vendor or brand of 3D printing filament.
+        ///     Typical examples include "Prusament" or "Hatchbox".
+        /// </remarks>
+        /// <returns>A task representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="manufacturer" /> is <c>null</c>.</exception>
+        Task<ValidationResult> AddManufacturerAsync(Manufacturer manufacturer);
+
+        /// <summary>
+        ///     Adds a new manufacturer asynchronously using a DTO.
+        /// </summary>
+        /// <param name="manufacturer">The manufacturer DTO to add.</param>
+        /// <returns>
+        ///     A task representing the asynchronous operation; returns a <see cref="ValidationResult" /> indicating success or
+        ///     validation errors.
+        /// </returns>
+        Task<ValidationResult> AddManufacturerAsync(ManufacturerDto manufacturer);
 
         /// <summary>
         ///     Adds a new model design asynchronously.
@@ -52,53 +113,30 @@ namespace gCodeJournal.ViewModel
         Task AddModelDesignAsync(ModelDesign modelDesign);
 
         /// <summary>
+        ///     Adds a new model design asynchronously using DTO.
+        /// </summary>
+        /// <param name="modelDesignDto">The model design DTO to add.</param>
+        /// <returns>
+        ///     A task representing the asynchronous operation; returns a ValidationResult indicating success or validation
+        ///     errors.
+        /// </returns>
+        Task<ValidationResult> AddModelDesignAsync(ModelDesignDto modelDesignDto);
+
+        /// <summary>
         ///     Adds a new printing project asynchronously.
         /// </summary>
         /// <param name="project">The printing project to add.</param>
         /// <returns>A task representing the asynchronous operation.</returns>
         Task AddPrintingProjectAsync(PrintingProject project);
 
-        // Add operations (DTO-based overloads) - return ValidationResult instead of throwing
-        /// <summary>
-        ///     Adds a new customer asynchronously using DTO.
-        /// </summary>
-        /// <param name="customerDto">The customer DTO to add.</param>
-        /// <returns>A task representing the asynchronous operation; returns a ValidationResult indicating success or validation errors.</returns>
-        Task<ValidationResult> AddCustomerAsync(CustomerDto customerDto);
-
-        /// <summary>
-        ///     Adds a new filament asynchronously using DTO.
-        /// </summary>
-        /// <param name="filamentDto">The filament DTO to add.</param>
-        /// <returns>A task representing the asynchronous operation; returns a ValidationResult indicating success or validation errors.</returns>
-        Task<ValidationResult> AddFilamentAsync(FilamentDto filamentDto);
-
-        /// <summary>
-        ///     Adds a new filament color asynchronously using DTO.
-        /// </summary>
-        /// <param name="filamentColourDto">The filament color DTO to add.</param>
-        /// <returns>A task representing the asynchronous operation; returns a ValidationResult indicating success or validation errors.</returns>
-        Task<ValidationResult> AddFilamentColourAsync(FilamentColourDto filamentColourDto);
-
-        /// <summary>
-        ///     Adds a new filament type asynchronously using DTO.
-        /// </summary>
-        /// <param name="filamentTypeDto">The filament type DTO to add.</param>
-        /// <returns>A task representing the asynchronous operation; returns a ValidationResult indicating success or validation errors.</returns>
-        Task<ValidationResult> AddFilamentTypeAsync(FilamentTypeDto filamentTypeDto);
-
-        /// <summary>
-        ///     Adds a new model design asynchronously using DTO.
-        /// </summary>
-        /// <param name="modelDesignDto">The model design DTO to add.</param>
-        /// <returns>A task representing the asynchronous operation; returns a ValidationResult indicating success or validation errors.</returns>
-        Task<ValidationResult> AddModelDesignAsync(ModelDesignDto modelDesignDto);
-
         /// <summary>
         ///     Adds a new printing project asynchronously using DTO.
         /// </summary>
         /// <param name="projectDto">The printing project DTO to add.</param>
-        /// <returns>A task representing the asynchronous operation; returns a ValidationResult indicating success or validation errors.</returns>
+        /// <returns>
+        ///     A task representing the asynchronous operation; returns a ValidationResult indicating success or validation
+        ///     errors.
+        /// </returns>
         Task<ValidationResult> AddPrintingProjectAsync(PrintingProjectDto projectDto);
 
         // Retrieval operations (DTO-based)
