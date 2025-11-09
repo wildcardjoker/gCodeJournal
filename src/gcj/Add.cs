@@ -139,6 +139,74 @@
             appLogger.LogInformation(Emoji.Known.CheckMarkButton + " Added model design {Summary}", summary);
         }
 
-        private static async Task AddPrintingProjectAsync(IGCodeJournalViewModel vm, ILogger appLogger) => throw new NotImplementedException();
+        private static async Task AddPrintingProjectAsync(IGCodeJournalViewModel vm, ILogger appLogger)
+        {
+            var customers = await vm.GetAllCustomersAsync().ConfigureAwait(false);
+            var models    = await vm.GetAllModelDesignsAsync().ConfigureAwait(false);
+            var filaments = await vm.GetAllFilamentsAsync().ConfigureAwait(false);
+            if (!customers.Any() || !models.Any() || !filaments.Any())
+            {
+                string missing;
+                if (customers.Any())
+                {
+                    missing = models.Any() ? "filaments" : "models";
+                }
+                else
+                {
+                    missing = "customers";
+                }
+
+                appLogger.LogError("No {MissingElement} found; cannot create a project without it", missing);
+                return;
+            }
+
+            var customer = await customers.GetEntitySelectionAsync().ConfigureAwait(false);
+            if (customer is null)
+            {
+                // User chose to go back to the menu
+                appLogger.LogInformation("Returning to menu");
+                return;
+            }
+
+            var model = await models.GetEntitySelectionAsync().ConfigureAwait(false);
+            if (model is null)
+            {
+                // User chose to go back to the menu
+                appLogger.LogInformation("Returning to menu");
+                return;
+            }
+
+            // Collect multiple filaments until the user elects to return to the menu.
+            var selectedFilaments = new List<FilamentDto>();
+            while (true)
+            {
+                var selected = await filaments.GetEntitySelectionAsync().ConfigureAwait(false);
+                if (selected is null)
+                {
+                    if (!selectedFilaments.Any())
+                    {
+                        // User chose to return immediately -> cancel project creation.
+                        appLogger.LogInformation("Returning to menu");
+                        return;
+                    }
+
+                    // User has finished selecting filaments; exit selection loop and continue.
+                    break;
+                }
+
+                selectedFilaments.Add(selected);
+                appLogger.LogInformation(Emoji.Known.CheckMarkButton + " Added filament {Filament}", selected);
+
+                // Loop will prompt again to allow multiple selections until the user chooses to return.
+            }
+
+            var       cost          = await "cost".GetInputFromConsoleAsync<decimal>().ConfigureAwait(false);
+            var       dateSubmitted = await "date submitted (yyyy-MM-dd)".GetInputFromConsoleAsync<DateOnly>().ConfigureAwait(false);
+            DateOnly? dateCompleted = await "date completed (yyyy-MM-dd)".GetInputFromConsoleAsync<DateOnly>().ConfigureAwait(false);
+            await vm.AddPrintingProjectAsync(
+                        new PrintingProjectDto(cost, dateSubmitted.ToDateTime(TimeOnly.MinValue), dateCompleted?.ToDateTime(TimeOnly.MinValue), customer, model, filaments))
+                    .ConfigureAwait(false);
+            appLogger.LogInformation(Emoji.Known.CheckMarkButton + " Added project {Model} ({Customer})", model, customer);
+        }
     }
 }
