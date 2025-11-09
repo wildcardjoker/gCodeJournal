@@ -173,8 +173,21 @@ public static partial class Program
                     case var _ when target.Equals("Filament", StringComparison.OrdinalIgnoreCase):
                         await AddFilamentAsync(vm, appLogger).ConfigureAwait(false);
                         return;
+                    case var _ when target.Equals("FilamentColour",   StringComparison.OrdinalIgnoreCase)
+                                    || target.Equals("FilamentColor", StringComparison.OrdinalIgnoreCase):
+                        await AddFilamentColourAsync(vm, appLogger).ConfigureAwait(false);
+                        return;
+                    case var _ when target.Equals("FilamentType", StringComparison.OrdinalIgnoreCase):
+                        await AddFilamentTypeAsync(vm, appLogger).ConfigureAwait(false);
+                        return;
                     case var _ when target.Equals("Manufacturer", StringComparison.OrdinalIgnoreCase):
                         await AddManufacturerAsync(vm, appLogger).ConfigureAwait(false);
+                        return;
+                    case var _ when target.Equals("ModelDesign", StringComparison.OrdinalIgnoreCase):
+                        await AddModelDesignAsync(vm, appLogger).configureAwait(false);
+                        return;
+                    case var _ when target.Equals("PrintingProject", StringComparison.OrdinalIgnoreCase):
+                        await AddPrintingProjectAsync(vm, appLogger).ConfigureAwait(false);
                         return;
                 }
 
