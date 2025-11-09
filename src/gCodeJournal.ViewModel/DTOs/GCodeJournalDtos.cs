@@ -1,20 +1,6 @@
 namespace gCodeJournal.ViewModel.DTOs
 {
     /// <summary>
-    ///     Represents a customer with an ID and a name.
-    /// </summary>
-    /// <param name="Id">The unique identifier of the customer.</param>
-    /// <param name="Name">The name of the customer.</param>
-    public record CustomerDto(int Id, string Name)
-    {
-        /// <summary>
-        ///     Returns the string representation of the customer.
-        /// </summary>
-        /// <returns>The name of the customer.</returns>
-        public override string ToString() => Name;
-    }
-
-    /// <summary>
     ///     Represents a manufacturer with an ID and a name.
     /// </summary>
     /// <param name="Id">The unique identifier of the manufacturer.</param>
