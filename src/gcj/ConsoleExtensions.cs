@@ -1,6 +1,7 @@
 ﻿namespace gcj
 {
     #region Using Directives
+    using Microsoft.Extensions.Logging;
     using Spectre.Console;
     #endregion
 
@@ -34,10 +35,11 @@
             return response;
         }
 
-        public static Task<string?> GetInputFromConsoleAsync(this string promptMessage) => promptMessage.GetInputFromConsoleAsync<string?>();
+        public static Task<string?> GetInputFromConsoleAsync(this    string promptMessage) => promptMessage.GetInputFromConsoleAsync<string?>(string.Empty);
+        public static Task<T?>      GetInputFromConsoleAsync<T>(this string promptMessage) => promptMessage.GetInputFromConsoleAsync<T>(default);
 
-        public static Task<T?> GetInputFromConsoleAsync<T>(this string promptMessage) =>
-            AnsiConsole.PromptAsync(new TextPrompt<T?>($"Please enter the {promptMessage} (ENTER for none):").AllowEmpty().DefaultValue(default));
+        public static Task<T?> GetInputFromConsoleAsync<T>(this string promptMessage, T? defaultValue) =>
+            AnsiConsole.PromptAsync(new TextPrompt<T?>($"Please enter the {promptMessage} (ENTER for none):").AllowEmpty().DefaultValue(defaultValue ?? default));
 
         public static Task<string?> GetMultiLineInputAsync(this string promptMessage)
         {
@@ -62,5 +64,7 @@
                                          return lines.Count == 0 ? null : string.Join(Environment.NewLine, lines);
                                      });
         }
+
+        public static void LogReturnToMenu(this ILogger logger) => logger.LogInformation("Returning to menu");
     }
 }
