@@ -309,6 +309,285 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
         return ValidationResult.Success;
     }
 
+    // --- Edit operations for DTOs -------------------------------------------------
+
+    public async Task<ValidationResult> EditCustomerAsync(CustomerDto customerDto)
+    {
+        var validation = ValidateCustomerDto(customerDto);
+        if (validation != ValidationResult.Success)
+        {
+            return validation;
+        }
+
+        if (customerDto.Id == 0)
+        {
+            return new ValidationResult("Customer Id is required for editing");
+        }
+
+        var existing = await _db.Customers.FindAsync(customerDto.Id).ConfigureAwait(false);
+        if (existing == null)
+        {
+            return new ValidationResult("Customer not found");
+        }
+
+        existing.Name = customerDto.Name;
+        await _db.SaveChangesAsync().ConfigureAwait(false);
+        return ValidationResult.Success;
+    }
+
+    public async Task<ValidationResult> EditFilamentAsync(FilamentDto filamentDto)
+    {
+        var validation = ValidateFilamentDto(filamentDto);
+        if (validation != ValidationResult.Success)
+        {
+            return validation;
+        }
+
+        if (filamentDto.Id == 0)
+        {
+            return new ValidationResult("Filament Id is required for editing");
+        }
+
+        var existing = await _db.Filaments.FindAsync(filamentDto.Id).ConfigureAwait(false);
+        if (existing == null)
+        {
+            return new ValidationResult("Filament not found");
+        }
+
+        existing.CostPerWeight = filamentDto.CostPerWeight;
+        existing.ProductId = filamentDto.ProductId;
+        existing.ReorderLink = filamentDto.ReorderLink;
+
+        if (filamentDto.Manufacturer != null)
+        {
+            var man = await GetOrCreateManufacturerAsync(filamentDto.Manufacturer).ConfigureAwait(false);
+            existing.ManufacturerId = man.Id;
+        }
+
+        if (filamentDto.FilamentColour != null)
+        {
+            var col = await GetOrCreateFilamentColourAsync(filamentDto.FilamentColour).ConfigureAwait(false);
+            existing.FilamentColourId = col.Id;
+        }
+
+        if (filamentDto.FilamentType != null)
+        {
+            var typ = await GetOrCreateFilamentTypeAsync(filamentDto.FilamentType).ConfigureAwait(false);
+            existing.FilamentTypeId = typ.Id;
+        }
+
+        await _db.SaveChangesAsync().ConfigureAwait(false);
+        return ValidationResult.Success;
+    }
+
+    public async Task<ValidationResult> EditFilamentColourAsync(FilamentColourDto filamentColourDto)
+    {
+        var validation = ValidateFilamentColourDto(filamentColourDto);
+        if (validation != ValidationResult.Success)
+        {
+            return validation;
+        }
+
+        if (filamentColourDto.Id == 0)
+        {
+            return new ValidationResult("Filament colour Id is required for editing");
+        }
+
+        var existing = await _db.FilamentColours.FindAsync(filamentColourDto.Id).ConfigureAwait(false);
+        if (existing == null)
+        {
+            return new ValidationResult("Filament colour not found");
+        }
+
+        existing.Description = filamentColourDto.Description;
+        await _db.SaveChangesAsync().ConfigureAwait(false);
+        return ValidationResult.Success;
+    }
+
+    public async Task<ValidationResult> EditFilamentTypeAsync(FilamentTypeDto filamentTypeDto)
+    {
+        var validation = ValidateFilamentTypeDto(filamentTypeDto);
+        if (validation != ValidationResult.Success)
+        {
+            return validation;
+        }
+
+        if (filamentTypeDto.Id == 0)
+        {
+            return new ValidationResult("Filament type Id is required for editing");
+        }
+
+        var existing = await _db.FilamentTypes.FindAsync(filamentTypeDto.Id).ConfigureAwait(false);
+        if (existing == null)
+        {
+            return new ValidationResult("Filament type not found");
+        }
+
+        existing.Description = filamentTypeDto.Description;
+        await _db.SaveChangesAsync().ConfigureAwait(false);
+        return ValidationResult.Success;
+    }
+
+    public async Task<ValidationResult> EditManufacturerAsync(ManufacturerDto manufacturerDto)
+    {
+        var validation = ValidateManufacturerDto(manufacturerDto);
+        if (validation != ValidationResult.Success)
+        {
+            return validation;
+        }
+
+        if (manufacturerDto.Id == 0)
+        {
+            return new ValidationResult("Manufacturer Id is required for editing");
+        }
+
+        var existing = await _db.Manufacturers.FindAsync(manufacturerDto.Id).ConfigureAwait(false);
+        if (existing == null)
+        {
+            return new ValidationResult("Manufacturer not found");
+        }
+
+        existing.Name = manufacturerDto.Name;
+        await _db.SaveChangesAsync().ConfigureAwait(false);
+        return ValidationResult.Success;
+    }
+
+    public async Task<ValidationResult> EditModelDesignAsync(ModelDesignDto modelDesignDto)
+    {
+        var validation = ValidateModelDesignDto(modelDesignDto);
+        if (validation != ValidationResult.Success)
+        {
+            return validation;
+        }
+
+        if (modelDesignDto.Id == 0)
+        {
+            return new ValidationResult("ModelDesign Id is required for editing");
+        }
+
+        var existing = await _db.ModelDesigns.FindAsync(modelDesignDto.Id).ConfigureAwait(false);
+        if (existing == null)
+        {
+            return new ValidationResult("ModelDesign not found");
+        }
+
+        existing.Description = modelDesignDto.Description;
+        existing.Length = modelDesignDto.Length;
+        existing.Summary = modelDesignDto.Summary;
+        existing.Url = modelDesignDto.Url;
+
+        await _db.SaveChangesAsync().ConfigureAwait(false);
+        return ValidationResult.Success;
+    }
+
+    public async Task<ValidationResult> EditPrintingProjectAsync(PrintingProjectDto printingProjectDto)
+    {
+        var validation = ValidatePrintingProjectDto(printingProjectDto);
+        if (validation != ValidationResult.Success)
+        {
+            return validation;
+        }
+
+        if (printingProjectDto.Id == 0)
+        {
+            return new ValidationResult("Printing project Id is required for editing");
+        }
+
+        var existing = await _db.PrintingProjects
+            .Include(p => p.Filaments)
+            .FirstOrDefaultAsync(p => p.Id == printingProjectDto.Id)
+            .ConfigureAwait(false);
+        if (existing == null)
+        {
+            return new ValidationResult("Printing project not found");
+        }
+
+        // Resolve or create customer
+        Customer? customer = null;
+        if (printingProjectDto.Customer != null)
+        {
+            if (printingProjectDto.Customer.Id != 0)
+            {
+                customer = await _db.Customers.FindAsync(printingProjectDto.Customer.Id).ConfigureAwait(false);
+            }
+
+            customer ??= await _db.Customers.FirstOrDefaultAsync(c => c.Name.ToLower() == printingProjectDto.Customer.Name.ToLower()).ConfigureAwait(false);
+            if (customer == null)
+            {
+                customer = printingProjectDto.Customer.ToEntity();
+                await _db.Customers.AddAsync(customer).ConfigureAwait(false);
+                await _db.SaveChangesAsync().ConfigureAwait(false); // ensure customer.Id is populated
+            }
+        }
+
+        // Resolve or create model design
+        ModelDesign? model = null;
+        if (printingProjectDto.ModelDesign != null)
+        {
+            if (printingProjectDto.ModelDesign.Id != 0)
+            {
+                model = await _db.ModelDesigns.FindAsync(printingProjectDto.ModelDesign.Id).ConfigureAwait(false);
+            }
+
+            model ??= await _db.ModelDesigns.FirstOrDefaultAsync(md => md.Description.ToLower() == printingProjectDto.ModelDesign.Description.ToLower()).ConfigureAwait(false);
+            if (model == null)
+            {
+                model = printingProjectDto.ModelDesign.ToEntity();
+                await _db.ModelDesigns.AddAsync(model).ConfigureAwait(false);
+                await _db.SaveChangesAsync().ConfigureAwait(false); // ensure model.Id is populated
+            }
+        }
+
+        existing.Cost = printingProjectDto.Cost;
+        existing.Submitted = printingProjectDto.Submitted;
+        existing.Completed = printingProjectDto.Completed;
+        if (customer != null) existing.CustomerId = customer.Id;
+        if (model != null) existing.ModelDesignId = model.Id;
+
+        // Resolve first filament (legacy single-filament support)
+        if (printingProjectDto.Filaments?.Any() == true)
+        {
+            var fDto = printingProjectDto.Filaments.First();
+            Filament? fEntity = null;
+            if (fDto.Id != 0)
+            {
+                fEntity = await _db.Filaments.FindAsync(fDto.Id).ConfigureAwait(false);
+            }
+
+            if (fEntity == null)
+            {
+                // create filament entity, but attach related lookups
+                fEntity = new Filament {CostPerWeight = fDto.CostPerWeight, ProductId = fDto.ProductId, ReorderLink = fDto.ReorderLink};
+
+                if (fDto.Manufacturer != null)
+                {
+                    var man = await GetOrCreateManufacturerAsync(fDto.Manufacturer).ConfigureAwait(false);
+                    fEntity.ManufacturerId = man.Id;
+                }
+
+                if (fDto.FilamentColour != null)
+                {
+                    var col = await GetOrCreateFilamentColourAsync(fDto.FilamentColour).ConfigureAwait(false);
+                    fEntity.FilamentColourId = col.Id;
+                }
+
+                if (fDto.FilamentType != null)
+                {
+                    var typ = await GetOrCreateFilamentTypeAsync(fDto.FilamentType).ConfigureAwait(false);
+                    fEntity.FilamentTypeId = typ.Id;
+                }
+
+                await _db.Filaments.AddAsync(fEntity).ConfigureAwait(false);
+                await _db.SaveChangesAsync().ConfigureAwait(false); // ensure new filament has Id
+            }
+
+            existing.FilamentId = fEntity.Id;
+        }
+
+        await _db.SaveChangesAsync().ConfigureAwait(false);
+        return ValidationResult.Success;
+    }
+
     /// <inheritdoc />
     public Task<List<CustomerDto>> GetAllCustomersAsync()
     {

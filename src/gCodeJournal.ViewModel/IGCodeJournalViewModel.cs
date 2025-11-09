@@ -139,6 +139,77 @@ namespace gCodeJournal.ViewModel
         /// </returns>
         Task<ValidationResult> AddPrintingProjectAsync(PrintingProjectDto projectDto);
 
+        // Edit operations (DTO-based)
+        /// <summary>
+        ///     Edits an existing customer asynchronously using DTO.
+        /// </summary>
+        /// <param name="customerDto">The customer DTO with updated values.</param>
+        /// <returns>
+        ///     A task representing the asynchronous operation; returns a ValidationResult indicating success or validation
+        ///     errors.
+        /// </returns>
+        Task<ValidationResult> EditCustomerAsync(CustomerDto customerDto);
+
+        /// <summary>
+        ///     Edits an existing filament asynchronously using DTO.
+        /// </summary>
+        /// <param name="filamentDto">The filament DTO with updated values.</param>
+        /// <returns>
+        ///     A task representing the asynchronous operation; returns a ValidationResult indicating success or validation
+        ///     errors.
+        /// </returns>
+        Task<ValidationResult> EditFilamentAsync(FilamentDto filamentDto);
+
+        /// <summary>
+        ///     Edits an existing filament color asynchronously using DTO.
+        /// </summary>
+        /// <param name="filamentColourDto">The filament color DTO with updated values.</param>
+        /// <returns>
+        ///     A task representing the asynchronous operation; returns a ValidationResult indicating success or validation
+        ///     errors.
+        /// </returns>
+        Task<ValidationResult> EditFilamentColourAsync(FilamentColourDto filamentColourDto);
+
+        /// <summary>
+        ///     Edits an existing filament type asynchronously using DTO.
+        /// </summary>
+        /// <param name="filamentTypeDto">The filament type DTO with updated values.</param>
+        /// <returns>
+        ///     A task representing the asynchronous operation; returns a ValidationResult indicating success or validation
+        ///     errors.
+        /// </returns>
+        Task<ValidationResult> EditFilamentTypeAsync(FilamentTypeDto filamentTypeDto);
+
+        /// <summary>
+        ///     Edits an existing manufacturer asynchronously using DTO.
+        /// </summary>
+        /// <param name="manufacturerDto">The manufacturer DTO with updated values.</param>
+        /// <returns>
+        ///     A task representing the asynchronous operation; returns a ValidationResult indicating success or validation
+        ///     errors.
+        /// </returns>
+        Task<ValidationResult> EditManufacturerAsync(ManufacturerDto manufacturerDto);
+
+        /// <summary>
+        ///     Edits an existing model design asynchronously using DTO.
+        /// </summary>
+        /// <param name="modelDesignDto">The model design DTO with updated values.</param>
+        /// <returns>
+        ///     A task representing the asynchronous operation; returns a ValidationResult indicating success or validation
+        ///     errors.
+        /// </returns>
+        Task<ValidationResult> EditModelDesignAsync(ModelDesignDto modelDesignDto);
+
+        /// <summary>
+        ///     Edits an existing printing project asynchronously using DTO.
+        /// </summary>
+        /// <param name="printingProjectDto">The printing project DTO with updated values.</param>
+        /// <returns>
+        ///     A task representing the asynchronous operation; returns a ValidationResult indicating success or validation
+        ///     errors.
+        /// </returns>
+        Task<ValidationResult> EditPrintingProjectAsync(PrintingProjectDto printingProjectDto);
+
         // Retrieval operations (DTO-based)
         /// <summary>
         ///     Retrieves all customers asynchronously.
