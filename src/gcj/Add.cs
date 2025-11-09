@@ -11,7 +11,7 @@
     {
         private static async Task AddCustomerAsync(IGCodeJournalViewModel vm, ILogger appLogger)
         {
-            var customerName = await AnsiConsole.AskAsync<string>("Please enter the customer's name").ConfigureAwait(false);
+            var customerName = await "customer's name".GetInputFromConsoleAsync().ConfigureAwait(false);
             if (string.IsNullOrWhiteSpace(customerName))
             {
                 appLogger.LogError(Emoji.Known.Warning + "  Customer name cannot be empty");
@@ -19,7 +19,7 @@
             }
 
             await vm.AddCustomerAsync(new CustomerDto(customerName)).ConfigureAwait(false);
-            appLogger.LogInformation(Emoji.Known.CheckMark + " Added customer {Name}", customerName);
+            appLogger.LogInformation(Emoji.Known.CheckMarkButton + " Added customer {Name}", customerName);
         }
 
         private static async Task AddFilamentAsync(IGCodeJournalViewModel vm, ILogger appLogger)
@@ -74,12 +74,34 @@
             var productUrl  = await AnsiConsole.PromptAsync(new TextPrompt<string?>("Please enter the product URL (ENTER for none):").AllowEmpty()).ConfigureAwait(false);
             var filamentDto = new FilamentDto(costPerWeight, productCode, productUrl, colour, filamentType, manufacturer);
             await vm.AddFilamentAsync(filamentDto).ConfigureAwait(false);
-            appLogger.LogInformation(Emoji.Known.CheckMark + " Added filament {Filament}", filamentDto);
+            appLogger.LogInformation(Emoji.Known.CheckMarkButton + " Added filament {Filament}", filamentDto);
         }
 
-        private static async Task AddFilamentColourAsync(IGCodeJournalViewModel vm, ILogger appLogger) => throw new NotImplementedException();
+        private static async Task AddFilamentColourAsync(IGCodeJournalViewModel vm, ILogger appLogger)
+        {
+            var filamentColour = await "filament colour".GetInputFromConsoleAsync().ConfigureAwait(false);
+            if (string.IsNullOrWhiteSpace(filamentColour))
+            {
+                appLogger.LogError(Emoji.Known.Warning + "  filament colour cannot be empty");
+                return;
+            }
 
-        private static async Task AddFilamentTypeAsync(IGCodeJournalViewModel vm, ILogger appLogger) => throw new NotImplementedException();
+            await vm.AddFilamentColourAsync(new FilamentColourDto(filamentColour)).ConfigureAwait(false);
+            appLogger.LogInformation(Emoji.Known.CheckMarkButton + " Added filament colour {Colour}", filamentColour);
+        }
+
+        private static async Task AddFilamentTypeAsync(IGCodeJournalViewModel vm, ILogger appLogger)
+        {
+            var filamentType = await "filament type".GetInputFromConsoleAsync().ConfigureAwait(false);
+            if (string.IsNullOrWhiteSpace(filamentType))
+            {
+                appLogger.LogError(Emoji.Known.Warning + "  filament type cannot be empty");
+                return;
+            }
+
+            await vm.AddFilamentTypeAsync(new FilamentTypeDto(filamentType)).ConfigureAwait(false);
+            appLogger.LogInformation(Emoji.Known.CheckMarkButton + " Added filament type {Type}", filamentType);
+        }
 
         private static async Task AddManufacturerAsync(IGCodeJournalViewModel vm, ILogger appLogger)
         {
@@ -91,10 +113,31 @@
             }
 
             await vm.AddManufacturerAsync(new ManufacturerDto(manufacturerName)).ConfigureAwait(false);
-            appLogger.LogInformation(Emoji.Known.CheckMark + " Added manufacturer {Name}", manufacturerName);
+            appLogger.LogInformation(Emoji.Known.CheckMarkButton + " Added manufacturer {Name}", manufacturerName);
         }
 
-        private static async Task AddModelDesignAsync(IGCodeJournalViewModel vm, ILogger appLogger) => throw new NotImplementedException();
+        private static async Task AddModelDesignAsync(IGCodeJournalViewModel vm, ILogger appLogger)
+        {
+            var summary     = await "model summary".GetInputFromConsoleAsync().ConfigureAwait(false);
+            var description = await "model description".GetMultiLineInputAsync().ConfigureAwait(false);
+            var length      = await "model length in m".GetInputFromConsoleAsync<decimal>().ConfigureAwait(false);
+            var url         = await "model URL".GetInputFromConsoleAsync().ConfigureAwait(false);
+
+            if (string.IsNullOrWhiteSpace(summary))
+            {
+                appLogger.LogError(Emoji.Known.Warning + "  Summary cannot be empty");
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(description))
+            {
+                appLogger.LogError(Emoji.Known.Warning + "  Description cannot be empty");
+                return;
+            }
+
+            await vm.AddModelDesignAsync(new ModelDesignDto(description, length, summary, url)).ConfigureAwait(false);
+            appLogger.LogInformation(Emoji.Known.CheckMarkButton + " Added model design {Summary}", summary);
+        }
 
         private static async Task AddPrintingProjectAsync(IGCodeJournalViewModel vm, ILogger appLogger) => throw new NotImplementedException();
     }
