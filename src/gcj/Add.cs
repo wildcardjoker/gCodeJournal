@@ -168,6 +168,8 @@
                 return;
             }
 
+            appLogger.LogInformation(Emoji.Known.OkButton + " Selected customer: {Customer}", customer);
+
             var model = await models.GetEntitySelectionAsync().ConfigureAwait(false);
             if (model is null)
             {
@@ -175,6 +177,8 @@
                 appLogger.LogInformation("Returning to menu");
                 return;
             }
+
+            appLogger.LogInformation(Emoji.Known.OkButton + " Selected model: {Model}", model);
 
             // Collect multiple filaments until the user elects to return to the menu.
             var selectedFilaments = new List<FilamentDto>();
@@ -195,7 +199,7 @@
                 }
 
                 selectedFilaments.Add(selected);
-                appLogger.LogInformation(Emoji.Known.CheckMarkButton + " Added filament {Filament}", selected);
+                appLogger.LogInformation(Emoji.Known.OkButton + " Added filament {Filament}", selected);
 
                 // Loop will prompt again to allow multiple selections until the user chooses to return.
             }
