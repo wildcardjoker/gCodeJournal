@@ -19,7 +19,7 @@ public class CustomerDto(int id, string name)
     public int Id {get; init;} = id;
 
     /// <summary>The name of the customer.</summary>
-    public string Name {get; init;} = name;
+    public string Name {get; set;} = name;
     #endregion
 
     public void Deconstruct(out int Id, out string Name)
