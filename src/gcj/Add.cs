@@ -208,10 +208,11 @@
             var       dateSubmitted = await "date submitted (yyyy-MM-dd)".GetInputFromConsoleAsync<DateOnly>().ConfigureAwait(false);
             DateOnly? dateCompleted = await "date completed (yyyy-MM-dd)".GetInputFromConsoleAsync<DateOnly>().ConfigureAwait(false);
             dateCompleted = dateCompleted.Equals(DateOnly.MinValue) ? null : dateCompleted;
-            appLogger.LogInformation(Emoji.Known.OkButton + " Set cost to {Cost}", cost.ToString("C2"));
+            appLogger.LogInformation(Emoji.Known.OkButton + " Set cost to {Cost}",                   cost.ToString("C2"));
+            appLogger.LogInformation(Emoji.Known.OkButton + " Set DateSubmitted to {DateSubmitted}", dateSubmitted.ToShortDateString());
             if (dateCompleted.HasValue)
             {
-                appLogger.LogInformation(Emoji.Known.OkButton + " Set DateSubmitted to {DateSubmitted}", dateSubmitted.ToShortDateString());
+                appLogger.LogInformation(Emoji.Known.OkButton + " Set DateCompleted to {DateCompleted", dateCompleted.Value.ToShortDateString());
             }
             else
             {
@@ -227,7 +228,11 @@
                             model,
                             selectedFilaments))
                     .ConfigureAwait(false);
-            appLogger.LogInformation(Emoji.Known.CheckMarkButton + " Added project {Model} ({Customer})", model, customer);
+            appLogger.LogInformation(
+                Emoji.Known.CheckMarkButton + " Added project {Model} for {Customer} with filaments {Filaments}",
+                model,
+                customer,
+                string.Join(", ", selectedFilaments));
         }
     }
 }
