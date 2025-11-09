@@ -34,6 +34,11 @@ namespace gCodeJournal.ViewModel.DTOs
     /// </summary>
     public class FilamentColourDto(int id, string description)
     {
+        #region Constructors
+        /// <inheritdoc />
+        public FilamentColourDto(string description) : this(0, description) {}
+        #endregion
+
         #region Properties
         /// <summary>
         ///     The description of the filament color.
@@ -58,6 +63,11 @@ namespace gCodeJournal.ViewModel.DTOs
     /// </summary>
     public class FilamentTypeDto(int id, string description)
     {
+        #region Constructors
+        /// <inheritdoc />
+        public FilamentTypeDto(string description) : this(0, description) {}
+        #endregion
+
         #region Properties
         /// <summary>
         ///     The description of the filament type.
@@ -150,6 +160,11 @@ namespace gCodeJournal.ViewModel.DTOs
     /// </summary>
     public class ModelDesignDto(int id, string description, decimal length, string summary, string? url)
     {
+        #region Constructors
+        /// <inheritdoc />
+        public ModelDesignDto(string description, decimal length, string summary, string? url) : this(0, description, length, summary, url) {}
+        #endregion
+
         #region Properties
         /// <summary>
         ///     The description of the model design.
