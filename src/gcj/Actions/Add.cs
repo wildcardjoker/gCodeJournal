@@ -47,7 +47,7 @@
             if (manufacturer is null)
             {
                 // User chose to go back to the menu
-                appLogger.LogInformation("Returning to menu");
+                appLogger.LogReturnToMenu();
                 return;
             }
 
@@ -55,7 +55,7 @@
             if (filamentType is null)
             {
                 // User chose to go back to the menu
-                appLogger.LogInformation("Returning to menu");
+                appLogger.LogReturnToMenu();
                 return;
             }
 
@@ -63,7 +63,7 @@
             if (colour is null)
             {
                 // User chose to go back to the menu
-                appLogger.LogInformation("Returning to menu");
+                appLogger.LogReturnToMenu();
                 return;
             }
 
@@ -164,7 +164,7 @@
             if (customer is null)
             {
                 // User chose to go back to the menu
-                appLogger.LogInformation("Returning to menu");
+                appLogger.LogReturnToMenu();
                 return;
             }
 
@@ -174,7 +174,7 @@
             if (model is null)
             {
                 // User chose to go back to the menu
-                appLogger.LogInformation("Returning to menu");
+                appLogger.LogReturnToMenu();
                 return;
             }
 
@@ -190,7 +190,7 @@
                     if (!selectedFilaments.Any())
                     {
                         // User chose to return immediately -> cancel project creation.
-                        appLogger.LogInformation("Returning to menu");
+                        appLogger.LogReturnToMenu();
                         return;
                     }
 
