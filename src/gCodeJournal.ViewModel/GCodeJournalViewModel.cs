@@ -296,52 +296,13 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
         // Create project entity and attach resolved relations
         var project = new PrintingProject
         {
-            Cost      = projectDto.Cost,
-            Submitted = projectDto.Submitted,
-            Completed = projectDto.Completed,
-            Customer  = customer,
-            Model     = model,
-            Filaments = new List<Filament>()
+            Cost       = projectDto.Cost,
+            Submitted  = projectDto.Submitted,
+            Completed  = projectDto.Completed,
+            Customer   = customer!,
+            Model      = model!,
+            FilamentId = projectDto.Filaments.First().Id // TODO: handle multiple filaments properly
         };
-
-        // Resolve or create filaments
-        foreach (var fDto in projectDto.Filaments)
-        {
-            Filament? fEntity = null;
-            if (fDto.Id != 0)
-            {
-                fEntity = await _db.Filaments.FindAsync(fDto.Id).ConfigureAwait(false);
-            }
-
-            if (fEntity == null)
-            {
-                // create filament entity, but attach related lookups
-                fEntity = new Filament {CostPerWeight = fDto.CostPerWeight, ProductId = fDto.ProductId, ReorderLink = fDto.ReorderLink};
-
-                if (fDto.Manufacturer != null)
-                {
-                    var man = await GetOrCreateManufacturerAsync(fDto.Manufacturer).ConfigureAwait(false);
-                    fEntity.ManufacturerId = man.Id;
-                }
-
-                if (fDto.FilamentColour != null)
-                {
-                    var col = await GetOrCreateFilamentColourAsync(fDto.FilamentColour).ConfigureAwait(false);
-                    fEntity.FilamentColourId = col.Id;
-                }
-
-                if (fDto.FilamentType != null)
-                {
-                    var typ = await GetOrCreateFilamentTypeAsync(fDto.FilamentType).ConfigureAwait(false);
-                    fEntity.FilamentTypeId = typ.Id;
-                }
-
-                // add to context but don't save yet
-                await _db.Filaments.AddAsync(fEntity).ConfigureAwait(false);
-            }
-
-            project.Filaments.Add(fEntity);
-        }
 
         await _db.PrintingProjects.AddAsync(project).ConfigureAwait(false);
         await _db.SaveChangesAsync().ConfigureAwait(false);
