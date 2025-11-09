@@ -33,5 +33,34 @@
             var response = await AnsiConsole.PromptAsync(prompt).ConfigureAwait(false);
             return response;
         }
+
+        public static Task<string?> GetInputFromConsoleAsync(this string promptMessage) => promptMessage.GetInputFromConsoleAsync<string?>();
+
+        public static Task<T> GetInputFromConsoleAsync<T>(this string promptMessage) =>
+            AnsiConsole.PromptAsync<T>(new TextPrompt<T>($"Please enter the {promptMessage} (ENTER for none):").AllowEmpty());
+
+        public static Task<string?> GetMultiLineInputAsync(this string promptMessage)
+        {
+            AnsiConsole.MarkupLineInterpolated($"Please enter the {promptMessage} (empty line to finish):");
+
+            return Task.Run<string?>(async () =>
+                                     {
+                                         var lines = new List<string>();
+                                         while (true)
+                                         {
+                                             var line = await AnsiConsole.PromptAsync(new TextPrompt<string?>(">").AllowEmpty()).ConfigureAwait(false);
+
+                                             //var line = AnsiConsole.Console.ReadLine();
+                                             if (string.IsNullOrWhiteSpace(line)) // EOF or input closed
+                                             {
+                                                 break;
+                                             }
+
+                                             lines.Add(line);
+                                         }
+
+                                         return lines.Count == 0 ? null : string.Join(Environment.NewLine, lines);
+                                     });
+        }
     }
 }
