@@ -196,7 +196,7 @@ namespace gCodeJournal.ViewModel.DTOs
         ///     Returns a string representation of the model design.
         /// </summary>
         /// <returns>The description of the model design.</returns>
-        public override string ToString() => Description;
+        public override string ToString() => Summary;
     }
 
     /// <summary>
@@ -212,6 +212,11 @@ namespace gCodeJournal.ViewModel.DTOs
         ModelDesignDto?   modelDesign,
         List<FilamentDto> filaments)
     {
+        #region Constructors
+        public PrintingProjectDto(decimal cost, DateTime submitted, DateTime? completed, CustomerDto? customer, ModelDesignDto? modelDesign, List<FilamentDto> filaments) :
+            this(0, cost, submitted, completed, customer, modelDesign, filaments) {}
+        #endregion
+
         #region Properties
         /// <summary>
         ///     The date when the project was completed (optional).
@@ -258,9 +263,9 @@ namespace gCodeJournal.ViewModel.DTOs
         /// </returns>
         public override string ToString()
         {
-            var model     = ModelDesign?.Description ?? "<no model>";
-            var customer  = Customer?.Name           ?? "<no customer>";
-            var filaments = Filaments.OrderBy(f => f.Manufacturer).ThenBy(f1 => f1.FilamentType).ThenBy(f2 => f2.FilamentColour).ToList();
+            var model     = ModelDesign?.Summary ?? "<no model>";
+            var customer  = Customer?.Name       ?? "<no customer>";
+            var filaments = Filaments.OrderBy(f => f.Manufacturer.Name).ThenBy(f1 => f1.FilamentType.Description).ThenBy(f2 => f2.FilamentColour.Description).ToList();
             return $"{model} for {customer} {string.Join("/", filaments)}";
         }
     }
