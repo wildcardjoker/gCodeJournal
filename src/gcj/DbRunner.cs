@@ -184,7 +184,7 @@ public static partial class Program
                         await AddManufacturerAsync(vm, appLogger).ConfigureAwait(false);
                         return;
                     case var _ when target.Equals("ModelDesign", StringComparison.OrdinalIgnoreCase):
-                        await AddModelDesignAsync(vm, appLogger).configureAwait(false);
+                        await AddModelDesignAsync(vm, appLogger).ConfigureAwait(false);
                         return;
                     case var _ when target.Equals("PrintingProject", StringComparison.OrdinalIgnoreCase):
                         await AddPrintingProjectAsync(vm, appLogger).ConfigureAwait(false);
