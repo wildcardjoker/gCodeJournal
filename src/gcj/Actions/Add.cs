@@ -11,7 +11,8 @@
     {
         private static async Task AddCustomerAsync(IGCodeJournalViewModel vm, ILogger appLogger)
         {
-            var customerName = await ValidateCustomerName(appLogger).ConfigureAwait(false); //await "customer's name".GetInputFromConsoleAsync().ConfigureAwait(false);
+            var customerName =
+                await ValidateCustomerNameInputAsync(appLogger).ConfigureAwait(false); //await "customer's name".GetInputFromConsoleAsync().ConfigureAwait(false);
             if (string.IsNullOrWhiteSpace(customerName))
             {
                 return;
@@ -42,11 +43,9 @@
                 return;
             }
 
-            var manufacturer = await manufacturers.GetEntitySelectionAsync().ConfigureAwait(false);
+            var manufacturer = await ValidateManufacturerSelectionAsync(appLogger, manufacturers).ConfigureAwait(false);
             if (manufacturer is null)
             {
-                // User chose to go back to the menu
-                appLogger.LogReturnToMenu();
                 return;
             }
 
