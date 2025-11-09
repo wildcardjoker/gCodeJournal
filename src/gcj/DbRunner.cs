@@ -196,7 +196,32 @@ public static partial class Program
             case var s when s.Equals(SubMenuUpdateExisting, StringComparison.OrdinalIgnoreCase):
                 appLogger.LogInformation("Update requested for '{Target}'", target);
 
-                // Implement edit flow
+                switch (target)
+                {
+                    case var _ when target.Equals("Customer", StringComparison.OrdinalIgnoreCase):
+                        await EditCustomerAsync(vm, appLogger).ConfigureAwait(false);
+                        return;
+                    case var _ when target.Equals("Filament", StringComparison.OrdinalIgnoreCase):
+                        await EditFilamentAsync(vm, appLogger).ConfigureAwait(false);
+                        return;
+                    case var _ when target.Equals("FilamentColour",   StringComparison.OrdinalIgnoreCase)
+                                    || target.Equals("FilamentColor", StringComparison.OrdinalIgnoreCase):
+                        await EditFilamentColourAsync(vm, appLogger).ConfigureAwait(false);
+                        return;
+                    case var _ when target.Equals("FilamentType", StringComparison.OrdinalIgnoreCase):
+                        await EditFilamentTypeAsync(vm, appLogger).ConfigureAwait(false);
+                        return;
+                    case var _ when target.Equals("Manufacturer", StringComparison.OrdinalIgnoreCase):
+                        await EditManufacturerAsync(vm, appLogger).ConfigureAwait(false);
+                        return;
+                    case var _ when target.Equals("ModelDesign", StringComparison.OrdinalIgnoreCase):
+                        await EditModelDesignAsync(vm, appLogger).ConfigureAwait(false);
+                        return;
+                    case var _ when target.Equals("PrintingProject", StringComparison.OrdinalIgnoreCase):
+                        await EditPrintingProjectAsync(vm, appLogger).ConfigureAwait(false);
+                        return;
+                }
+
                 return;
 
             case var s when s.Equals(SubMenuDeleteExisting, StringComparison.OrdinalIgnoreCase):
