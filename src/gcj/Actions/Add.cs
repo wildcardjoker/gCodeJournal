@@ -11,10 +11,9 @@
     {
         private static async Task AddCustomerAsync(IGCodeJournalViewModel vm, ILogger appLogger)
         {
-            var customerName = await "customer's name".GetInputFromConsoleAsync().ConfigureAwait(false);
+            var customerName = await ValidateCustomerName(appLogger).ConfigureAwait(false); //await "customer's name".GetInputFromConsoleAsync().ConfigureAwait(false);
             if (string.IsNullOrWhiteSpace(customerName))
             {
-                appLogger.LogError(Emoji.Known.Warning + "  Customer name cannot be empty");
                 return;
             }
 
