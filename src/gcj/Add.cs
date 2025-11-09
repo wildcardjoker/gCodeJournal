@@ -207,6 +207,17 @@
             var       cost          = await "cost".GetInputFromConsoleAsync<decimal>().ConfigureAwait(false);
             var       dateSubmitted = await "date submitted (yyyy-MM-dd)".GetInputFromConsoleAsync<DateOnly>().ConfigureAwait(false);
             DateOnly? dateCompleted = await "date completed (yyyy-MM-dd)".GetInputFromConsoleAsync<DateOnly>().ConfigureAwait(false);
+            dateCompleted = dateCompleted.Equals(DateOnly.MinValue) ? null : dateCompleted;
+            appLogger.LogInformation(Emoji.Known.OkButton + " Set cost to {Cost}", cost.ToString("C2"));
+            if (dateCompleted.HasValue)
+            {
+                appLogger.LogInformation(Emoji.Known.OkButton + " Set DateSubmitted to {DateSubmitted}", dateSubmitted.ToShortDateString());
+            }
+            else
+            {
+                appLogger.LogInformation(Emoji.Known.OkButton + " Not completed");
+            }
+
             await vm.AddPrintingProjectAsync(
                         new PrintingProjectDto(
                             cost,
