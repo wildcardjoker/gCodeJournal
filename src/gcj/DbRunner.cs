@@ -160,14 +160,24 @@ public static partial class Program
                 }
 
                 break;
-            default:
-                appLogger.LogWarning("Unknown section {Section}", action);
-                break;
 
             case var s when s.Equals(SubMenuAddNew, StringComparison.OrdinalIgnoreCase):
                 appLogger.LogInformation("Add new requested for '{Target}'", target);
 
                 // Implement interactive prompts / DTO creation and call view model Add* methods
+                switch (target)
+                {
+                    case var _ when target.Equals("Customer", StringComparison.OrdinalIgnoreCase):
+                        await AddCustomerAsync(vm, appLogger).ConfigureAwait(false);
+                        return;
+                    case var _ when target.Equals("Filament", StringComparison.OrdinalIgnoreCase):
+                        await AddFilamentAsync(vm, appLogger).ConfigureAwait(false);
+                        return;
+                    case var _ when target.Equals("Manufacturer", StringComparison.OrdinalIgnoreCase):
+                        await AddManufacturerAsync(vm, appLogger).ConfigureAwait(false);
+                        return;
+                }
+
                 return;
 
             case var s when s.Equals(SubMenuUpdateExisting, StringComparison.OrdinalIgnoreCase):
@@ -200,7 +210,7 @@ public static partial class Program
                 await LogFilamentDetailsAsync(vm, appLogger).ConfigureAwait(false);
                 break;
             default:
-                appLogger.LogWarning(Emoji.Known.Warning + "  Unhandled section '{Section}' / action '{Action}'", action, commandRequested);
+                appLogger.LogWarning(Emoji.Known.Warning + "  Unhandled section '{Action}' / action '{Command}'", action, commandRequested);
                 break;
         }
     }
