@@ -204,7 +204,13 @@
             var       dateSubmitted = await "date submitted (yyyy-MM-dd)".GetInputFromConsoleAsync<DateOnly>().ConfigureAwait(false);
             DateOnly? dateCompleted = await "date completed (yyyy-MM-dd)".GetInputFromConsoleAsync<DateOnly>().ConfigureAwait(false);
             await vm.AddPrintingProjectAsync(
-                        new PrintingProjectDto(cost, dateSubmitted.ToDateTime(TimeOnly.MinValue), dateCompleted?.ToDateTime(TimeOnly.MinValue), customer, model, filaments))
+                        new PrintingProjectDto(
+                            cost,
+                            dateSubmitted.ToDateTime(TimeOnly.MinValue),
+                            dateCompleted?.ToDateTime(TimeOnly.MinValue),
+                            customer,
+                            model,
+                            selectedFilaments))
                     .ConfigureAwait(false);
             appLogger.LogInformation(Emoji.Known.CheckMarkButton + " Added project {Model} ({Customer})", model, customer);
         }
