@@ -354,7 +354,7 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
     /// <inheritdoc />
     public Task<List<ModelDesignDto>> GetAllModelDesignsAsync()
     {
-        return _db.ModelDesigns.OrderBy(md => md.Description).Select(md => new ModelDesignDto(md.Id, md.Description, md.Length, md.Summary, md.Url)).ToListAsync();
+        return _db.ModelDesigns.OrderBy(md => md.Summary).Select(md => new ModelDesignDto(md.Id, md.Description, md.Length, md.Summary, md.Url)).ToListAsync();
     }
 
     /// <inheritdoc />
