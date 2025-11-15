@@ -114,8 +114,8 @@
 
         private static async Task AddModelDesignAsync(IGCodeJournalViewModel vm, ILogger appLogger)
         {
-            var summary     = await string.Empty.GetModelSummary().ConfigureAwait(false); //await "model summary".GetInputFromConsoleAsync().ConfigureAwait(false);
-            var description = await "model description".GetMultiLineInputAsync().ConfigureAwait(false);
+            var summary     = await string.Empty.GetModelSummary().ConfigureAwait(false);
+            var description = await string.Empty.GetModelDescriptionAsync().ConfigureAwait(false);
             var length      = await "model length in m".GetInputFromConsoleAsync<decimal>().ConfigureAwait(false);
             var url         = await "model URL".GetInputFromConsoleAsync().ConfigureAwait(false);
 
@@ -208,7 +208,7 @@
             appLogger.LogInformation(Emoji.Known.OkButton + " Set DateSubmitted to {DateSubmitted}", dateSubmitted.ToShortDateString());
             if (dateCompleted.HasValue)
             {
-                appLogger.LogInformation(Emoji.Known.OkButton + " Set DateCompleted to {DateCompleted", dateCompleted.Value.ToShortDateString());
+                appLogger.LogInformation(Emoji.Known.OkButton + " Set DateCompleted to {DateCompleted}", dateCompleted.Value.ToShortDateString());
             }
             else
             {
