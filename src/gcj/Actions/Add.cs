@@ -87,7 +87,7 @@
 
         private static async Task AddFilamentTypeAsync(IGCodeJournalViewModel vm, ILogger appLogger)
         {
-            var filamentType = await "filament type".GetInputFromConsoleAsync().ConfigureAwait(false);
+            var filamentType = await string.Empty.GetFilamentTypeAsync().ConfigureAwait(false);
             if (string.IsNullOrWhiteSpace(filamentType))
             {
                 appLogger.LogError(Emoji.Known.Warning + "  filament type cannot be empty");
