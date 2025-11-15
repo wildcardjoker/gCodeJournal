@@ -12,6 +12,13 @@
         private static readonly string[] EmojiWithExtraSpace = [Emoji.Known.Information, Emoji.Known.Warning];
         #endregion
 
+        public static async Task<bool> ConfirmDeleteAsync<T>(this T objectType) where T : class
+        {
+            var confirmationPrompt = new ConfirmationPrompt($"Are you sure you want to delete the {typeof(T)} ({objectType})?") {DefaultValue = false};
+            var result             = await AnsiConsole.PromptAsync(confirmationPrompt).ConfigureAwait(false);
+            return result;
+        }
+
         public static void DisplayInfoMessage(this    string message) => message.DisplayConsoleMessageWithLeadingEmoji(Emoji.Known.Information);
         public static void DisplayWarningMessage(this string message) => message.DisplayConsoleMessageWithLeadingEmoji(Emoji.Known.Warning);
 
@@ -26,12 +33,11 @@
 #pragma warning disable CS8714 // The type cannot be used as type parameter in the generic type or method. Nullability of type argument doesn't match 'notnull' constraint.
 
             // ReSharper disable once ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract
-            var prompt = new SelectionPrompt<T>()
-                         .Title($"Please select from the following {typeof(T).Name.Replace("Dto", string.Empty, StringComparison.OrdinalIgnoreCase).Humanize()}")
-                         .PageSize(10)
-                         .MoreChoicesText("Scroll up/down for more choices")
-                         .UseConverter(item => item is null ? "Back to menu" : item?.ToString() ?? "<unknown>")!.AddChoices(
-                             new[] {(T?) null}.Concat(choices.Select(T? (c) => c)));
+            var prompt = new SelectionPrompt<T>().Title($"Please select from the following {typeof(T).Name.HumanizeDtoName()}")
+                                                 .PageSize(10)
+                                                 .MoreChoicesText("Scroll up/down for more choices")
+                                                 .UseConverter(item => item is null ? "Back to menu" : item?.ToString() ?? "<unknown>")!.AddChoices(
+                                                     new[] {(T?) null}.Concat(choices.Select(T? (c) => c)));
 #pragma warning restore CS8714 // The type cannot be used as type parameter in the generic type or method. Nullability of type argument doesn't match 'notnull' constraint.
 
             var response = await AnsiConsole.PromptAsync(prompt).ConfigureAwait(false);
@@ -52,6 +58,9 @@
 
         public static async Task<string?> GetFilamentReorderLinkAsync(this string defaultValue) =>
             await "reorder link".GetInputFromConsoleAsync(defaultValue).ConfigureAwait(false);
+
+        public static async Task<string?> GetFilamentTypeAsync(this string defaultValue) =>
+            await "filament type".GetInputFromConsoleAsync(defaultValue).ConfigureAwait(false);
 
         public static Task<string?> GetInputFromConsoleAsync(this    string promptMessage) => promptMessage.GetInputFromConsoleAsync<string?>(string.Empty);
         public static Task<T?>      GetInputFromConsoleAsync<T>(this string promptMessage) => promptMessage.GetInputFromConsoleAsync<T>(default);
@@ -100,6 +109,8 @@
             var uri = await GetInputFromConsoleAsync(promptMessage, defaultValue).ConfigureAwait(false);
             return string.IsNullOrWhiteSpace(uri) ? uri : uri.StartsWith("http", StringComparison.OrdinalIgnoreCase) ? uri : $"https://{uri}";
         }
+
+        public static string HumanizeDtoName(this string dtoName) => dtoName.Replace("Dto", string.Empty, StringComparison.OrdinalIgnoreCase).Humanize();
 
         public static void LogReturnToMenu(this ILogger logger) => logger.LogInformation("Returning to menu");
 
