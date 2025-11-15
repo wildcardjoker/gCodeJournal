@@ -11,13 +11,8 @@
         private static readonly string[] EmojiWithExtraSpace = [Emoji.Known.Information, Emoji.Known.Warning];
         #endregion
 
-        public static void DisplayConsoleMessageWithLeadingEmoji(this string message, string emoji)
-        {
-            var spacing = EmojiWithExtraSpace.Contains(emoji) ? "  " : " ";
-            AnsiConsole.MarkupLineInterpolated($"{emoji}{spacing}{message}");
-        }
-
-        public static void DisplayInfoMessage(this string message) => message.DisplayConsoleMessageWithLeadingEmoji(Emoji.Known.Information);
+        public static void DisplayInfoMessage(this    string message) => message.DisplayConsoleMessageWithLeadingEmoji(Emoji.Known.Information);
+        public static void DisplayWarningMessage(this string message) => message.DisplayConsoleMessageWithLeadingEmoji(Emoji.Known.Warning);
 
         public static async Task<T?> GetEntitySelectionAsync<T>(this IEnumerable<T> choices) where T : class
         {
@@ -34,6 +29,9 @@
             var response = await AnsiConsole.PromptAsync(prompt).ConfigureAwait(false);
             return response;
         }
+
+        public static async Task<string?> GetFilamentColourAsync(this string defaultValue) =>
+            await "Please enter the colour".GetInputFromConsoleAsync(defaultValue).ConfigureAwait(false);
 
         public static async Task<decimal> GetFilamentCostPerWeightAsync(this decimal defaultValue) =>
             await "Please enter the cost/weight".GetInputFromConsoleAsync(defaultValue).ConfigureAwait(false);
@@ -75,6 +73,12 @@
         }
 
         public static void LogReturnToMenu(this ILogger logger) => logger.LogInformation("Returning to menu");
+
+        private static void DisplayConsoleMessageWithLeadingEmoji(this string message, string emoji)
+        {
+            var spacing = EmojiWithExtraSpace.Contains(emoji) ? "  " : " ";
+            AnsiConsole.MarkupLineInterpolated($"{emoji}{spacing}{message}");
+        }
 
         private static async Task<string?> GetInputFromConsoleAsync(this string promptMessage, string? defaultValue)
         {
