@@ -4,10 +4,16 @@
     using gCodeJournal.ViewModel.DTOs;
     using Microsoft.Extensions.Logging;
     using Spectre.Console;
+    using ValidationResult = System.ComponentModel.DataAnnotations.ValidationResult;
     #endregion
 
     public static partial class Program
     {
+        private static void LogSaveFailure(this ILogger appLogger, ValidationResult result)
+        {
+            appLogger.LogError(Emoji.Known.CrossMark + "  Error saving data: {ValidationResult}", result);
+        }
+
         private static async Task<List<FilamentDto>> SelectFilamentsAsync(
             this List<FilamentDto>    filaments,
             ILogger                   appLogger,
