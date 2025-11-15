@@ -33,7 +33,7 @@
             }
             else
             {
-                LogSaveFailure(appLogger, result);
+                appLogger.LogSaveFailure(result);
             }
         }
 
@@ -72,7 +72,7 @@
             }
             else
             {
-                LogSaveFailure(appLogger, result);
+                appLogger.LogSaveFailure(result);
             }
         }
 
@@ -109,11 +109,46 @@
             }
             else
             {
-                LogSaveFailure(appLogger, result);
+                appLogger.LogSaveFailure(result);
             }
         }
 
-        private static async Task EditFilamentTypeAsync(IGCodeJournalViewModel vm, ILogger appLogger) => throw new NotImplementedException();
+        private static async Task EditFilamentTypeAsync(IGCodeJournalViewModel vm, ILogger appLogger)
+        {
+            var filamentTypes        = await vm.GetAllFilamentTypesAsync().ConfigureAwait(false);
+            var selectedFilamentType = await filamentTypes.GetEntitySelectionAsync().ConfigureAwait(false);
+            if (selectedFilamentType is null)
+            {
+                appLogger.LogReturnToMenu();
+                return;
+            }
+
+            var updatedFilamentType = await selectedFilamentType.Description.GetFilamentTypeAsync().ConfigureAwait(false);
+            if (string.IsNullOrWhiteSpace(updatedFilamentType))
+            {
+                "Filament Type cannot be null; no changes made".DisplayWarningMessage();
+                appLogger.LogReturnToMenu();
+                return;
+            }
+
+            if (updatedFilamentType.Equals(selectedFilamentType.Description))
+            {
+                "No changes detected".DisplayWarningMessage();
+                appLogger.LogReturnToMenu();
+                return;
+            }
+
+            selectedFilamentType.Description = updatedFilamentType;
+            var result = await vm.EditFilamentTypeAsync(selectedFilamentType).ConfigureAwait(false);
+            if (result == ValidationResult.Success)
+            {
+                appLogger.LogInformation(Emoji.Known.CheckMarkButton + "  Updated Filament Type {FilamentType}", selectedFilamentType);
+            }
+            else
+            {
+                appLogger.LogSaveFailure(result);
+            }
+        }
 
         private static async Task EditManufacturerAsync(IGCodeJournalViewModel vm, ILogger appLogger)
         {
@@ -148,7 +183,7 @@
             }
             else
             {
-                LogSaveFailure(appLogger, result);
+                appLogger.LogSaveFailure(result);
             }
         }
 
@@ -186,7 +221,7 @@
             }
             else
             {
-                LogSaveFailure(appLogger, result);
+                appLogger.LogSaveFailure(result);
             }
         }
 
@@ -222,14 +257,8 @@
             }
             else
             {
-                LogSaveFailure(appLogger, result);
+                appLogger.LogSaveFailure(result);
             }
-        }
-
-        private static void LogSaveFailure(ILogger appLogger, ValidationResult result)
-        {
-            // TODO: Move to extension method
-            appLogger.LogError(Emoji.Known.CrossMark + "  Error saving data: {ValidationResult}", result);
         }
     }
 }
