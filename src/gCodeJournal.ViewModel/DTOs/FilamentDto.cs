@@ -28,17 +28,17 @@ public class FilamentDto(
     /// <summary>
     ///     The cost of the filament per unit weight.
     /// </summary>
-    public decimal CostPerWeight {get; init;} = costPerWeight;
+    public decimal CostPerWeight {get; set;} = costPerWeight;
 
     /// <summary>
     ///     The color of the filament.
     /// </summary>
-    public FilamentColourDto FilamentColour {get; init;} = filamentColour;
+    public FilamentColourDto FilamentColour {get; set;} = filamentColour;
 
     /// <summary>
     ///     The type of the filament.
     /// </summary>
-    public FilamentTypeDto FilamentType {get; init;} = filamentType;
+    public FilamentTypeDto FilamentType {get; set;} = filamentType;
 
     /// <summary>
     ///     The unique identifier of the filament.
@@ -48,17 +48,17 @@ public class FilamentDto(
     /// <summary>
     ///     The manufacturer of the filament.
     /// </summary>
-    public ManufacturerDto Manufacturer {get; init;} = manufacturer;
+    public ManufacturerDto Manufacturer {get; set;} = manufacturer;
 
     /// <summary>
     ///     The product ID of the filament (optional).
     /// </summary>
-    public string? ProductId {get; init;} = productId;
+    public string? ProductId {get; set;} = productId;
 
     /// <summary>
     ///     The link to reorder the filament (optional).
     /// </summary>
-    public string? ReorderLink {get; init;} = reorderLink;
+    public string? ReorderLink {get; set;} = reorderLink;
     #endregion
 
     /// <summary>
