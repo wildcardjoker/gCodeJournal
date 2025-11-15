@@ -15,6 +15,12 @@
         public static void DisplayInfoMessage(this    string message) => message.DisplayConsoleMessageWithLeadingEmoji(Emoji.Known.Information);
         public static void DisplayWarningMessage(this string message) => message.DisplayConsoleMessageWithLeadingEmoji(Emoji.Known.Warning);
 
+        public static async Task<DateOnly?> GetDateFromConsoleAsync(this string promptMessage, DateOnly? defaultValue = null)
+        {
+            var selectedDate = await $"date {promptMessage} (yyyy-MM-dd)".GetInputFromConsoleAsync(defaultValue).ConfigureAwait(false);
+            return selectedDate == DateOnly.MinValue ? null : selectedDate;
+        }
+
         public static async Task<T?> GetEntitySelectionAsync<T>(this IEnumerable<T> choices) where T : class
         {
 #pragma warning disable CS8714 // The type cannot be used as type parameter in the generic type or method. Nullability of type argument doesn't match 'notnull' constraint.
