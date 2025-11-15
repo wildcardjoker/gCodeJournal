@@ -194,7 +194,7 @@ public static partial class Program
                 return;
 
             case var s when s.Equals(SubMenuUpdateExisting, StringComparison.OrdinalIgnoreCase):
-                appLogger.LogInformation("Update requested for '{Target}'", target);
+                appLogger.LogDebug("Update requested for '{Target}'", target);
 
                 switch (target)
                 {
@@ -227,7 +227,32 @@ public static partial class Program
             case var s when s.Equals(SubMenuDeleteExisting, StringComparison.OrdinalIgnoreCase):
                 appLogger.LogInformation("Delete requested for '{Target}'", target);
 
-                // Implement delete flow
+                switch (target)
+                {
+                    case var _ when target.Equals("Customer", StringComparison.OrdinalIgnoreCase):
+                        await DeleteCustomerAsync(vm, appLogger).ConfigureAwait(false);
+                        return;
+                    case var _ when target.Equals("Filament", StringComparison.OrdinalIgnoreCase):
+                        await DeleteFilamentAsync(vm, appLogger).ConfigureAwait(false);
+                        return;
+                    case var _ when target.Equals("FilamentColour",   StringComparison.OrdinalIgnoreCase)
+                                    || target.Equals("FilamentColor", StringComparison.OrdinalIgnoreCase):
+                        await DeleteFilamentColourAsync(vm, appLogger).ConfigureAwait(false);
+                        return;
+                    case var _ when target.Equals("FilamentType", StringComparison.OrdinalIgnoreCase):
+                        await DeleteFilamentTypeAsync(vm, appLogger).ConfigureAwait(false);
+                        return;
+                    case var _ when target.Equals("Manufacturer", StringComparison.OrdinalIgnoreCase):
+                        await DeleteManufacturerAsync(vm, appLogger).ConfigureAwait(false);
+                        return;
+                    case var _ when target.Equals("ModelDesign", StringComparison.OrdinalIgnoreCase):
+                        await DeleteModelDesignAsync(vm, appLogger).ConfigureAwait(false);
+                        return;
+                    case var _ when target.Equals("PrintingProject", StringComparison.OrdinalIgnoreCase):
+                        await DeletePrintingProjectAsync(vm, appLogger).ConfigureAwait(false);
+                        return;
+                }
+
                 return;
 
             case var s when s.Equals(SubMenuBackToMain, StringComparison.OrdinalIgnoreCase):
