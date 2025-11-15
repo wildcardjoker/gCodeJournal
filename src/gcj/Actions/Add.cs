@@ -65,12 +65,10 @@
                 return;
             }
 
-            var costPerWeight = await AnsiConsole.PromptAsync(new TextPrompt<decimal?>("Please enter the cost/weight (ENTER for no cost):").AllowEmpty())
-                                                 .ConfigureAwait(false)
-                                ?? 0m;
-            var productCode = await AnsiConsole.PromptAsync(new TextPrompt<string?>("Please enter the product code (ENTER for none):").AllowEmpty()).ConfigureAwait(false);
-            var productUrl  = await AnsiConsole.PromptAsync(new TextPrompt<string?>("Please enter the product URL (ENTER for none):").AllowEmpty()).ConfigureAwait(false);
-            var filamentDto = new FilamentDto(costPerWeight, productCode, productUrl, colour, filamentType, manufacturer);
+            var costPerWeight = await 0m.GetFilamentCostPerWeightAsync().ConfigureAwait(false);
+            var productCode   = await string.Empty.GetFilamentProductIdAsync().ConfigureAwait(false);
+            var productUrl    = await string.Empty.GetFilamentProductUrlAsync().ConfigureAwait(false);
+            var filamentDto   = new FilamentDto(costPerWeight, productCode, productUrl, colour, filamentType, manufacturer);
             await vm.AddFilamentAsync(filamentDto).ConfigureAwait(false);
             appLogger.LogInformation(Emoji.Known.CheckMarkButton + " Added filament {Filament}", filamentDto);
         }
