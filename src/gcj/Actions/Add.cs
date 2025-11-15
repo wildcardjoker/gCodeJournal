@@ -11,8 +11,7 @@
     {
         private static async Task AddCustomerAsync(IGCodeJournalViewModel vm, ILogger appLogger)
         {
-            var customerName =
-                await ValidateCustomerNameInputAsync(appLogger).ConfigureAwait(false); //await "customer's name".GetInputFromConsoleAsync().ConfigureAwait(false);
+            var customerName = await ValidateCustomerNameInputAsync(appLogger).ConfigureAwait(false);
             if (string.IsNullOrWhiteSpace(customerName))
             {
                 return;
@@ -116,8 +115,8 @@
         {
             var summary     = await string.Empty.GetModelSummary().ConfigureAwait(false);
             var description = await string.Empty.GetModelDescriptionAsync().ConfigureAwait(false);
-            var length      = await "model length in m".GetInputFromConsoleAsync<decimal>().ConfigureAwait(false);
-            var url         = await "model URL".GetInputFromConsoleAsync().ConfigureAwait(false);
+            var length      = await 0m.GetModelLengthAsync().ConfigureAwait(false);
+            var url         = await "model URL".GetUriAsync().ConfigureAwait(false);
 
             if (string.IsNullOrWhiteSpace(summary))
             {
