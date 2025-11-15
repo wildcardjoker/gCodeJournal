@@ -22,10 +22,10 @@
             // ReSharper disable once ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract
             var prompt = new SelectionPrompt<T>()
                          .Title($"Please select from the following {typeof(T).Name.Replace("Dto", string.Empty, StringComparison.OrdinalIgnoreCase).Humanize()}")
-                                                 .PageSize(10)
-                                                 .MoreChoicesText("Scroll up/down for more choices")
-                                                 .UseConverter(item => item is null ? "Back to menu" : item?.ToString() ?? "<unknown>")!.AddChoices(
-                                                     new[] {(T?) null}.Concat(choices.Select(T? (c) => c)));
+                         .PageSize(10)
+                         .MoreChoicesText("Scroll up/down for more choices")
+                         .UseConverter(item => item is null ? "Back to menu" : item?.ToString() ?? "<unknown>")!.AddChoices(
+                             new[] {(T?) null}.Concat(choices.Select(T? (c) => c)));
 #pragma warning restore CS8714 // The type cannot be used as type parameter in the generic type or method. Nullability of type argument doesn't match 'notnull' constraint.
 
             var response = await AnsiConsole.PromptAsync(prompt).ConfigureAwait(false);
@@ -52,6 +52,9 @@
 
         public static async Task<string?> GetManufacturerAsync(this string defaultValue) =>
             await "manufacturer's name".GetInputFromConsoleAsync(defaultValue).ConfigureAwait(false);
+
+        public static async Task<string?> GetModelDescriptionAsync(this string? additionalMessage) =>
+            await "model description".GetMultiLineInputAsync(additionalMessage).ConfigureAwait(false);
 
         public static async Task<string?> GetModelSummary(this string defaultValue) => await "model summary".GetInputFromConsoleAsync(defaultValue).ConfigureAwait(false);
 
