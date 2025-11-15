@@ -162,7 +162,7 @@ public static partial class Program
                 break;
 
             case var s when s.Equals(SubMenuAddNew, StringComparison.OrdinalIgnoreCase):
-                appLogger.LogInformation("Add new requested for '{Target}'", target);
+                appLogger.LogDebug("Add new requested for '{Target}'", target);
 
                 // Implement interactive prompts / DTO creation and call view model Add* methods
                 switch (target)
