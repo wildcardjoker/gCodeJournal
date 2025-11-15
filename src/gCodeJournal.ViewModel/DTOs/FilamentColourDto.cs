@@ -14,7 +14,7 @@ public class FilamentColourDto(int id, string description)
     /// <summary>
     ///     The description of the filament color.
     /// </summary>
-    public string Description {get; init;} = description;
+    public string Description {get; set;} = description;
 
     /// <summary>
     ///     The unique identifier of the filament color.
