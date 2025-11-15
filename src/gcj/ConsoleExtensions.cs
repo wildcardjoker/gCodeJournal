@@ -1,6 +1,7 @@
 ﻿namespace gcj
 {
     #region Using Directives
+    using Humanizer;
     using Microsoft.Extensions.Logging;
     using Spectre.Console;
     #endregion
@@ -19,7 +20,8 @@
 #pragma warning disable CS8714 // The type cannot be used as type parameter in the generic type or method. Nullability of type argument doesn't match 'notnull' constraint.
 
             // ReSharper disable once ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract
-            var prompt = new SelectionPrompt<T>().Title($"Please select from the following {typeof(T).Name}")
+            var prompt = new SelectionPrompt<T>()
+                         .Title($"Please select from the following {typeof(T).Name.Replace("Dto", string.Empty, StringComparison.OrdinalIgnoreCase).Humanize()}")
                                                  .PageSize(10)
                                                  .MoreChoicesText("Scroll up/down for more choices")
                                                  .UseConverter(item => item is null ? "Back to menu" : item?.ToString() ?? "<unknown>")!.AddChoices(
