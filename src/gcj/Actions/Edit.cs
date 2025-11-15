@@ -37,7 +37,44 @@
             }
         }
 
-        private static async Task EditFilamentAsync(IGCodeJournalViewModel vm, ILogger appLogger) => throw new NotImplementedException();
+        private static async Task EditFilamentAsync(IGCodeJournalViewModel vm, ILogger appLogger)
+        {
+            var colours       = await vm.GetAllFilamentColoursAsync().ConfigureAwait(false);
+            var filamentTypes = await vm.GetAllFilamentTypesAsync().ConfigureAwait(false);
+            var manufacturers = await vm.GetAllManufacturersAsync().ConfigureAwait(false);
+            var filaments     = await vm.GetAllFilamentsAsync().ConfigureAwait(false);
+            var filament      = await filaments.GetEntitySelectionAsync().ConfigureAwait(false);
+            if (filament is null)
+            {
+                appLogger.LogReturnToMenu();
+                return;
+            }
+
+            var newManufacturer = await manufacturers.GetEntitySelectionAsync().ConfigureAwait(false);
+            var newFilamentType = await filamentTypes.GetEntitySelectionAsync().ConfigureAwait(false);
+            var newColour       = await colours.GetEntitySelectionAsync().ConfigureAwait(false);
+            if (newColour is null || newFilamentType is null || newManufacturer is null)
+            {
+                appLogger.LogReturnToMenu();
+                return;
+            }
+
+            filament!.FilamentColour = newColour;
+            filament.FilamentType    = newFilamentType;
+            filament.Manufacturer    = newManufacturer;
+            filament.CostPerWeight   = await filament.CostPerWeight.GetFilamentCostPerWeightAsync().ConfigureAwait(false);
+            filament.ProductId       = await (filament.ProductId   ?? string.Empty).GetFilamentProductIdAsync().ConfigureAwait(false);
+            filament.ReorderLink     = await (filament.ReorderLink ?? string.Empty).GetFilamentReorderLinkAsync().ConfigureAwait(false);
+            var result = await vm.EditFilamentAsync(filament).ConfigureAwait(false);
+            if (result == ValidationResult.Success)
+            {
+                appLogger.LogInformation(Emoji.Known.CheckMarkButton + "  Updated filament {FilamentDescription}", filament);
+            }
+            else
+            {
+                appLogger.LogError(Emoji.Known.CrossMark + "  Error saving data: {ValidationResult}", result);
+            }
+        }
 
         private static async Task EditFilamentColourAsync(IGCodeJournalViewModel vm, ILogger appLogger) => throw new NotImplementedException();
 
