@@ -14,7 +14,7 @@ public class ModelDesignDto(int id, string description, decimal length, string s
     /// <summary>
     ///     The description of the model design.
     /// </summary>
-    public string Description {get; init;} = description;
+    public string Description {get; set;} = description;
 
     /// <summary>
     ///     The unique identifier of the model design.
@@ -24,17 +24,17 @@ public class ModelDesignDto(int id, string description, decimal length, string s
     /// <summary>
     ///     The length of the model design.
     /// </summary>
-    public decimal Length {get; init;} = length;
+    public decimal Length {get; set;} = length;
 
     /// <summary>
     ///     A summary of the model design.
     /// </summary>
-    public string Summary {get; init;} = summary;
+    public string Summary {get; set;} = summary;
 
     /// <summary>
     ///     The URL associated with the model design (optional).
     /// </summary>
-    public string? Url {get; init;} = url;
+    public string? Url {get; set;} = url;
     #endregion
 
     /// <summary>
