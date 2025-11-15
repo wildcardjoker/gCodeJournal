@@ -48,6 +48,9 @@
         public static Task<string?> GetInputFromConsoleAsync(this    string promptMessage) => promptMessage.GetInputFromConsoleAsync<string?>(string.Empty);
         public static Task<T?>      GetInputFromConsoleAsync<T>(this string promptMessage) => promptMessage.GetInputFromConsoleAsync<T>(default);
 
+        public static async Task<string?> GetManufacturerAsync(this string defaultValue) =>
+            await "Please enter the manufacturer's name".GetInputFromConsoleAsync(defaultValue).ConfigureAwait(false);
+
         public static Task<string?> GetMultiLineInputAsync(this string promptMessage)
         {
             AnsiConsole.MarkupLineInterpolated($"Please enter the {promptMessage} (empty line to finish):");
