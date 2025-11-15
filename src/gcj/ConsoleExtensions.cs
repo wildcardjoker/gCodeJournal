@@ -35,36 +35,63 @@
             return response;
         }
 
+        public static async Task<decimal> GetFilamentCostPerWeightAsync(this decimal defaultValue) =>
+            await "Please enter the cost/weight".GetInputFromConsoleAsync(defaultValue).ConfigureAwait(false);
+
+        public static async Task<string?> GetFilamentProductIdAsync(this string defaultValue) =>
+            await "Please enter the product ID".GetInputFromConsoleAsync(defaultValue).ConfigureAwait(false);
+
+        public static async Task<string?> GetFilamentProductUrlAsync(this string defaultValue) =>
+            await "Please enter the reorder link/URL".GetInputFromConsoleAsync(defaultValue).ConfigureAwait(false);
+
+        public static async Task<string?> GetFilamentReorderLinkAsync(this string defaultValue) =>
+            await "Please enter the reorder link".GetInputFromConsoleAsync(defaultValue).ConfigureAwait(false);
+
         public static Task<string?> GetInputFromConsoleAsync(this    string promptMessage) => promptMessage.GetInputFromConsoleAsync<string?>(string.Empty);
         public static Task<T?>      GetInputFromConsoleAsync<T>(this string promptMessage) => promptMessage.GetInputFromConsoleAsync<T>(default);
-
-        public static Task<T?> GetInputFromConsoleAsync<T>(this string promptMessage, T? defaultValue) =>
-            AnsiConsole.PromptAsync(new TextPrompt<T?>($"Please enter the {promptMessage} (ENTER for none):").AllowEmpty().DefaultValue(defaultValue ?? default));
 
         public static Task<string?> GetMultiLineInputAsync(this string promptMessage)
         {
             AnsiConsole.MarkupLineInterpolated($"Please enter the {promptMessage} (empty line to finish):");
 
-            return Task.Run<string?>(async () =>
-                                     {
-                                         var lines = new List<string>();
-                                         while (true)
-                                         {
-                                             var line = await AnsiConsole.PromptAsync(new TextPrompt<string?>(">").AllowEmpty()).ConfigureAwait(false);
+            return Task.Run(async () =>
+                            {
+                                var lines = new List<string>();
+                                while (true)
+                                {
+                                    var line = await AnsiConsole.PromptAsync(new TextPrompt<string?>(">").AllowEmpty()).ConfigureAwait(false);
 
-                                             //var line = AnsiConsole.Console.ReadLine();
-                                             if (string.IsNullOrWhiteSpace(line)) // EOF or input closed
-                                             {
-                                                 break;
-                                             }
+                                    //var line = AnsiConsole.Console.ReadLine();
+                                    if (string.IsNullOrWhiteSpace(line)) // EOF or input closed
+                                    {
+                                        break;
+                                    }
 
-                                             lines.Add(line);
-                                         }
+                                    lines.Add(line);
+                                }
 
-                                         return lines.Count == 0 ? null : string.Join(Environment.NewLine, lines);
-                                     });
+                                return lines.Count == 0 ? null : string.Join(Environment.NewLine, lines);
+                            });
         }
 
         public static void LogReturnToMenu(this ILogger logger) => logger.LogInformation("Returning to menu");
+
+        private static async Task<string?> GetInputFromConsoleAsync(this string promptMessage, string? defaultValue)
+        {
+            if (string.IsNullOrWhiteSpace(defaultValue))
+            {
+                defaultValue = null;
+            }
+
+            var defaultValueString = defaultValue ?? "null";
+            return await AnsiConsole.PromptAsync(
+                                        new TextPrompt<string?>($"Please enter the {promptMessage} (ENTER for {defaultValueString}):").AllowEmpty()
+                                            .DefaultValue(defaultValue))
+                                    .ConfigureAwait(false);
+        }
+
+        private static Task<T?> GetInputFromConsoleAsync<T>(this string promptMessage, T? defaultValue) =>
+            AnsiConsole.PromptAsync(
+                new TextPrompt<T?>($"Please enter the {promptMessage} (ENTER for {defaultValue ?? default}):").AllowEmpty().DefaultValue(defaultValue ?? default));
     }
 }
