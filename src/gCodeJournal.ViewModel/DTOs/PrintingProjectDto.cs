@@ -7,14 +7,14 @@ namespace gCodeJournal.ViewModel.DTOs;
 public class PrintingProjectDto(
     int               id,
     decimal           cost,
-    DateTime          submitted,
-    DateTime?         completed,
+    DateOnly          submitted,
+    DateOnly?         completed,
     CustomerDto?      customer,
     ModelDesignDto?   modelDesign,
     List<FilamentDto> filaments)
 {
     #region Constructors
-    public PrintingProjectDto(decimal cost, DateTime submitted, DateTime? completed, CustomerDto? customer, ModelDesignDto? modelDesign, List<FilamentDto> filaments) :
+    public PrintingProjectDto(decimal cost, DateOnly submitted, DateOnly? completed, CustomerDto? customer, ModelDesignDto? modelDesign, List<FilamentDto> filaments) :
         this(0, cost, submitted, completed, customer, modelDesign, filaments) {}
     #endregion
 
@@ -22,22 +22,22 @@ public class PrintingProjectDto(
     /// <summary>
     ///     The date when the project was completed (optional).
     /// </summary>
-    public DateTime? Completed {get; init;} = completed;
+    public DateOnly? Completed {get; set;} = completed; // TODO: Revert to init properties with code for updating values in ViewModel
 
     /// <summary>
     ///     The total cost of the printing project.
     /// </summary>
-    public decimal Cost {get; init;} = cost;
+    public decimal Cost {get; set;} = cost;
 
     /// <summary>
     ///     The customer associated with the project (optional).
     /// </summary>
-    public CustomerDto? Customer {get; init;} = customer;
+    public CustomerDto? Customer {get; set;} = customer;
 
     /// <summary>
     ///     The list of filaments used in the project.
     /// </summary>
-    public List<FilamentDto> Filaments {get; init;} = filaments;
+    public List<FilamentDto> Filaments {get; set;} = filaments;
 
     /// <summary>
     ///     The unique identifier of the printing project.
@@ -47,12 +47,12 @@ public class PrintingProjectDto(
     /// <summary>
     ///     The model design associated with the project (optional).
     /// </summary>
-    public ModelDesignDto? ModelDesign {get; init;} = modelDesign;
+    public ModelDesignDto? ModelDesign {get; set;} = modelDesign;
 
     /// <summary>
     ///     The date when the project was submitted.
     /// </summary>
-    public DateTime Submitted {get; init;} = submitted;
+    public DateOnly Submitted {get; set;} = submitted;
     #endregion
 
     /// <summary>

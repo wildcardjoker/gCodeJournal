@@ -297,8 +297,8 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
         var project = new PrintingProject
         {
             Cost       = projectDto.Cost,
-            Submitted  = projectDto.Submitted,
-            Completed  = projectDto.Completed,
+            Submitted  = projectDto.Submitted.ToDateTime(TimeOnly.MinValue),
+            Completed  = projectDto.Completed?.ToDateTime(TimeOnly.MinValue),
             Customer   = customer!,
             Model      = model!,
             FilamentId = projectDto.Filaments.First().Id // TODO: handle multiple filaments properly
@@ -521,8 +521,8 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
         }
 
         existing.Cost      = printingProjectDto.Cost;
-        existing.Submitted = printingProjectDto.Submitted;
-        existing.Completed = printingProjectDto.Completed;
+        existing.Submitted = printingProjectDto.Submitted.ToDateTime(TimeOnly.MinValue);
+        existing.Completed = printingProjectDto.Completed?.ToDateTime(TimeOnly.MinValue);
         if (customer != null)
         {
             existing.CustomerId = customer.Id;
@@ -641,10 +641,10 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
                   .Select(p => new PrintingProjectDto(
                               p.Id,
                               p.Cost,
-                              p.Submitted,
-                              p.Completed,
-                              p.Customer == null ? null : new CustomerDto(p.Customer.Id, p.Customer.Name),
-                              p.Model    == null ? null : new ModelDesignDto(p.Model.Id, p.Model.Description, p.Model.Length, p.Model.Summary, p.Model.Url),
+                              DateOnly.FromDateTime(p.Submitted),
+                              p.Completed == null ? null : DateOnly.FromDateTime(p.Completed.Value),
+                              p.Customer  == null ? null : new CustomerDto(p.Customer.Id, p.Customer.Name),
+                              p.Model     == null ? null : new ModelDesignDto(p.Model.Id, p.Model.Description, p.Model.Length, p.Model.Summary, p.Model.Url),
                               p.Filaments.Select(f => new FilamentDto(
                                                      f.Id,
                                                      f.CostPerWeight,
