@@ -101,7 +101,7 @@
 
         private static async Task AddManufacturerAsync(IGCodeJournalViewModel vm, ILogger appLogger)
         {
-            var manufacturerName = await AnsiConsole.AskAsync<string>("Please enter the manufacturer's name").ConfigureAwait(false);
+            var manufacturerName = await string.Empty.GetManufacturerAsync().ConfigureAwait(false);
             if (string.IsNullOrWhiteSpace(manufacturerName))
             {
                 appLogger.LogError(Emoji.Known.Warning + "  Manufacturer name cannot be empty");
