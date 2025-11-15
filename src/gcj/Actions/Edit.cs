@@ -190,7 +190,41 @@
             }
         }
 
-        private static async Task EditPrintingProjectAsync(IGCodeJournalViewModel vm, ILogger appLogger) => throw new NotImplementedException();
+        private static async Task EditPrintingProjectAsync(IGCodeJournalViewModel vm, ILogger appLogger)
+        {
+            var allCustomers = await vm.GetAllCustomersAsync().ConfigureAwait(false);
+            var allModels    = await vm.GetAllModelDesignsAsync().ConfigureAwait(false);
+            var allFilaments = await vm.GetAllFilamentsAsync().ConfigureAwait(false);
+            var allProjects  = await vm.GetAllPrintingProjectsAsync().ConfigureAwait(false);
+
+            var selectedProject = await allProjects.GetEntitySelectionAsync().ConfigureAwait(false);
+            if (selectedProject is null)
+            {
+                appLogger.LogReturnToMenu();
+                return;
+            }
+
+            var customer  = await allCustomers.GetEntitySelectionAsync().ConfigureAwait(false);
+            var model     = await allModels.GetEntitySelectionAsync().ConfigureAwait(false);
+            var filaments = await allFilaments.SelectFilamentsAsync(appLogger, selectedProject.Filaments);
+
+            selectedProject.Customer = customer ?? selectedProject.Customer;
+            selectedProject.Filaments = filaments.Any() ? filaments : selectedProject.Filaments;
+            selectedProject.Cost = await "cost".GetInputFromConsoleAsync<decimal>().ConfigureAwait(false); // TODO: Calculate from filament and length
+            selectedProject.Submitted = await "submitted".GetDateFromConsoleAsync(selectedProject.Submitted).ConfigureAwait(false) ?? DateOnly.FromDateTime(DateTime.Today);
+            selectedProject.Completed = await "completed".GetDateFromConsoleAsync(selectedProject.Completed).ConfigureAwait(false);
+            selectedProject.ModelDesign = model ?? selectedProject.ModelDesign;
+
+            var result = await vm.EditPrintingProjectAsync(selectedProject).ConfigureAwait(false);
+            if (result == ValidationResult.Success)
+            {
+                appLogger.LogInformation(Emoji.Known.CheckMarkButton + "  Updated Project {Project}", selectedProject);
+            }
+            else
+            {
+                LogSaveFailure(appLogger, result);
+            }
+        }
 
         private static void LogSaveFailure(ILogger appLogger, ValidationResult result)
         {
