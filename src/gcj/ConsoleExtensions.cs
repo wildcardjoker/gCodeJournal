@@ -42,7 +42,7 @@
             await "product ID".GetInputFromConsoleAsync(defaultValue).ConfigureAwait(false);
 
         public static async Task<string?> GetFilamentProductUrlAsync(this string defaultValue) =>
-            await "reorder link/URL".GetInputFromConsoleAsync(defaultValue).ConfigureAwait(false);
+            await "reorder link/URL".GetUriAsync(defaultValue).ConfigureAwait(false);
 
         public static async Task<string?> GetFilamentReorderLinkAsync(this string defaultValue) =>
             await "reorder link".GetInputFromConsoleAsync(defaultValue).ConfigureAwait(false);
@@ -55,6 +55,9 @@
 
         public static async Task<string?> GetModelDescriptionAsync(this string? additionalMessage) =>
             await "model description".GetMultiLineInputAsync(additionalMessage).ConfigureAwait(false);
+
+        public static async Task<decimal> GetModelLengthAsync(this decimal defaultValue) =>
+            await "model length in metres".GetInputFromConsoleAsync(defaultValue).ConfigureAwait(false);
 
         public static async Task<string?> GetModelSummary(this string defaultValue) => await "model summary".GetInputFromConsoleAsync(defaultValue).ConfigureAwait(false);
 
@@ -84,6 +87,12 @@
 
                                 return lines.Count == 0 ? null : string.Join(Environment.NewLine, lines);
                             });
+        }
+
+        public static async Task<string?> GetUriAsync(this string promptMessage, string? defaultValue = null)
+        {
+            var uri = await GetInputFromConsoleAsync(promptMessage, defaultValue).ConfigureAwait(false);
+            return string.IsNullOrWhiteSpace(uri) ? uri : uri.StartsWith("http", StringComparison.OrdinalIgnoreCase) ? uri : $"https://{uri}";
         }
 
         public static void LogReturnToMenu(this ILogger logger) => logger.LogInformation("Returning to menu");
