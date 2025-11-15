@@ -14,7 +14,7 @@ public class FilamentTypeDto(int id, string description)
     /// <summary>
     ///     The description of the filament type.
     /// </summary>
-    public string Description {get; init;} = description;
+    public string Description {get; set;} = description;
 
     /// <summary>
     ///     The unique identifier of the filament type.
