@@ -175,34 +175,12 @@
 
             appLogger.LogInformation(Emoji.Known.OkButton + " Selected model: {Model}", model);
 
-            // Collect multiple filaments until the user elects to return to the menu.
-            var selectedFilaments = new List<FilamentDto>();
-            while (true)
-            {
-                var selected = await filaments.GetEntitySelectionAsync().ConfigureAwait(false);
-                if (selected is null)
-                {
-                    if (!selectedFilaments.Any())
-                    {
-                        // User chose to return immediately -> cancel project creation.
-                        appLogger.LogReturnToMenu();
-                        return;
-                    }
+            var selectedFilaments = await filaments.SelectFilamentsAsync(appLogger);
+            var cost              = await "cost".GetInputFromConsoleAsync<decimal>().ConfigureAwait(false); // TODO: Calculate from filament and length
+            var dateSubmitted = await "submitted".GetDateFromConsoleAsync(DateOnly.FromDateTime(DateTime.Today)).ConfigureAwait(false)
+                                ?? DateOnly.FromDateTime(DateTime.Today);
+            var dateCompleted = await "completed".GetDateFromConsoleAsync().ConfigureAwait(false);
 
-                    // User has finished selecting filaments; exit selection loop and continue.
-                    break;
-                }
-
-                selectedFilaments.Add(selected);
-                appLogger.LogInformation(Emoji.Known.OkButton + " Added filament {Filament}", selected);
-
-                // Loop will prompt again to allow multiple selections until the user chooses to return.
-            }
-
-            var       cost          = await "cost".GetInputFromConsoleAsync<decimal>().ConfigureAwait(false);
-            var       dateSubmitted = await "date submitted (yyyy-MM-dd)".GetInputFromConsoleAsync<DateOnly>().ConfigureAwait(false);
-            DateOnly? dateCompleted = await "date completed (yyyy-MM-dd)".GetInputFromConsoleAsync<DateOnly>().ConfigureAwait(false);
-            dateCompleted = dateCompleted.Equals(DateOnly.MinValue) ? null : dateCompleted;
             appLogger.LogInformation(Emoji.Known.OkButton + " Set cost to {Cost}",                   cost.ToString("C2"));
             appLogger.LogInformation(Emoji.Known.OkButton + " Set DateSubmitted to {DateSubmitted}", dateSubmitted.ToShortDateString());
             if (dateCompleted.HasValue)
@@ -214,15 +192,7 @@
                 appLogger.LogInformation(Emoji.Known.OkButton + " Not completed");
             }
 
-            await vm.AddPrintingProjectAsync(
-                        new PrintingProjectDto(
-                            cost,
-                            dateSubmitted.ToDateTime(TimeOnly.MinValue),
-                            dateCompleted?.ToDateTime(TimeOnly.MinValue),
-                            customer,
-                            model,
-                            selectedFilaments))
-                    .ConfigureAwait(false);
+            await vm.AddPrintingProjectAsync(new PrintingProjectDto(cost, dateSubmitted, dateCompleted, customer, model, selectedFilaments)).ConfigureAwait(false);
             appLogger.LogInformation(
                 Emoji.Known.CheckMarkButton + " Added project {Model} for {Customer} with filaments {Filaments}",
                 model,
