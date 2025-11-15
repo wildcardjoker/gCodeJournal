@@ -152,7 +152,43 @@
             }
         }
 
-        private static async Task EditModelDesignAsync(IGCodeJournalViewModel vm, ILogger appLogger) => throw new NotImplementedException();
+        private static async Task EditModelDesignAsync(IGCodeJournalViewModel vm, ILogger appLogger)
+        {
+            var designs        = await vm.GetAllModelDesignsAsync().ConfigureAwait(false);
+            var selectedDesign = await designs.GetEntitySelectionAsync().ConfigureAwait(false);
+            if (selectedDesign is null)
+            {
+                appLogger.LogReturnToMenu();
+                return;
+            }
+
+            var summary     = await selectedDesign.Summary.GetModelSummary().ConfigureAwait(false);
+            var description = await "[Press ENTER to retain existing description]".GetModelDescriptionAsync().ConfigureAwait(false);
+            var length      = await selectedDesign.Length.GetModelLengthAsync().ConfigureAwait(false);
+            var url         = await "model URL".GetUriAsync(selectedDesign.Url).ConfigureAwait(false);
+
+            if (string.IsNullOrWhiteSpace(summary))
+            {
+                appLogger.LogWarning("Summary cannot be empty");
+                appLogger.LogReturnToMenu();
+                return;
+            }
+
+            selectedDesign.Description = description ?? selectedDesign.Description;
+            selectedDesign.Summary     = summary;
+            selectedDesign.Length      = length;
+            selectedDesign.Url         = url;
+
+            var result = await vm.EditModelDesignAsync(selectedDesign).ConfigureAwait(false);
+            if (result == ValidationResult.Success)
+            {
+                appLogger.LogInformation(Emoji.Known.CheckMarkButton + "  Updated Model {ModelDesign}", selectedDesign);
+            }
+            else
+            {
+                LogSaveFailure(appLogger, result);
+            }
+        }
 
         private static async Task EditPrintingProjectAsync(IGCodeJournalViewModel vm, ILogger appLogger) => throw new NotImplementedException();
 
