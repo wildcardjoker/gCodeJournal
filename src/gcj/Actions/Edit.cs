@@ -33,7 +33,7 @@
             }
             else
             {
-                appLogger.LogError(Emoji.Known.CrossMark + "  Error saving data: {ValidationResult}", result);
+                LogSaveFailure(appLogger, result);
             }
         }
 
@@ -72,11 +72,46 @@
             }
             else
             {
-                appLogger.LogError(Emoji.Known.CrossMark + "  Error saving data: {ValidationResult}", result);
+                LogSaveFailure(appLogger, result);
             }
         }
 
-        private static async Task EditFilamentColourAsync(IGCodeJournalViewModel vm, ILogger appLogger) => throw new NotImplementedException();
+        private static async Task EditFilamentColourAsync(IGCodeJournalViewModel vm, ILogger appLogger)
+        {
+            var colours        = await vm.GetAllFilamentColoursAsync().ConfigureAwait(false);
+            var selectedColour = await colours.GetEntitySelectionAsync().ConfigureAwait(false);
+            if (selectedColour is null)
+            {
+                appLogger.LogReturnToMenu();
+                return;
+            }
+
+            var updatedDescription = await selectedColour.Description.GetFilamentColourAsync().ConfigureAwait(false);
+            if (string.IsNullOrWhiteSpace(updatedDescription))
+            {
+                "Description cannot be null; no changes made".DisplayWarningMessage();
+                appLogger.LogReturnToMenu();
+                return;
+            }
+
+            if (updatedDescription.Equals(selectedColour.Description))
+            {
+                "No changes detected".DisplayWarningMessage();
+                appLogger.LogReturnToMenu();
+                return;
+            }
+
+            selectedColour.Description = updatedDescription;
+            var result = await vm.EditFilamentColourAsync(selectedColour).ConfigureAwait(false);
+            if (result == ValidationResult.Success)
+            {
+                appLogger.LogInformation(Emoji.Known.CheckMarkButton + "  Updated filament colour {FilamentDescription}", selectedColour);
+            }
+            else
+            {
+                LogSaveFailure(appLogger, result);
+            }
+        }
 
         private static async Task EditFilamentTypeAsync(IGCodeJournalViewModel vm, ILogger appLogger) => throw new NotImplementedException();
 
@@ -85,5 +120,11 @@
         private static async Task EditModelDesignAsync(IGCodeJournalViewModel vm, ILogger appLogger) => throw new NotImplementedException();
 
         private static async Task EditPrintingProjectAsync(IGCodeJournalViewModel vm, ILogger appLogger) => throw new NotImplementedException();
+
+        private static void LogSaveFailure(ILogger appLogger, ValidationResult result)
+        {
+            // TODO: Move to extension method
+            appLogger.LogError(Emoji.Known.CrossMark + "  Error saving data: {ValidationResult}", result);
+        }
     }
 }
