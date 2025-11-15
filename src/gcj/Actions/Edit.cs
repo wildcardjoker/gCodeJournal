@@ -115,7 +115,42 @@
 
         private static async Task EditFilamentTypeAsync(IGCodeJournalViewModel vm, ILogger appLogger) => throw new NotImplementedException();
 
-        private static async Task EditManufacturerAsync(IGCodeJournalViewModel vm, ILogger appLogger) => throw new NotImplementedException();
+        private static async Task EditManufacturerAsync(IGCodeJournalViewModel vm, ILogger appLogger)
+        {
+            var manufacturers        = await vm.GetAllManufacturersAsync().ConfigureAwait(false);
+            var selectedManufacturer = await manufacturers.GetEntitySelectionAsync().ConfigureAwait(false);
+            if (selectedManufacturer is null)
+            {
+                appLogger.LogReturnToMenu();
+                return;
+            }
+
+            var updatedManufacturer = await selectedManufacturer.Name.GetManufacturerAsync().ConfigureAwait(false);
+            if (string.IsNullOrWhiteSpace(updatedManufacturer))
+            {
+                "Manufacturer name cannot be null; no changes made".DisplayWarningMessage();
+                appLogger.LogReturnToMenu();
+                return;
+            }
+
+            if (updatedManufacturer.Equals(selectedManufacturer.Name))
+            {
+                "No changes detected".DisplayWarningMessage();
+                appLogger.LogReturnToMenu();
+                return;
+            }
+
+            selectedManufacturer.Name = updatedManufacturer;
+            var result = await vm.EditManufacturerAsync(selectedManufacturer).ConfigureAwait(false);
+            if (result == ValidationResult.Success)
+            {
+                appLogger.LogInformation(Emoji.Known.CheckMarkButton + "  Updated Manufacturer {Manufacturer}", selectedManufacturer);
+            }
+            else
+            {
+                LogSaveFailure(appLogger, result);
+            }
+        }
 
         private static async Task EditModelDesignAsync(IGCodeJournalViewModel vm, ILogger appLogger) => throw new NotImplementedException();
 
