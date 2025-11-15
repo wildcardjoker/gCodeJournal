@@ -355,27 +355,11 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
         }
 
         existing.CostPerWeight = filamentDto.CostPerWeight;
-        existing.ProductId = filamentDto.ProductId;
-        existing.ReorderLink = filamentDto.ReorderLink;
-
-        if (filamentDto.Manufacturer != null)
-        {
-            var man = await GetOrCreateManufacturerAsync(filamentDto.Manufacturer).ConfigureAwait(false);
-            existing.ManufacturerId = man.Id;
-        }
-
-        if (filamentDto.FilamentColour != null)
-        {
-            var col = await GetOrCreateFilamentColourAsync(filamentDto.FilamentColour).ConfigureAwait(false);
-            existing.FilamentColourId = col.Id;
-        }
-
-        if (filamentDto.FilamentType != null)
-        {
-            var typ = await GetOrCreateFilamentTypeAsync(filamentDto.FilamentType).ConfigureAwait(false);
-            existing.FilamentTypeId = typ.Id;
-        }
-
+        existing.ProductId     = filamentDto.ProductId;
+        existing.ReorderLink   = filamentDto.ReorderLink;
+        existing.Manufacturer  = filamentDto.Manufacturer.ToEntity();
+        existing.Colour        = filamentDto.FilamentColour.ToEntity();
+        existing.Type          = filamentDto.FilamentType.ToEntity();
         await _db.SaveChangesAsync().ConfigureAwait(false);
         return ValidationResult.Success;
     }
@@ -472,9 +456,9 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
         }
 
         existing.Description = modelDesignDto.Description;
-        existing.Length = modelDesignDto.Length;
-        existing.Summary = modelDesignDto.Summary;
-        existing.Url = modelDesignDto.Url;
+        existing.Length      = modelDesignDto.Length;
+        existing.Summary     = modelDesignDto.Summary;
+        existing.Url         = modelDesignDto.Url;
 
         await _db.SaveChangesAsync().ConfigureAwait(false);
         return ValidationResult.Success;
@@ -493,10 +477,7 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
             return new ValidationResult("Printing project Id is required for editing");
         }
 
-        var existing = await _db.PrintingProjects
-            .Include(p => p.Filaments)
-            .FirstOrDefaultAsync(p => p.Id == printingProjectDto.Id)
-            .ConfigureAwait(false);
+        var existing = await _db.PrintingProjects.Include(p => p.Filaments).FirstOrDefaultAsync(p => p.Id == printingProjectDto.Id).ConfigureAwait(false);
         if (existing == null)
         {
             return new ValidationResult("Printing project not found");
@@ -529,7 +510,8 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
                 model = await _db.ModelDesigns.FindAsync(printingProjectDto.ModelDesign.Id).ConfigureAwait(false);
             }
 
-            model ??= await _db.ModelDesigns.FirstOrDefaultAsync(md => md.Description.ToLower() == printingProjectDto.ModelDesign.Description.ToLower()).ConfigureAwait(false);
+            model ??= await _db.ModelDesigns.FirstOrDefaultAsync(md => md.Description.ToLower() == printingProjectDto.ModelDesign.Description.ToLower())
+                               .ConfigureAwait(false);
             if (model == null)
             {
                 model = printingProjectDto.ModelDesign.ToEntity();
@@ -538,16 +520,23 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
             }
         }
 
-        existing.Cost = printingProjectDto.Cost;
+        existing.Cost      = printingProjectDto.Cost;
         existing.Submitted = printingProjectDto.Submitted;
         existing.Completed = printingProjectDto.Completed;
-        if (customer != null) existing.CustomerId = customer.Id;
-        if (model != null) existing.ModelDesignId = model.Id;
+        if (customer != null)
+        {
+            existing.CustomerId = customer.Id;
+        }
+
+        if (model != null)
+        {
+            existing.ModelDesignId = model.Id;
+        }
 
         // Resolve first filament (legacy single-filament support)
         if (printingProjectDto.Filaments?.Any() == true)
         {
-            var fDto = printingProjectDto.Filaments.First();
+            var       fDto    = printingProjectDto.Filaments.First();
             Filament? fEntity = null;
             if (fDto.Id != 0)
             {
@@ -606,7 +595,9 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
         return _db.Filaments.Include(f => f.Colour)
                   .Include(f => f.Manufacturer)
                   .Include(f => f.Type)
-                  .OrderBy(f => f.ManufacturerId)
+                  .OrderBy(f => f.Manufacturer.Name)
+                  .ThenBy(f => f.Type.Description)
+                  .ThenBy(f => f.Colour.Description)
                   .Select(f => new FilamentDto(
                               f.Id,
                               f.CostPerWeight,
