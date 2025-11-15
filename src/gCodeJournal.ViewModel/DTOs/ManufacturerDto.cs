@@ -19,7 +19,7 @@ namespace gCodeJournal.ViewModel.DTOs
         /// <summary>
         ///     The name of the manufacturer.
         /// </summary>
-        public string Name {get; init;} = name;
+        public string Name {get; set;} = name;
         #endregion
 
         /// <summary>
