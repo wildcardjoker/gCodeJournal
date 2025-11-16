@@ -362,7 +362,7 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                             if (p.Customer != null && p.Customer.Id != 0)
                             {
                                 var sid = p.Customer.Id.ToString();
-                                if (resolveMap.TryGetValue("customers", out var custMap) && custMap.TryGetValue(sid, out var mappedId))
+                                if (resolveMap.TryGetValue("customers", out var customerMap) && customerMap.TryGetValue(sid, out var mappedId))
                                 {
                                     // replace with db id by creating a new DTO (Id is init-only)
                                     p.Customer = new CustomerDto(mappedId, p.Customer.Name);
@@ -418,10 +418,10 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                                     continue;
                                 }
 
-                                var custId  = p.Customer?.Id    ?? 0;
-                                var modelId = p.ModelDesign?.Id ?? 0;
+                                var customerId = p.Customer?.Id    ?? 0;
+                                var modelId    = p.ModelDesign?.Id ?? 0;
                                 var dbEntity = await db.PrintingProjects.FirstOrDefaultAsync(
-                                                           x => x.Cost == p.Cost && x.CustomerId == custId && x.ModelDesignId == modelId,
+                                                           x => x.Cost == p.Cost && x.CustomerId == customerId && x.ModelDesignId == modelId,
                                                            ct)
                                                        .ConfigureAwait(false);
                                 if (dbEntity != null)
@@ -930,10 +930,10 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                     var modelId        = ParseIntOrZero(GetString(dict, "ModelDesignId") ?? GetString(dict, "ModelDesign"));
                     var filamentIdsRaw = GetString(dict, "FilamentIds") ?? GetString(dict, "FilamentId") ?? GetString(dict, "Filaments");
 
-                    CustomerDto? custDto = null;
+                    CustomerDto? customerDto = null;
                     if (customerId != 0)
                     {
-                        custDto = new CustomerDto(customerId, string.Empty);
+                        customerDto = new CustomerDto(customerId, string.Empty);
                     }
 
                     ModelDesignDto? modelDto = null;
@@ -973,14 +973,14 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                                           cost,
                                           submitted == DateOnly.MinValue ? DateOnly.FromDateTime(DateTime.Now) : submitted,
                                           completed == DateOnly.MinValue ? null : completed,
-                                          custDto,
+                                          customerDto,
                                           modelDto,
                                           filamentDtos)
                                       : new PrintingProjectDto(
                                           cost,
                                           submitted == DateOnly.MinValue ? DateOnly.FromDateTime(DateTime.Now) : submitted,
                                           completed == DateOnly.MinValue ? null : completed,
-                                          custDto,
+                                          customerDto,
                                           modelDto,
                                           filamentDtos);
 
@@ -1005,10 +1005,10 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                             result.Created++;
                             if (id != 0)
                             {
-                                var custId = projDto.Customer?.Id    ?? 0;
-                                var mdlId  = projDto.ModelDesign?.Id ?? 0;
+                                var projectCustomerId = projDto.Customer?.Id    ?? 0;
+                                var mdlId             = projDto.ModelDesign?.Id ?? 0;
                                 var dbEntity = await db.PrintingProjects.FirstOrDefaultAsync(
-                                                           x => x.Cost == projDto.Cost && x.CustomerId == custId && x.ModelDesignId == mdlId,
+                                                           x => x.Cost == projDto.Cost && x.CustomerId == projectCustomerId && x.ModelDesignId == mdlId,
                                                            ct)
                                                        .ConfigureAwait(false);
                                 if (dbEntity != null)
