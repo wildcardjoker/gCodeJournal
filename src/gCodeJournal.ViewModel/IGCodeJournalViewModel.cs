@@ -4,6 +4,8 @@ namespace gCodeJournal.ViewModel
     using System.ComponentModel.DataAnnotations;
     using DTOs;
     using Model;
+    using System.IO;
+    using System.Threading;
     #endregion
 
     /// <summary>
@@ -288,5 +290,16 @@ namespace gCodeJournal.ViewModel
         ///     Deletes the specified printing project represented by a DTO.
         /// </summary>
         Task<ValidationResult> DeletePrintingProjectAsync(PrintingProjectDto printingProjectDto);
+
+        // Import operations
+        /// <summary>
+        ///     Import data from CSV (file path). Supports a directory containing per-entity CSV files or a single CSV file.
+        /// </summary>
+        Task<gCodeJournal.ViewModel.Import.ImportResult> ImportFromCsvAsync(string csvPath, bool updateExisting = false, char delimiter = ',', CancellationToken ct = default);
+
+        /// <summary>
+        ///     Import data from a CSV stream. Optional fileName helps infer entity from the file name.
+        /// </summary>
+        Task<gCodeJournal.ViewModel.Import.ImportResult> ImportFromCsvAsync(Stream stream, string? fileName = null, bool updateExisting = false, char delimiter = ',', CancellationToken ct = default);
     }
 }

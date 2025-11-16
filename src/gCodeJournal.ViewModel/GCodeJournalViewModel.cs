@@ -3,6 +3,7 @@
 #region Using Directives
 using System.ComponentModel.DataAnnotations;
 using DTOs;
+using gCodeJournal.ViewModel.Import;
 using Mapping;
 using Microsoft.EntityFrameworkCore;
 using Model;
@@ -635,6 +636,21 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
                                .ToList()))
                   .ToListAsync();
     }
+
+    /// <inheritdoc />
+    public async Task<ImportResult> ImportFromCsvAsync(string csvPath, bool updateExisting = false, char delimiter = ',', CancellationToken ct = default)
+    {
+        var importer = new CsvImporter(_db, this);
+        return await importer.ImportFromPathAsync(csvPath, updateExisting, delimiter, ct).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<ImportResult> ImportFromCsvAsync(Stream stream, string? fileName = null, bool updateExisting = false, char delimiter = ',', CancellationToken ct = default)
+    {
+        var importer = new CsvImporter(_db, this);
+        return await importer.ImportStreamAsync(stream, fileName, updateExisting, delimiter, ct).ConfigureAwait(false);
+    }
+
     #endregion
 
     #region Validation helpers
