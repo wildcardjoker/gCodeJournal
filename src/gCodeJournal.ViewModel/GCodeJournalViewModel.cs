@@ -802,6 +802,201 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
     }
     #endregion
 
+    #region Delete operations
+    public async Task<ValidationResult> DeleteCustomerAsync(CustomerDto customerDto)
+    {
+        if (customerDto == null)
+        {
+            return new ValidationResult("Customer DTO is required");
+        }
+
+        if (customerDto.Id == 0)
+        {
+            return new ValidationResult("Customer Id is required for deletion");
+        }
+
+        var existing = await _db.Customers.FindAsync(customerDto.Id).ConfigureAwait(false);
+        if (existing == null)
+        {
+            return new ValidationResult("Customer not found");
+        }
+
+        _db.Customers.Remove(existing);
+        await _db.SaveChangesAsync().ConfigureAwait(false);
+        return ValidationResult.Success!;
+    }
+
+    public async Task<ValidationResult> DeleteFilamentAsync(FilamentDto filamentDto)
+    {
+        if (filamentDto == null)
+        {
+            return new ValidationResult("Filament DTO is required");
+        }
+
+        if (filamentDto.Id == 0)
+        {
+            return new ValidationResult("Filament Id is required for deletion");
+        }
+
+        var existing = await _db.Filaments.FindAsync(filamentDto.Id).ConfigureAwait(false);
+        if (existing == null)
+        {
+            return new ValidationResult("Filament not found");
+        }
+
+        _db.Filaments.Remove(existing);
+        await _db.SaveChangesAsync().ConfigureAwait(false);
+        return ValidationResult.Success!;
+    }
+
+    public async Task<ValidationResult> DeleteFilamentColourAsync(FilamentColourDto filamentColourDto)
+    {
+        var validation = ValidateFilamentColourDto(filamentColourDto);
+        if (validation != ValidationResult.Success)
+        {
+            return validation;
+        }
+
+        if (filamentColourDto.Id == 0)
+        {
+            return new ValidationResult("Filament colour Id is required for deletion");
+        }
+
+        var existing = await _db.FilamentColours.FindAsync(filamentColourDto.Id).ConfigureAwait(false);
+        if (existing == null)
+        {
+            return new ValidationResult("Filament colour not found");
+        }
+
+        // Prevent deletion if in use
+        var inUse = await _db.Filaments.AnyAsync(f => f.FilamentColourId == existing.Id).ConfigureAwait(false);
+        if (inUse)
+        {
+            return new ValidationResult("Filament colour is in use and cannot be deleted");
+        }
+
+        _db.FilamentColours.Remove(existing);
+        await _db.SaveChangesAsync().ConfigureAwait(false);
+        return ValidationResult.Success;
+    }
+
+    public async Task<ValidationResult> DeleteFilamentTypeAsync(FilamentTypeDto filamentTypeDto)
+    {
+        var validation = ValidateFilamentTypeDto(filamentTypeDto);
+        if (validation != ValidationResult.Success)
+        {
+            return validation;
+        }
+
+        if (filamentTypeDto.Id == 0)
+        {
+            return new ValidationResult("Filament type Id is required for deletion");
+        }
+
+        var existing = await _db.FilamentTypes.FindAsync(filamentTypeDto.Id).ConfigureAwait(false);
+        if (existing == null)
+        {
+            return new ValidationResult("Filament type not found");
+        }
+
+        // Prevent deletion if in use
+        var inUse = await _db.Filaments.AnyAsync(f => f.FilamentTypeId == existing.Id).ConfigureAwait(false);
+        if (inUse)
+        {
+            return new ValidationResult("Filament type is in use and cannot be deleted");
+        }
+
+        _db.FilamentTypes.Remove(existing);
+        await _db.SaveChangesAsync().ConfigureAwait(false);
+        return ValidationResult.Success;
+    }
+
+    public async Task<ValidationResult> DeleteManufacturerAsync(ManufacturerDto manufacturerDto)
+    {
+        var validation = ValidateManufacturerDto(manufacturerDto);
+        if (validation != ValidationResult.Success)
+        {
+            return validation;
+        }
+
+        if (manufacturerDto.Id == 0)
+        {
+            return new ValidationResult("Manufacturer Id is required for deletion");
+        }
+
+        var existing = await _db.Manufacturers.FindAsync(manufacturerDto.Id).ConfigureAwait(false);
+        if (existing == null)
+        {
+            return new ValidationResult("Manufacturer not found");
+        }
+
+        // Prevent deletion if in use
+        var inUse = await _db.Filaments.AnyAsync(f => f.ManufacturerId == existing.Id).ConfigureAwait(false);
+        if (inUse)
+        {
+            return new ValidationResult("Manufacturer is in use and cannot be deleted");
+        }
+
+        _db.Manufacturers.Remove(existing);
+        await _db.SaveChangesAsync().ConfigureAwait(false);
+        return ValidationResult.Success;
+    }
+
+    public async Task<ValidationResult> DeleteModelDesignAsync(ModelDesignDto modelDesignDto)
+    {
+        var validation = ValidateModelDesignDto(modelDesignDto);
+        if (validation != ValidationResult.Success)
+        {
+            return validation;
+        }
+
+        if (modelDesignDto.Id == 0)
+        {
+            return new ValidationResult("ModelDesign Id is required for deletion");
+        }
+
+        var existing = await _db.ModelDesigns.FindAsync(modelDesignDto.Id).ConfigureAwait(false);
+        if (existing == null)
+        {
+            return new ValidationResult("ModelDesign not found");
+        }
+
+        // Prevent deletion if in use
+        var inUse = await _db.PrintingProjects.AnyAsync(p => p.ModelDesignId == existing.Id).ConfigureAwait(false);
+        if (inUse)
+        {
+            return new ValidationResult("Model design is in use and cannot be deleted");
+        }
+
+        _db.ModelDesigns.Remove(existing);
+        await _db.SaveChangesAsync().ConfigureAwait(false);
+        return ValidationResult.Success;
+    }
+
+    public async Task<ValidationResult> DeletePrintingProjectAsync(PrintingProjectDto printingProjectDto)
+    {
+        if (printingProjectDto == null)
+        {
+            return new ValidationResult("Printing project DTO is required");
+        }
+
+        if (printingProjectDto.Id == 0)
+        {
+            return new ValidationResult("Printing project Id is required for deletion");
+        }
+
+        var existing = await _db.PrintingProjects.FindAsync(printingProjectDto.Id).ConfigureAwait(false);
+        if (existing == null)
+        {
+            return new ValidationResult("Printing project not found");
+        }
+
+        _db.PrintingProjects.Remove(existing);
+        await _db.SaveChangesAsync().ConfigureAwait(false);
+        return ValidationResult.Success!;
+    }
+    #endregion
+
     #region Helper lookups
     private async Task<Manufacturer> GetOrCreateManufacturerAsync(ManufacturerDto dto)
     {

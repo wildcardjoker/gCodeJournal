@@ -252,5 +252,41 @@ namespace gCodeJournal.ViewModel
         /// </summary>
         /// <returns>A task representing the asynchronous operation, with a list of printing projects as the result.</returns>
         Task<List<PrintingProjectDto>> GetAllPrintingProjectsAsync();
+
+        // Delete operations (DTO-based)
+        /// <summary>
+        ///     Deletes the specified customer represented by a DTO.
+        /// </summary>
+        Task<ValidationResult> DeleteCustomerAsync(CustomerDto customerDto);
+
+        /// <summary>
+        ///     Deletes the specified filament represented by a DTO.
+        /// </summary>
+        Task<ValidationResult> DeleteFilamentAsync(FilamentDto filamentDto);
+
+        /// <summary>
+        ///     Deletes the specified filament colour represented by a DTO.
+        /// </summary>
+        Task<ValidationResult> DeleteFilamentColourAsync(FilamentColourDto filamentColourDto);
+
+        /// <summary>
+        ///     Deletes the specified filament type represented by a DTO.
+        /// </summary>
+        Task<ValidationResult> DeleteFilamentTypeAsync(FilamentTypeDto filamentTypeDto);
+
+        /// <summary>
+        ///     Deletes the specified manufacturer represented by a DTO.
+        /// </summary>
+        Task<ValidationResult> DeleteManufacturerAsync(ManufacturerDto manufacturerDto);
+
+        /// <summary>
+        ///     Deletes the specified model design represented by a DTO.
+        /// </summary>
+        Task<ValidationResult> DeleteModelDesignAsync(ModelDesignDto modelDesignDto);
+
+        /// <summary>
+        ///     Deletes the specified printing project represented by a DTO.
+        /// </summary>
+        Task<ValidationResult> DeletePrintingProjectAsync(PrintingProjectDto printingProjectDto);
     }
 }
