@@ -287,15 +287,12 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                                     dbEntity = await db.Filaments.FirstOrDefaultAsync(x => x.ProductId == f.ProductId, ct).ConfigureAwait(false);
                                 }
 
-                                if (dbEntity == null)
-                                {
-                                    dbEntity = await db.Filaments.FirstOrDefaultAsync(
-                                                           x => x.ManufacturerId      == f.Manufacturer.Id
-                                                                && x.FilamentTypeId   == f.FilamentType.Id
-                                                                && x.FilamentColourId == f.FilamentColour.Id,
-                                                           ct)
-                                                       .ConfigureAwait(false);
-                                }
+                                dbEntity ??= await db.Filaments.FirstOrDefaultAsync(
+                                                         x => x.ManufacturerId      == f.Manufacturer.Id
+                                                              && x.FilamentTypeId   == f.FilamentType.Id
+                                                              && x.FilamentColourId == f.FilamentColour.Id,
+                                                         ct)
+                                                     .ConfigureAwait(false);
 
                                 if (dbEntity != null)
                                 {
@@ -847,13 +844,10 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                                     dbEntity = await db.Filaments.FirstOrDefaultAsync(x => x.ProductId == productId, ct).ConfigureAwait(false);
                                 }
 
-                                if (dbEntity == null)
-                                {
-                                    dbEntity = await db.Filaments.FirstOrDefaultAsync(
-                                                           x => x.ManufacturerId == manId && x.FilamentTypeId == typeId && x.FilamentColourId == colourId,
-                                                           ct)
-                                                       .ConfigureAwait(false);
-                                }
+                                dbEntity ??= await db.Filaments.FirstOrDefaultAsync(
+                                                         x => x.ManufacturerId == manId && x.FilamentTypeId == typeId && x.FilamentColourId == colourId,
+                                                         ct)
+                                                     .ConfigureAwait(false);
 
                                 if (dbEntity != null)
                                 {
