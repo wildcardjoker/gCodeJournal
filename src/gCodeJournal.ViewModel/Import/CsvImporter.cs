@@ -130,9 +130,8 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
             {
                 // assume one-row-per-file contains Entity column
                 var records = csv.GetRecords<dynamic>();
-                foreach (var rec in records)
+                foreach (var dict in records.Select(rec => (IDictionary<string, object>) rec))
                 {
-                    var dict = (IDictionary<string, object>) rec;
                     if (!dict.TryGetValue("Entity", out var en))
                     {
                         result.Errors.Add("No Entity column found in CSV and filename did not match a known entity");
