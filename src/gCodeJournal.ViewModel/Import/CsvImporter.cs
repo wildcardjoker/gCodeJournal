@@ -4,38 +4,51 @@ namespace gCodeJournal.ViewModel.Import;
 using System.ComponentModel.DataAnnotations;
 using System.Globalization;
 using System.Text;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-using System.IO;
-using DTOs;
-using Microsoft.EntityFrameworkCore;
-using Model;
 using CsvHelper;
 using CsvHelper.Configuration;
-using Mapping;
+using DTOs;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Model;
 #endregion
 
 public class CsvImporter
 {
+    #region Fields
     private readonly GCodeJournalDbContext _db;
     private readonly GCodeJournalViewModel _vm;
+    #endregion
 
+    #region Constructors
     public CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
     {
         _db = db;
         _vm = vm;
     }
+    #endregion
 
-    public async Task<ImportResult> ImportFromPathAsync(string path, bool updateExisting, char delimiter, CancellationToken ct)
+    #region ImportEntity Enum
+    private enum ImportEntity
+    {
+        Unknown,
+        Customers,
+        Manufacturers,
+        FilamentColours,
+        FilamentTypes,
+        Filaments,
+        ModelDesigns,
+        PrintingProjects
+    }
+    #endregion
+
+    public async Task<ImportResult> ImportFromPathAsync(string path, ILogger appLogger, bool updateExisting, char delimiter, CancellationToken ct)
     {
         var result = new ImportResult();
         if (File.Exists(path))
         {
             // single file - delegate to stream overload
-            await using var fs = File.OpenRead(path);
-            var res = await ImportStreamAsync(fs, Path.GetFileName(path), updateExisting, delimiter, ct).ConfigureAwait(false);
+            await using var fs  = File.OpenRead(path);
+            var             res = await ImportStreamAsync(fs, appLogger, Path.GetFileName(path), updateExisting, delimiter, ct).ConfigureAwait(false);
             return res;
         }
 
@@ -54,22 +67,26 @@ public class CsvImporter
             };
 
             // mergedMap carries mappings between files so later files can resolve references
-            var mergedMap = new Dictionary<string, Dictionary<string,int>>(StringComparer.OrdinalIgnoreCase);
+            var mergedMap = new Dictionary<string, Dictionary<string, int>>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var entity in ordered)
             {
                 var fileName = EntityFileName(entity);
-                var file = Path.Combine(path, fileName);
-                if (!File.Exists(file)) continue;
+                var file     = Path.Combine(path, fileName);
+                if (!File.Exists(file))
+                {
+                    result.Errors.Add($"Could not process file {file}");
+                    continue;
+                }
 
                 await using var fs = File.OpenRead(file);
-                var r = await ImportStreamAsync(fs, Path.GetFileName(file), updateExisting, delimiter, ct, mergedMap).ConfigureAwait(false);
+                var             r  = await ImportStreamAsync(fs, appLogger, Path.GetFileName(file), updateExisting, delimiter, ct, mergedMap).ConfigureAwait(false);
 
                 // merge results
                 result.Created += r.Created;
                 result.Updated += r.Updated;
                 result.Skipped += r.Skipped;
-                result.Failed += r.Failed;
+                result.Failed  += r.Failed;
                 result.Errors.AddRange(r.Errors);
 
                 // merge id maps into mergedMap and result.IdMap
@@ -77,7 +94,7 @@ public class CsvImporter
                 {
                     if (!mergedMap.TryGetValue(kv.Key, out var inner))
                     {
-                        inner = new Dictionary<string,int>(StringComparer.OrdinalIgnoreCase);
+                        inner             = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
                         mergedMap[kv.Key] = inner;
                     }
 
@@ -97,30 +114,19 @@ public class CsvImporter
         return result;
     }
 
-    private string EntityFileName(ImportEntity entity) => entity switch
-    {
-        ImportEntity.Customers => "customers.csv",
-        ImportEntity.Manufacturers => "manufacturers.csv",
-        ImportEntity.FilamentColours => "filament_colours.csv",
-        ImportEntity.FilamentTypes => "filament_types.csv",
-        ImportEntity.Filaments => "filaments.csv",
-        ImportEntity.ModelDesigns => "model_designs.csv",
-        ImportEntity.PrintingProjects => "printing_projects.csv",
-        _ => string.Empty
-    };
-
-    private async Task<ImportResult> ImportFileAsync(string filePath, ImportEntity entity, bool updateExisting, char delimiter, CancellationToken ct, Dictionary<string, Dictionary<string,int>>? existingMap = null)
-    {
-        await using var fs = File.OpenRead(filePath);
-        return await ImportStreamAsync(fs, Path.GetFileName(filePath), updateExisting, delimiter, ct, existingMap).ConfigureAwait(false);
-    }
-
     // accept optional existing mappings so single-file imports in a batch can resolve earlier-created ids
-    public async Task<ImportResult> ImportStreamAsync(Stream stream, string? fileName, bool updateExisting, char delimiter, CancellationToken ct, Dictionary<string, Dictionary<string,int>>? existingMappings = null)
+    public async Task<ImportResult> ImportStreamAsync(
+        Stream                                       stream,
+        ILogger                                      appLogger,
+        string?                                      fileName,
+        bool                                         updateExisting,
+        char                                         delimiter,
+        CancellationToken                            ct,
+        Dictionary<string, Dictionary<string, int>>? existingMappings = null)
     {
-        var result = new ImportResult();
-        using var sr = new StreamReader(stream, Encoding.UTF8, true, 8192, true);
-        using var csv = new CsvReader(sr, new CsvConfiguration(CultureInfo.InvariantCulture) { Delimiter = delimiter.ToString() });
+        var       result = new ImportResult();
+        using var sr     = new StreamReader(stream, Encoding.UTF8, true, 8192, true);
+        using var csv    = new CsvReader(sr, new CsvConfiguration(CultureInfo.InvariantCulture) {Delimiter = delimiter.ToString()});
 
         // Try to detect entity from filename
         var entity = DetectEntityFromFileName(fileName);
@@ -134,7 +140,7 @@ public class CsvImporter
                 var records = csv.GetRecords<dynamic>();
                 foreach (var rec in records)
                 {
-                    var dict = (IDictionary<string, object>)rec;
+                    var dict = (IDictionary<string, object>) rec;
                     if (!dict.TryGetValue("Entity", out var en))
                     {
                         result.Errors.Add("No Entity column found in CSV and filename did not match a known entity");
@@ -143,7 +149,7 @@ public class CsvImporter
                     }
 
                     var entityName = en?.ToString() ?? string.Empty;
-                    var ent = ParseEntityName(entityName);
+                    var ent        = ParseEntityName(entityName);
                     await ProcessRowAsync(ent, dict, result, updateExisting, ct, existingMappings).ConfigureAwait(false);
                 }
             }
@@ -157,17 +163,24 @@ public class CsvImporter
                         foreach (var c in customers)
                         {
                             var sourceId = c.Id != 0 ? c.Id.ToString() : null;
-                            var r = await _vm.AddCustomerAsync(c).ConfigureAwait(false);
+                            var r        = await _vm.AddCustomerAsync(c).ConfigureAwait(false);
                             if (r == ValidationResult.Success)
                             {
                                 result.Created++;
                                 if (sourceId != null)
                                 {
                                     var dbEntity = await _db.Customers.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Name, "NOCASE") == c.Name).ConfigureAwait(false);
-                                    if (dbEntity != null) result.RecordMapping("customers", sourceId, dbEntity.Id);
+                                    if (dbEntity != null)
+                                    {
+                                        result.RecordMapping("customers", sourceId, dbEntity.Id);
+                                    }
                                 }
                             }
-                            else { result.Errors.Add(r.ErrorMessage ?? "AddCustomer failed"); result.Failed++; }
+                            else
+                            {
+                                result.Errors.Add(r.ErrorMessage ?? "AddCustomer failed");
+                                result.Failed++;
+                            }
                         }
 
                         break;
@@ -177,17 +190,24 @@ public class CsvImporter
                         foreach (var m in mans)
                         {
                             var sourceId = m.Id != 0 ? m.Id.ToString() : null;
-                            var r = await _vm.AddManufacturerAsync(m).ConfigureAwait(false);
+                            var r        = await _vm.AddManufacturerAsync(m).ConfigureAwait(false);
                             if (r == ValidationResult.Success)
                             {
                                 result.Created++;
                                 if (sourceId != null)
                                 {
                                     var dbEntity = await _db.Manufacturers.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Name, "NOCASE") == m.Name).ConfigureAwait(false);
-                                    if (dbEntity != null) result.RecordMapping("manufacturers", sourceId, dbEntity.Id);
+                                    if (dbEntity != null)
+                                    {
+                                        result.RecordMapping("manufacturers", sourceId, dbEntity.Id);
+                                    }
                                 }
                             }
-                            else { result.Errors.Add(r.ErrorMessage ?? "AddManufacturer failed"); result.Failed++; }
+                            else
+                            {
+                                result.Errors.Add(r.ErrorMessage ?? "AddManufacturer failed");
+                                result.Failed++;
+                            }
                         }
 
                         break;
@@ -197,17 +217,25 @@ public class CsvImporter
                         foreach (var c in cols)
                         {
                             var sourceId = c.Id != 0 ? c.Id.ToString() : null;
-                            var r = await _vm.AddFilamentColourAsync(c).ConfigureAwait(false);
+                            var r        = await _vm.AddFilamentColourAsync(c).ConfigureAwait(false);
                             if (r == ValidationResult.Success)
                             {
                                 result.Created++;
                                 if (sourceId != null)
                                 {
-                                    var dbEntity = await _db.FilamentColours.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Description, "NOCASE") == c.Description).ConfigureAwait(false);
-                                    if (dbEntity != null) result.RecordMapping("filament_colours", sourceId, dbEntity.Id);
+                                    var dbEntity = await _db.FilamentColours.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Description, "NOCASE") == c.Description)
+                                                            .ConfigureAwait(false);
+                                    if (dbEntity != null)
+                                    {
+                                        result.RecordMapping("filament_colours", sourceId, dbEntity.Id);
+                                    }
                                 }
                             }
-                            else { result.Errors.Add(r.ErrorMessage ?? "AddFilamentColour failed"); result.Failed++; }
+                            else
+                            {
+                                result.Errors.Add(r.ErrorMessage ?? "AddFilamentColour failed");
+                                result.Failed++;
+                            }
                         }
 
                         break;
@@ -217,17 +245,25 @@ public class CsvImporter
                         foreach (var t in types)
                         {
                             var sourceId = t.Id != 0 ? t.Id.ToString() : null;
-                            var r = await _vm.AddFilamentTypeAsync(t).ConfigureAwait(false);
+                            var r        = await _vm.AddFilamentTypeAsync(t).ConfigureAwait(false);
                             if (r == ValidationResult.Success)
                             {
                                 result.Created++;
                                 if (sourceId != null)
                                 {
-                                    var dbEntity = await _db.FilamentTypes.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Description, "NOCASE") == t.Description).ConfigureAwait(false);
-                                    if (dbEntity != null) result.RecordMapping("filament_types", sourceId, dbEntity.Id);
+                                    var dbEntity = await _db.FilamentTypes.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Description, "NOCASE") == t.Description)
+                                                            .ConfigureAwait(false);
+                                    if (dbEntity != null)
+                                    {
+                                        result.RecordMapping("filament_types", sourceId, dbEntity.Id);
+                                    }
                                 }
                             }
-                            else { result.Errors.Add(r.ErrorMessage ?? "AddFilamentType failed"); result.Failed++; }
+                            else
+                            {
+                                result.Errors.Add(r.ErrorMessage ?? "AddFilamentType failed");
+                                result.Failed++;
+                            }
                         }
 
                         break;
@@ -237,7 +273,7 @@ public class CsvImporter
                         foreach (var f in filaments)
                         {
                             var sourceId = f.Id != 0 ? f.Id.ToString() : null;
-                            var r = await _vm.AddFilamentAsync(f).ConfigureAwait(false);
+                            var r        = await _vm.AddFilamentAsync(f).ConfigureAwait(false);
                             if (r == ValidationResult.Success)
                             {
                                 result.Created++;
@@ -251,13 +287,24 @@ public class CsvImporter
 
                                     if (dbEntity == null)
                                     {
-                                        dbEntity = await _db.Filaments.FirstOrDefaultAsync(x => x.ManufacturerId == f.Manufacturer.Id && x.FilamentTypeId == f.FilamentType.Id && x.FilamentColourId == f.FilamentColour.Id).ConfigureAwait(false);
+                                        dbEntity = await _db.Filaments
+                                                            .FirstOrDefaultAsync(x => x.ManufacturerId      == f.Manufacturer.Id
+                                                                                      && x.FilamentTypeId   == f.FilamentType.Id
+                                                                                      && x.FilamentColourId == f.FilamentColour.Id)
+                                                            .ConfigureAwait(false);
                                     }
 
-                                    if (dbEntity != null) result.RecordMapping("filaments", sourceId, dbEntity.Id);
+                                    if (dbEntity != null)
+                                    {
+                                        result.RecordMapping("filaments", sourceId, dbEntity.Id);
+                                    }
                                 }
                             }
-                            else { result.Errors.Add(r.ErrorMessage ?? "AddFilament failed"); result.Failed++; }
+                            else
+                            {
+                                result.Errors.Add(r.ErrorMessage ?? "AddFilament failed");
+                                result.Failed++;
+                            }
                         }
 
                         break;
@@ -267,17 +314,25 @@ public class CsvImporter
                         foreach (var m in models)
                         {
                             var sourceId = m.Id != 0 ? m.Id.ToString() : null;
-                            var r = await _vm.AddModelDesignAsync(m).ConfigureAwait(false);
+                            var r        = await _vm.AddModelDesignAsync(m).ConfigureAwait(false);
                             if (r == ValidationResult.Success)
                             {
                                 result.Created++;
                                 if (sourceId != null)
                                 {
-                                    var dbEntity = await _db.ModelDesigns.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Description, "NOCASE") == m.Description).ConfigureAwait(false);
-                                    if (dbEntity != null) result.RecordMapping("model_designs", sourceId, dbEntity.Id);
+                                    var dbEntity = await _db.ModelDesigns.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Description, "NOCASE") == m.Description)
+                                                            .ConfigureAwait(false);
+                                    if (dbEntity != null)
+                                    {
+                                        result.RecordMapping("model_designs", sourceId, dbEntity.Id);
+                                    }
                                 }
                             }
-                            else { result.Errors.Add(r.ErrorMessage ?? "AddModelDesign failed"); result.Failed++; }
+                            else
+                            {
+                                result.Errors.Add(r.ErrorMessage ?? "AddModelDesign failed");
+                                result.Failed++;
+                            }
                         }
 
                         break;
@@ -289,12 +344,19 @@ public class CsvImporter
                             var sourceId = p.Id != 0 ? p.Id.ToString() : null;
 
                             // resolve referenced ids from existingMappings (provided from earlier files) or from result.IdMap
-                            var resolveMap = new Dictionary<string, Dictionary<string,int>>(StringComparer.OrdinalIgnoreCase);
+                            var resolveMap = new Dictionary<string, Dictionary<string, int>>(StringComparer.OrdinalIgnoreCase);
                             if (existingMappings != null)
                             {
-                                foreach (var kv in existingMappings) resolveMap[kv.Key] = new Dictionary<string,int>(kv.Value, StringComparer.OrdinalIgnoreCase);
+                                foreach (var kv in existingMappings)
+                                {
+                                    resolveMap[kv.Key] = new Dictionary<string, int>(kv.Value, StringComparer.OrdinalIgnoreCase);
+                                }
                             }
-                            foreach (var kv in result.IdMap) resolveMap[kv.Key] = kv.Value;
+
+                            foreach (var kv in result.IdMap)
+                            {
+                                resolveMap[kv.Key] = kv.Value;
+                            }
 
                             if (p.Customer != null && p.Customer.Id != 0)
                             {
@@ -312,7 +374,12 @@ public class CsvImporter
                                 if (resolveMap.TryGetValue("model_designs", out var modelMap) && modelMap.TryGetValue(sid, out var mappedId))
                                 {
                                     // replace with db id by creating a new DTO (Id is init-only)
-                                    p.ModelDesign = new ModelDesignDto(mappedId, p.ModelDesign.Description ?? string.Empty, p.ModelDesign.Length, p.ModelDesign.Summary ?? string.Empty, p.ModelDesign.Url);
+                                    p.ModelDesign = new ModelDesignDto(
+                                        mappedId,
+                                        p.ModelDesign.Description ?? string.Empty,
+                                        p.ModelDesign.Length,
+                                        p.ModelDesign.Summary ?? string.Empty,
+                                        p.ModelDesign.Url);
                                 }
                             }
 
@@ -321,11 +388,22 @@ public class CsvImporter
                                 for (var i = 0; i < p.Filaments.Count; i++)
                                 {
                                     var fd = p.Filaments[i];
-                                    if (fd.Id == 0) continue;
+                                    if (fd.Id == 0)
+                                    {
+                                        continue;
+                                    }
+
                                     var sid = fd.Id.ToString();
                                     if (resolveMap.TryGetValue("filaments", out var filMap) && filMap.TryGetValue(sid, out var mappedId))
                                     {
-                                        p.Filaments[i] = new FilamentDto(mappedId, fd.CostPerWeight, fd.ProductId, fd.ReorderLink, fd.FilamentColour, fd.FilamentType, fd.Manufacturer);
+                                        p.Filaments[i] = new FilamentDto(
+                                            mappedId,
+                                            fd.CostPerWeight,
+                                            fd.ProductId,
+                                            fd.ReorderLink,
+                                            fd.FilamentColour,
+                                            fd.FilamentType,
+                                            fd.Manufacturer);
                                     }
                                 }
                             }
@@ -336,13 +414,22 @@ public class CsvImporter
                                 result.Created++;
                                 if (sourceId != null)
                                 {
-                                    var custId = p.Customer?.Id ?? 0;
+                                    var custId  = p.Customer?.Id    ?? 0;
                                     var modelId = p.ModelDesign?.Id ?? 0;
-                                    var dbEntity = await _db.PrintingProjects.FirstOrDefaultAsync(x => x.Cost == p.Cost && x.CustomerId == custId && x.ModelDesignId == modelId).ConfigureAwait(false);
-                                    if (dbEntity != null) result.RecordMapping("printing_projects", sourceId, dbEntity.Id);
+                                    var dbEntity = await _db.PrintingProjects
+                                                            .FirstOrDefaultAsync(x => x.Cost == p.Cost && x.CustomerId == custId && x.ModelDesignId == modelId)
+                                                            .ConfigureAwait(false);
+                                    if (dbEntity != null)
+                                    {
+                                        result.RecordMapping("printing_projects", sourceId, dbEntity.Id);
+                                    }
                                 }
                             }
-                            else { result.Errors.Add(r.ErrorMessage ?? "AddPrintingProject failed"); result.Failed++; }
+                            else
+                            {
+                                result.Errors.Add(r.ErrorMessage ?? "AddPrintingProject failed");
+                                result.Failed++;
+                            }
                         }
 
                         break;
@@ -369,32 +456,91 @@ public class CsvImporter
         }
 
         var name = fileName.ToLowerInvariant();
-        if (name.Contains("customers")) return ImportEntity.Customers;
-        if (name.Contains("manufacturers")) return ImportEntity.Manufacturers;
-        if (name.Contains("filament_colours") || name.Contains("filamentcolors")) return ImportEntity.FilamentColours;
-        if (name.Contains("filament_types") || name.Contains("filamenttypes")) return ImportEntity.FilamentTypes;
-        if (name.Contains("filaments")) return ImportEntity.Filaments;
-        if (name.Contains("model_designs") || name.Contains("models")) return ImportEntity.ModelDesigns;
-        if (name.Contains("printing_projects") || name.Contains("projects")) return ImportEntity.PrintingProjects;
+        if (name.Contains("customers"))
+        {
+            return ImportEntity.Customers;
+        }
+
+        if (name.Contains("manufacturers"))
+        {
+            return ImportEntity.Manufacturers;
+        }
+
+        if (name.Contains("filament_colours") || name.Contains("filamentcolors"))
+        {
+            return ImportEntity.FilamentColours;
+        }
+
+        if (name.Contains("filament_types") || name.Contains("filamenttypes"))
+        {
+            return ImportEntity.FilamentTypes;
+        }
+
+        if (name.Contains("filaments"))
+        {
+            return ImportEntity.Filaments;
+        }
+
+        if (name.Contains("model_designs") || name.Contains("models"))
+        {
+            return ImportEntity.ModelDesigns;
+        }
+
+        if (name.Contains("printing_projects") || name.Contains("projects"))
+        {
+            return ImportEntity.PrintingProjects;
+        }
+
         return ImportEntity.Unknown;
+    }
+
+    private string EntityFileName(ImportEntity entity) => entity switch
+    {
+        ImportEntity.Customers        => "customers.csv",
+        ImportEntity.Manufacturers    => "manufacturers.csv",
+        ImportEntity.FilamentColours  => "filament_colours.csv",
+        ImportEntity.FilamentTypes    => "filament_types.csv",
+        ImportEntity.Filaments        => "filaments.csv",
+        ImportEntity.ModelDesigns     => "model_designs.csv",
+        ImportEntity.PrintingProjects => "printing_projects.csv",
+        _                             => string.Empty
+    };
+
+    private async Task<ImportResult> ImportFileAsync(
+        string                                       filePath,
+        ILogger                                      appLogger,
+        ImportEntity                                 entity,
+        bool                                         updateExisting,
+        char                                         delimiter,
+        CancellationToken                            ct,
+        Dictionary<string, Dictionary<string, int>>? existingMap = null)
+    {
+        await using var fs = File.OpenRead(filePath);
+        return await ImportStreamAsync(fs, appLogger, Path.GetFileName(filePath), updateExisting, delimiter, ct, existingMap).ConfigureAwait(false);
     }
 
     private ImportEntity ParseEntityName(string name)
     {
         return name.ToLowerInvariant() switch
         {
-            "customers" or "customer" => ImportEntity.Customers,
-            "manufacturers" or "manufacturer" => ImportEntity.Manufacturers,
+            "customers" or "customer"                                     => ImportEntity.Customers,
+            "manufacturers" or "manufacturer"                             => ImportEntity.Manufacturers,
             "filament_colours" or "filament_colours" or "filamentcolours" => ImportEntity.FilamentColours,
-            "filament_types" or "filamenttypes" => ImportEntity.FilamentTypes,
-            "filaments" or "filament" => ImportEntity.Filaments,
-            "model_designs" or "modeldesigns" or "models" => ImportEntity.ModelDesigns,
-            "printing_projects" or "printingprojects" or "projects" => ImportEntity.PrintingProjects,
-            _ => ImportEntity.Unknown
+            "filament_types" or "filamenttypes"                           => ImportEntity.FilamentTypes,
+            "filaments" or "filament"                                     => ImportEntity.Filaments,
+            "model_designs" or "modeldesigns" or "models"                 => ImportEntity.ModelDesigns,
+            "printing_projects" or "printingprojects" or "projects"       => ImportEntity.PrintingProjects,
+            _                                                             => ImportEntity.Unknown
         };
     }
 
-    private async Task ProcessRowAsync(ImportEntity entity, IDictionary<string, object> dict, ImportResult result, bool updateExisting, CancellationToken ct, Dictionary<string, Dictionary<string,int>>? existingMappings = null)
+    private async Task ProcessRowAsync(
+        ImportEntity                                 entity,
+        IDictionary<string, object>                  dict,
+        ImportResult                                 result,
+        bool                                         updateExisting,
+        CancellationToken                            ct,
+        Dictionary<string, Dictionary<string, int>>? existingMappings = null)
     {
         // helper locals
         static string? GetString(IDictionary<string, object> d, string key)
@@ -411,22 +557,32 @@ public class CsvImporter
             return null;
         }
 
-        static int ParseIntOrZero(string? s)
-        {
-            return int.TryParse(s, out var i) ? i : 0;
-        }
+        static int ParseIntOrZero(string? s) => int.TryParse(s, out var i) ? i : 0;
 
-        static decimal ParseDecimalOrZero(string? s)
-        {
-            return decimal.TryParse(s, NumberStyles.Number, CultureInfo.InvariantCulture, out var d) ? d : 0m;
-        }
+        static decimal ParseDecimalOrZero(string? s) => decimal.TryParse(s, NumberStyles.Number, CultureInfo.InvariantCulture, out var d) ? d : 0m;
 
         static DateOnly ParseDateOnlyOrDefault(string? s)
         {
-            if (string.IsNullOrWhiteSpace(s)) return DateOnly.MinValue;
-            if (DateOnly.TryParse(s, CultureInfo.InvariantCulture, DateTimeStyles.None, out var d)) return d;
-            if (DateOnly.TryParse(s, out d)) return d;
-            if (DateTime.TryParse(s, CultureInfo.InvariantCulture, DateTimeStyles.None, out var dt)) return DateOnly.FromDateTime(dt);
+            if (string.IsNullOrWhiteSpace(s))
+            {
+                return DateOnly.MinValue;
+            }
+
+            if (DateOnly.TryParse(s, CultureInfo.InvariantCulture, DateTimeStyles.None, out var d))
+            {
+                return d;
+            }
+
+            if (DateOnly.TryParse(s, out d))
+            {
+                return d;
+            }
+
+            if (DateTime.TryParse(s, CultureInfo.InvariantCulture, DateTimeStyles.None, out var dt))
+            {
+                return DateOnly.FromDateTime(dt);
+            }
+
             return DateOnly.MinValue;
         }
 
@@ -436,7 +592,7 @@ public class CsvImporter
             {
                 case ImportEntity.Customers:
                 {
-                    var id = ParseIntOrZero(GetString(dict, "Id"));
+                    var id   = ParseIntOrZero(GetString(dict, "Id"));
                     var name = GetString(dict, "Name");
                     if (string.IsNullOrWhiteSpace(name))
                     {
@@ -449,7 +605,15 @@ public class CsvImporter
                     if (id != 0 && updateExisting)
                     {
                         var r = await _vm.EditCustomerAsync(dto).ConfigureAwait(false);
-                        if (r == ValidationResult.Success) result.Updated++; else { result.Errors.Add(r.ErrorMessage ?? "EditCustomer failed"); result.Failed++; }
+                        if (r == ValidationResult.Success)
+                        {
+                            result.Updated++;
+                        }
+                        else
+                        {
+                            result.Errors.Add(r.ErrorMessage ?? "EditCustomer failed");
+                            result.Failed++;
+                        }
                     }
                     else
                     {
@@ -460,10 +624,17 @@ public class CsvImporter
                             if (id != 0)
                             {
                                 var dbEntity = await _db.Customers.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Name, "NOCASE") == name).ConfigureAwait(false);
-                                if (dbEntity != null) result.RecordMapping("customers", id.ToString(), dbEntity.Id);
+                                if (dbEntity != null)
+                                {
+                                    result.RecordMapping("customers", id.ToString(), dbEntity.Id);
+                                }
                             }
                         }
-                        else { result.Errors.Add(r.ErrorMessage ?? "AddCustomer failed"); result.Failed++; }
+                        else
+                        {
+                            result.Errors.Add(r.ErrorMessage ?? "AddCustomer failed");
+                            result.Failed++;
+                        }
                     }
 
                     break;
@@ -471,7 +642,7 @@ public class CsvImporter
 
                 case ImportEntity.Manufacturers:
                 {
-                    var id = ParseIntOrZero(GetString(dict, "Id"));
+                    var id   = ParseIntOrZero(GetString(dict, "Id"));
                     var name = GetString(dict, "Name");
                     if (string.IsNullOrWhiteSpace(name))
                     {
@@ -484,7 +655,15 @@ public class CsvImporter
                     if (id != 0 && updateExisting)
                     {
                         var r = await _vm.EditManufacturerAsync(dto).ConfigureAwait(false);
-                        if (r == ValidationResult.Success) result.Updated++; else { result.Errors.Add(r.ErrorMessage ?? "EditManufacturer failed"); result.Failed++; }
+                        if (r == ValidationResult.Success)
+                        {
+                            result.Updated++;
+                        }
+                        else
+                        {
+                            result.Errors.Add(r.ErrorMessage ?? "EditManufacturer failed");
+                            result.Failed++;
+                        }
                     }
                     else
                     {
@@ -495,10 +674,17 @@ public class CsvImporter
                             if (id != 0)
                             {
                                 var dbEntity = await _db.Manufacturers.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Name, "NOCASE") == name).ConfigureAwait(false);
-                                if (dbEntity != null) result.RecordMapping("manufacturers", id.ToString(), dbEntity.Id);
+                                if (dbEntity != null)
+                                {
+                                    result.RecordMapping("manufacturers", id.ToString(), dbEntity.Id);
+                                }
                             }
                         }
-                        else { result.Errors.Add(r.ErrorMessage ?? "AddManufacturer failed"); result.Failed++; }
+                        else
+                        {
+                            result.Errors.Add(r.ErrorMessage ?? "AddManufacturer failed");
+                            result.Failed++;
+                        }
                     }
 
                     break;
@@ -506,7 +692,7 @@ public class CsvImporter
 
                 case ImportEntity.FilamentColours:
                 {
-                    var id = ParseIntOrZero(GetString(dict, "Id"));
+                    var id   = ParseIntOrZero(GetString(dict, "Id"));
                     var desc = GetString(dict, "Description") ?? GetString(dict, "Name");
                     if (string.IsNullOrWhiteSpace(desc))
                     {
@@ -519,7 +705,15 @@ public class CsvImporter
                     if (id != 0 && updateExisting)
                     {
                         var r = await _vm.EditFilamentColourAsync(dto).ConfigureAwait(false);
-                        if (r == ValidationResult.Success) result.Updated++; else { result.Errors.Add(r.ErrorMessage ?? "EditFilamentColour failed"); result.Failed++; }
+                        if (r == ValidationResult.Success)
+                        {
+                            result.Updated++;
+                        }
+                        else
+                        {
+                            result.Errors.Add(r.ErrorMessage ?? "EditFilamentColour failed");
+                            result.Failed++;
+                        }
                     }
                     else
                     {
@@ -529,11 +723,19 @@ public class CsvImporter
                             result.Created++;
                             if (id != 0)
                             {
-                                var dbEntity = await _db.FilamentColours.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Description, "NOCASE") == desc).ConfigureAwait(false);
-                                if (dbEntity != null) result.RecordMapping("filament_colours", id.ToString(), dbEntity.Id);
+                                var dbEntity = await _db.FilamentColours.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Description, "NOCASE") == desc)
+                                                        .ConfigureAwait(false);
+                                if (dbEntity != null)
+                                {
+                                    result.RecordMapping("filament_colours", id.ToString(), dbEntity.Id);
+                                }
                             }
                         }
-                        else { result.Errors.Add(r.ErrorMessage ?? "AddFilamentColour failed"); result.Failed++; }
+                        else
+                        {
+                            result.Errors.Add(r.ErrorMessage ?? "AddFilamentColour failed");
+                            result.Failed++;
+                        }
                     }
 
                     break;
@@ -541,7 +743,7 @@ public class CsvImporter
 
                 case ImportEntity.FilamentTypes:
                 {
-                    var id = ParseIntOrZero(GetString(dict, "Id"));
+                    var id   = ParseIntOrZero(GetString(dict, "Id"));
                     var desc = GetString(dict, "Description") ?? GetString(dict, "Name");
                     if (string.IsNullOrWhiteSpace(desc))
                     {
@@ -554,7 +756,15 @@ public class CsvImporter
                     if (id != 0 && updateExisting)
                     {
                         var r = await _vm.EditFilamentTypeAsync(dto).ConfigureAwait(false);
-                        if (r == ValidationResult.Success) result.Updated++; else { result.Errors.Add(r.ErrorMessage ?? "EditFilamentType failed"); result.Failed++; }
+                        if (r == ValidationResult.Success)
+                        {
+                            result.Updated++;
+                        }
+                        else
+                        {
+                            result.Errors.Add(r.ErrorMessage ?? "EditFilamentType failed");
+                            result.Failed++;
+                        }
                     }
                     else
                     {
@@ -564,11 +774,19 @@ public class CsvImporter
                             result.Created++;
                             if (id != 0)
                             {
-                                var dbEntity = await _db.FilamentTypes.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Description, "NOCASE") == desc).ConfigureAwait(false);
-                                if (dbEntity != null) result.RecordMapping("filament_types", id.ToString(), dbEntity.Id);
+                                var dbEntity = await _db.FilamentTypes.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Description, "NOCASE") == desc)
+                                                        .ConfigureAwait(false);
+                                if (dbEntity != null)
+                                {
+                                    result.RecordMapping("filament_types", id.ToString(), dbEntity.Id);
+                                }
                             }
                         }
-                        else { result.Errors.Add(r.ErrorMessage ?? "AddFilamentType failed"); result.Failed++; }
+                        else
+                        {
+                            result.Errors.Add(r.ErrorMessage ?? "AddFilamentType failed");
+                            result.Failed++;
+                        }
                     }
 
                     break;
@@ -576,26 +794,34 @@ public class CsvImporter
 
                 case ImportEntity.Filaments:
                 {
-                    var id = ParseIntOrZero(GetString(dict, "Id"));
-                    var cost = ParseDecimalOrZero(GetString(dict, "CostPerWeight") ?? GetString(dict, "Cost"));
+                    var id        = ParseIntOrZero(GetString(dict, "Id"));
+                    var cost      = ParseDecimalOrZero(GetString(dict, "CostPerWeight") ?? GetString(dict, "Cost"));
                     var productId = GetString(dict, "ProductId");
-                    var reorder = GetString(dict, "ReorderLink") ?? GetString(dict, "ReorderUrl") ?? GetString(dict, "Url");
-                    var colourId = ParseIntOrZero(GetString(dict, "FilamentColourId") ?? GetString(dict, "FilamentColour") ?? GetString(dict, "ColourId"));
-                    var typeId = ParseIntOrZero(GetString(dict, "FilamentTypeId") ?? GetString(dict, "FilamentType") ?? GetString(dict, "TypeId"));
-                    var manId = ParseIntOrZero(GetString(dict, "ManufacturerId") ?? GetString(dict, "Manufacturer") ?? GetString(dict, "MakerId"));
+                    var reorder   = GetString(dict, "ReorderLink") ?? GetString(dict, "ReorderUrl") ?? GetString(dict, "Url");
+                    var colourId  = ParseIntOrZero(GetString(dict, "FilamentColourId") ?? GetString(dict, "FilamentColour") ?? GetString(dict, "ColourId"));
+                    var typeId    = ParseIntOrZero(GetString(dict, "FilamentTypeId")   ?? GetString(dict, "FilamentType")   ?? GetString(dict, "TypeId"));
+                    var manId     = ParseIntOrZero(GetString(dict, "ManufacturerId")   ?? GetString(dict, "Manufacturer")   ?? GetString(dict, "MakerId"));
 
                     var colourDto = new FilamentColourDto(colourId, string.Empty);
-                    var typeDto = new FilamentTypeDto(typeId, string.Empty);
-                    var manDto = new ManufacturerDto(manId, string.Empty);
+                    var typeDto   = new FilamentTypeDto(typeId, string.Empty);
+                    var manDto    = new ManufacturerDto(manId, string.Empty);
 
                     var dto = id != 0
-                        ? new FilamentDto(id, cost, productId, reorder, colourDto, typeDto, manDto)
-                        : new FilamentDto(cost, productId, reorder, colourDto, typeDto, manDto);
+                                  ? new FilamentDto(id,   cost,      productId, reorder,   colourDto, typeDto, manDto)
+                                  : new FilamentDto(cost, productId, reorder,   colourDto, typeDto,   manDto);
 
                     if (id != 0 && updateExisting)
                     {
                         var r = await _vm.EditFilamentAsync(dto).ConfigureAwait(false);
-                        if (r == ValidationResult.Success) result.Updated++; else { result.Errors.Add(r.ErrorMessage ?? "EditFilament failed"); result.Failed++; }
+                        if (r == ValidationResult.Success)
+                        {
+                            result.Updated++;
+                        }
+                        else
+                        {
+                            result.Errors.Add(r.ErrorMessage ?? "EditFilament failed");
+                            result.Failed++;
+                        }
                     }
                     else
                     {
@@ -613,13 +839,22 @@ public class CsvImporter
 
                                 if (dbEntity == null)
                                 {
-                                    dbEntity = await _db.Filaments.FirstOrDefaultAsync(x => x.ManufacturerId == manId && x.FilamentTypeId == typeId && x.FilamentColourId == colourId).ConfigureAwait(false);
+                                    dbEntity = await _db.Filaments
+                                                        .FirstOrDefaultAsync(x => x.ManufacturerId == manId && x.FilamentTypeId == typeId && x.FilamentColourId == colourId)
+                                                        .ConfigureAwait(false);
                                 }
 
-                                if (dbEntity != null) result.RecordMapping("filaments", id.ToString(), dbEntity.Id);
+                                if (dbEntity != null)
+                                {
+                                    result.RecordMapping("filaments", id.ToString(), dbEntity.Id);
+                                }
                             }
                         }
-                        else { result.Errors.Add(r.ErrorMessage ?? "AddFilament failed"); result.Failed++; }
+                        else
+                        {
+                            result.Errors.Add(r.ErrorMessage ?? "AddFilament failed");
+                            result.Failed++;
+                        }
                     }
 
                     break;
@@ -627,11 +862,11 @@ public class CsvImporter
 
                 case ImportEntity.ModelDesigns:
                 {
-                    var id = ParseIntOrZero(GetString(dict, "Id"));
-                    var desc = GetString(dict, "Description") ?? GetString(dict, "Name");
-                    var length = ParseDecimalOrZero(GetString(dict, "Length"));
+                    var id      = ParseIntOrZero(GetString(dict, "Id"));
+                    var desc    = GetString(dict, "Description") ?? GetString(dict, "Name");
+                    var length  = ParseDecimalOrZero(GetString(dict, "Length"));
                     var summary = GetString(dict, "Summary");
-                    var url = GetString(dict, "Url");
+                    var url     = GetString(dict, "Url");
 
                     if (string.IsNullOrWhiteSpace(desc))
                     {
@@ -644,7 +879,15 @@ public class CsvImporter
                     if (id != 0 && updateExisting)
                     {
                         var r = await _vm.EditModelDesignAsync(dto).ConfigureAwait(false);
-                        if (r == ValidationResult.Success) result.Updated++; else { result.Errors.Add(r.ErrorMessage ?? "EditModelDesign failed"); result.Failed++; }
+                        if (r == ValidationResult.Success)
+                        {
+                            result.Updated++;
+                        }
+                        else
+                        {
+                            result.Errors.Add(r.ErrorMessage ?? "EditModelDesign failed");
+                            result.Failed++;
+                        }
                     }
                     else
                     {
@@ -655,10 +898,17 @@ public class CsvImporter
                             if (id != 0)
                             {
                                 var dbEntity = await _db.ModelDesigns.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Description, "NOCASE") == desc).ConfigureAwait(false);
-                                if (dbEntity != null) result.RecordMapping("model_designs", id.ToString(), dbEntity.Id);
+                                if (dbEntity != null)
+                                {
+                                    result.RecordMapping("model_designs", id.ToString(), dbEntity.Id);
+                                }
                             }
                         }
-                        else { result.Errors.Add(r.ErrorMessage ?? "AddModelDesign failed"); result.Failed++; }
+                        else
+                        {
+                            result.Errors.Add(r.ErrorMessage ?? "AddModelDesign failed");
+                            result.Failed++;
+                        }
                     }
 
                     break;
@@ -666,19 +916,25 @@ public class CsvImporter
 
                 case ImportEntity.PrintingProjects:
                 {
-                    var id = ParseIntOrZero(GetString(dict, "Id"));
-                    var cost = ParseDecimalOrZero(GetString(dict, "Cost"));
-                    var submitted = ParseDateOnlyOrDefault(GetString(dict, "Submitted"));
-                    var completed = ParseDateOnlyOrDefault(GetString(dict, "Completed"));
-                    var customerId = ParseIntOrZero(GetString(dict, "CustomerId") ?? GetString(dict, "Customer"));
-                    var modelId = ParseIntOrZero(GetString(dict, "ModelDesignId") ?? GetString(dict, "ModelDesign"));
+                    var id             = ParseIntOrZero(GetString(dict,         "Id"));
+                    var cost           = ParseDecimalOrZero(GetString(dict,     "Cost"));
+                    var submitted      = ParseDateOnlyOrDefault(GetString(dict, "Submitted"));
+                    var completed      = ParseDateOnlyOrDefault(GetString(dict, "Completed"));
+                    var customerId     = ParseIntOrZero(GetString(dict, "CustomerId")    ?? GetString(dict, "Customer"));
+                    var modelId        = ParseIntOrZero(GetString(dict, "ModelDesignId") ?? GetString(dict, "ModelDesign"));
                     var filamentIdsRaw = GetString(dict, "FilamentIds") ?? GetString(dict, "FilamentId") ?? GetString(dict, "Filaments");
 
                     CustomerDto? custDto = null;
-                    if (customerId != 0) custDto = new CustomerDto(customerId, string.Empty);
+                    if (customerId != 0)
+                    {
+                        custDto = new CustomerDto(customerId, string.Empty);
+                    }
 
                     ModelDesignDto? modelDto = null;
-                    if (modelId != 0) modelDto = new ModelDesignDto(modelId, string.Empty, 0m, string.Empty, null);
+                    if (modelId != 0)
+                    {
+                        modelDto = new ModelDesignDto(modelId, string.Empty, 0m, string.Empty, null);
+                    }
 
                     var filamentDtos = new List<FilamentDto>();
                     if (!string.IsNullOrWhiteSpace(filamentIdsRaw))
@@ -687,21 +943,53 @@ public class CsvImporter
                         foreach (var p in parts)
                         {
                             var fid = ParseIntOrZero(p.Trim());
-                            if (fid == 0) continue;
+                            if (fid == 0)
+                            {
+                                continue;
+                            }
+
                             // create minimal filament DTO with id only; AddPrintingProjectAsync will resolve existing entity
-                            var placeholder = new FilamentDto(fid, 0m, null, null, new FilamentColourDto(0, string.Empty), new FilamentTypeDto(0, string.Empty), new ManufacturerDto(0, string.Empty));
+                            var placeholder = new FilamentDto(
+                                fid,
+                                0m,
+                                null,
+                                null,
+                                new FilamentColourDto(0, string.Empty),
+                                new FilamentTypeDto(0, string.Empty),
+                                new ManufacturerDto(0, string.Empty));
                             filamentDtos.Add(placeholder);
                         }
                     }
 
                     var projDto = id != 0
-                        ? new PrintingProjectDto(id, cost, submitted == DateOnly.MinValue ? DateOnly.FromDateTime(DateTime.Now) : submitted, completed == DateOnly.MinValue ? null : completed, custDto, modelDto, filamentDtos)
-                        : new PrintingProjectDto(cost, submitted == DateOnly.MinValue ? DateOnly.FromDateTime(DateTime.Now) : submitted, completed == DateOnly.MinValue ? null : completed, custDto, modelDto, filamentDtos);
+                                      ? new PrintingProjectDto(
+                                          id,
+                                          cost,
+                                          submitted == DateOnly.MinValue ? DateOnly.FromDateTime(DateTime.Now) : submitted,
+                                          completed == DateOnly.MinValue ? null : completed,
+                                          custDto,
+                                          modelDto,
+                                          filamentDtos)
+                                      : new PrintingProjectDto(
+                                          cost,
+                                          submitted == DateOnly.MinValue ? DateOnly.FromDateTime(DateTime.Now) : submitted,
+                                          completed == DateOnly.MinValue ? null : completed,
+                                          custDto,
+                                          modelDto,
+                                          filamentDtos);
 
                     if (id != 0 && updateExisting)
                     {
                         var r = await _vm.EditPrintingProjectAsync(projDto).ConfigureAwait(false);
-                        if (r == ValidationResult.Success) result.Updated++; else { result.Errors.Add(r.ErrorMessage ?? "EditPrintingProject failed"); result.Failed++; }
+                        if (r == ValidationResult.Success)
+                        {
+                            result.Updated++;
+                        }
+                        else
+                        {
+                            result.Errors.Add(r.ErrorMessage ?? "EditPrintingProject failed");
+                            result.Failed++;
+                        }
                     }
                     else
                     {
@@ -711,13 +999,22 @@ public class CsvImporter
                             result.Created++;
                             if (id != 0)
                             {
-                                var custId = projDto.Customer?.Id ?? 0;
-                                var mdlId = projDto.ModelDesign?.Id ?? 0;
-                                var dbEntity = await _db.PrintingProjects.FirstOrDefaultAsync(x => x.Cost == projDto.Cost && x.CustomerId == custId && x.ModelDesignId == mdlId).ConfigureAwait(false);
-                                if (dbEntity != null) result.RecordMapping("printing_projects", id.ToString(), dbEntity.Id);
+                                var custId = projDto.Customer?.Id    ?? 0;
+                                var mdlId  = projDto.ModelDesign?.Id ?? 0;
+                                var dbEntity = await _db.PrintingProjects
+                                                        .FirstOrDefaultAsync(x => x.Cost == projDto.Cost && x.CustomerId == custId && x.ModelDesignId == mdlId)
+                                                        .ConfigureAwait(false);
+                                if (dbEntity != null)
+                                {
+                                    result.RecordMapping("printing_projects", id.ToString(), dbEntity.Id);
+                                }
                             }
                         }
-                        else { result.Errors.Add(r.ErrorMessage ?? "AddPrintingProject failed"); result.Failed++; }
+                        else
+                        {
+                            result.Errors.Add(r.ErrorMessage ?? "AddPrintingProject failed");
+                            result.Failed++;
+                        }
                     }
 
                     break;
@@ -734,17 +1031,5 @@ public class CsvImporter
             result.Errors.Add(ex.Message);
             result.Failed++;
         }
-    }
-
-    private enum ImportEntity
-    {
-        Unknown,
-        Customers,
-        Manufacturers,
-        FilamentColours,
-        FilamentTypes,
-        Filaments,
-        ModelDesigns,
-        PrintingProjects
     }
 }

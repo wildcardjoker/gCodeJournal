@@ -3,9 +3,9 @@ namespace gCodeJournal.ViewModel
     #region Using Directives
     using System.ComponentModel.DataAnnotations;
     using DTOs;
+    using Import;
+    using Microsoft.Extensions.Logging;
     using Model;
-    using System.IO;
-    using System.Threading;
     #endregion
 
     /// <summary>
@@ -141,6 +141,42 @@ namespace gCodeJournal.ViewModel
         /// </returns>
         Task<ValidationResult> AddPrintingProjectAsync(PrintingProjectDto projectDto);
 
+        // Delete operations (DTO-based)
+        /// <summary>
+        ///     Deletes the specified customer represented by a DTO.
+        /// </summary>
+        Task<ValidationResult> DeleteCustomerAsync(CustomerDto customerDto);
+
+        /// <summary>
+        ///     Deletes the specified filament represented by a DTO.
+        /// </summary>
+        Task<ValidationResult> DeleteFilamentAsync(FilamentDto filamentDto);
+
+        /// <summary>
+        ///     Deletes the specified filament colour represented by a DTO.
+        /// </summary>
+        Task<ValidationResult> DeleteFilamentColourAsync(FilamentColourDto filamentColourDto);
+
+        /// <summary>
+        ///     Deletes the specified filament type represented by a DTO.
+        /// </summary>
+        Task<ValidationResult> DeleteFilamentTypeAsync(FilamentTypeDto filamentTypeDto);
+
+        /// <summary>
+        ///     Deletes the specified manufacturer represented by a DTO.
+        /// </summary>
+        Task<ValidationResult> DeleteManufacturerAsync(ManufacturerDto manufacturerDto);
+
+        /// <summary>
+        ///     Deletes the specified model design represented by a DTO.
+        /// </summary>
+        Task<ValidationResult> DeleteModelDesignAsync(ModelDesignDto modelDesignDto);
+
+        /// <summary>
+        ///     Deletes the specified printing project represented by a DTO.
+        /// </summary>
+        Task<ValidationResult> DeletePrintingProjectAsync(PrintingProjectDto printingProjectDto);
+
         // Edit operations (DTO-based)
         /// <summary>
         ///     Edits an existing customer asynchronously using DTO.
@@ -255,51 +291,21 @@ namespace gCodeJournal.ViewModel
         /// <returns>A task representing the asynchronous operation, with a list of printing projects as the result.</returns>
         Task<List<PrintingProjectDto>> GetAllPrintingProjectsAsync();
 
-        // Delete operations (DTO-based)
-        /// <summary>
-        ///     Deletes the specified customer represented by a DTO.
-        /// </summary>
-        Task<ValidationResult> DeleteCustomerAsync(CustomerDto customerDto);
-
-        /// <summary>
-        ///     Deletes the specified filament represented by a DTO.
-        /// </summary>
-        Task<ValidationResult> DeleteFilamentAsync(FilamentDto filamentDto);
-
-        /// <summary>
-        ///     Deletes the specified filament colour represented by a DTO.
-        /// </summary>
-        Task<ValidationResult> DeleteFilamentColourAsync(FilamentColourDto filamentColourDto);
-
-        /// <summary>
-        ///     Deletes the specified filament type represented by a DTO.
-        /// </summary>
-        Task<ValidationResult> DeleteFilamentTypeAsync(FilamentTypeDto filamentTypeDto);
-
-        /// <summary>
-        ///     Deletes the specified manufacturer represented by a DTO.
-        /// </summary>
-        Task<ValidationResult> DeleteManufacturerAsync(ManufacturerDto manufacturerDto);
-
-        /// <summary>
-        ///     Deletes the specified model design represented by a DTO.
-        /// </summary>
-        Task<ValidationResult> DeleteModelDesignAsync(ModelDesignDto modelDesignDto);
-
-        /// <summary>
-        ///     Deletes the specified printing project represented by a DTO.
-        /// </summary>
-        Task<ValidationResult> DeletePrintingProjectAsync(PrintingProjectDto printingProjectDto);
-
         // Import operations
         /// <summary>
         ///     Import data from CSV (file path). Supports a directory containing per-entity CSV files or a single CSV file.
         /// </summary>
-        Task<gCodeJournal.ViewModel.Import.ImportResult> ImportFromCsvAsync(string csvPath, bool updateExisting = false, char delimiter = ',', CancellationToken ct = default);
+        Task<ImportResult> ImportFromCsvAsync(string csvPath, ILogger appLogger, bool updateExisting = false, char delimiter = ',', CancellationToken ct = default);
 
         /// <summary>
         ///     Import data from a CSV stream. Optional fileName helps infer entity from the file name.
         /// </summary>
-        Task<gCodeJournal.ViewModel.Import.ImportResult> ImportFromCsvAsync(Stream stream, string? fileName = null, bool updateExisting = false, char delimiter = ',', CancellationToken ct = default);
+        Task<ImportResult> ImportFromCsvAsync(
+            Stream            stream,
+            ILogger           appLogger,
+            string?           fileName       = null,
+            bool              updateExisting = false,
+            char              delimiter      = ',',
+            CancellationToken ct             = default);
     }
 }

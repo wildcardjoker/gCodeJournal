@@ -3,9 +3,10 @@
 #region Using Directives
 using System.ComponentModel.DataAnnotations;
 using DTOs;
-using gCodeJournal.ViewModel.Import;
+using Import;
 using Mapping;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Model;
 #endregion
 
@@ -51,6 +52,7 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
 
         // Use helper to resolve or create customer (ensures tracked entity)
         var customer = await GetOrCreateCustomerAsync(customerDto).ConfigureAwait(false);
+
         // If new entity was created its Id will be 0 until saved; save to persist
         if (customer.Id == 0)
         {
@@ -246,11 +248,12 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
                 if (fEntity == null)
                 {
                     // create filament entity, but attach related lookups (may be newly created and tracked)
-                    fEntity = new Filament { CostPerWeight = fDto.CostPerWeight, ProductId = fDto.ProductId, ReorderLink = fDto.ReorderLink };
+                    fEntity = new Filament {CostPerWeight = fDto.CostPerWeight, ProductId = fDto.ProductId, ReorderLink = fDto.ReorderLink};
 
                     if (fDto.Manufacturer != null)
                     {
                         var man = await GetOrCreateManufacturerAsync(fDto.Manufacturer).ConfigureAwait(false);
+
                         // prefer navigation property to ensure correct relationship when 'man' is newly added
                         fEntity.Manufacturer = man;
                     }
@@ -638,19 +641,24 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
     }
 
     /// <inheritdoc />
-    public async Task<ImportResult> ImportFromCsvAsync(string csvPath, bool updateExisting = false, char delimiter = ',', CancellationToken ct = default)
+    public async Task<ImportResult> ImportFromCsvAsync(string csvPath, ILogger appLogger, bool updateExisting = false, char delimiter = ',', CancellationToken ct = default)
     {
         var importer = new CsvImporter(_db, this);
-        return await importer.ImportFromPathAsync(csvPath, updateExisting, delimiter, ct).ConfigureAwait(false);
+        return await importer.ImportFromPathAsync(csvPath, appLogger, updateExisting, delimiter, ct).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
-    public async Task<ImportResult> ImportFromCsvAsync(Stream stream, string? fileName = null, bool updateExisting = false, char delimiter = ',', CancellationToken ct = default)
+    public async Task<ImportResult> ImportFromCsvAsync(
+        Stream            stream,
+        ILogger           appLogger,
+        string?           fileName       = null,
+        bool              updateExisting = false,
+        char              delimiter      = ',',
+        CancellationToken ct             = default)
     {
         var importer = new CsvImporter(_db, this);
-        return await importer.ImportStreamAsync(stream, fileName, updateExisting, delimiter, ct).ConfigureAwait(false);
+        return await importer.ImportStreamAsync(stream, appLogger, fileName, updateExisting, delimiter, ct).ConfigureAwait(false);
     }
-
     #endregion
 
     #region Validation helpers
@@ -1010,6 +1018,7 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
         }
 
         var created = dto.ToEntity();
+
         // ensure new entity doesn't carry an explicit Id
         created.Id = 0;
         await _db.Manufacturers.AddAsync(created).ConfigureAwait(false);
