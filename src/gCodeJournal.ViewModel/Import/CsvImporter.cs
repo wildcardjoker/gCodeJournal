@@ -12,21 +12,8 @@ using Microsoft.Extensions.Logging;
 using Model;
 #endregion
 
-public class CsvImporter
+public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
 {
-    #region Fields
-    private readonly GCodeJournalDbContext _db;
-    private readonly GCodeJournalViewModel _vm;
-    #endregion
-
-    #region Constructors
-    public CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
-    {
-        _db = db;
-        _vm = vm;
-    }
-    #endregion
-
     #region ImportEntity Enum
     private enum ImportEntity
     {
@@ -69,10 +56,8 @@ public class CsvImporter
             // mergedMap carries mappings between files so later files can resolve references
             var mergedMap = new Dictionary<string, Dictionary<string, int>>(StringComparer.OrdinalIgnoreCase);
 
-            foreach (var entity in ordered)
+            foreach (var file in ordered.Select(EntityFileName).Select(fileName => Path.Combine(path, fileName)))
             {
-                var fileName = EntityFileName(entity);
-                var file     = Path.Combine(path, fileName);
                 if (!File.Exists(file))
                 {
                     result.Errors.Add($"{file} does not exist; skipping");
@@ -138,7 +123,7 @@ public class CsvImporter
         // Try to detect entity from filename
         var entity = DetectEntityFromFileName(fileName);
 
-        await using var tx = await _db.Database.BeginTransactionAsync(ct).ConfigureAwait(false);
+        await using var tx = await db.Database.BeginTransactionAsync(ct).ConfigureAwait(false);
         try
         {
             if (entity == ImportEntity.Unknown)
@@ -170,13 +155,13 @@ public class CsvImporter
                         foreach (var c in customers)
                         {
                             var sourceId = c.Id != 0 ? c.Id.ToString() : null;
-                            var r        = await _vm.AddCustomerAsync(c).ConfigureAwait(false);
+                            var r        = await vm.AddCustomerAsync(c).ConfigureAwait(false);
                             if (r == ValidationResult.Success)
                             {
                                 result.Created++;
                                 if (sourceId != null)
                                 {
-                                    var dbEntity = await _db.Customers.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Name, "NOCASE") == c.Name).ConfigureAwait(false);
+                                    var dbEntity = await db.Customers.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Name, "NOCASE") == c.Name).ConfigureAwait(false);
                                     if (dbEntity != null)
                                     {
                                         result.RecordMapping("customers", sourceId, dbEntity.Id);
@@ -197,13 +182,13 @@ public class CsvImporter
                         foreach (var m in mans)
                         {
                             var sourceId = m.Id != 0 ? m.Id.ToString() : null;
-                            var r        = await _vm.AddManufacturerAsync(m).ConfigureAwait(false);
+                            var r        = await vm.AddManufacturerAsync(m).ConfigureAwait(false);
                             if (r == ValidationResult.Success)
                             {
                                 result.Created++;
                                 if (sourceId != null)
                                 {
-                                    var dbEntity = await _db.Manufacturers.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Name, "NOCASE") == m.Name).ConfigureAwait(false);
+                                    var dbEntity = await db.Manufacturers.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Name, "NOCASE") == m.Name).ConfigureAwait(false);
                                     if (dbEntity != null)
                                     {
                                         result.RecordMapping("manufacturers", sourceId, dbEntity.Id);
@@ -224,14 +209,14 @@ public class CsvImporter
                         foreach (var c in cols)
                         {
                             var sourceId = c.Id != 0 ? c.Id.ToString() : null;
-                            var r        = await _vm.AddFilamentColourAsync(c).ConfigureAwait(false);
+                            var r        = await vm.AddFilamentColourAsync(c).ConfigureAwait(false);
                             if (r == ValidationResult.Success)
                             {
                                 result.Created++;
                                 if (sourceId != null)
                                 {
-                                    var dbEntity = await _db.FilamentColours.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Description, "NOCASE") == c.Description)
-                                                            .ConfigureAwait(false);
+                                    var dbEntity = await db.FilamentColours.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Description, "NOCASE") == c.Description)
+                                                           .ConfigureAwait(false);
                                     if (dbEntity != null)
                                     {
                                         result.RecordMapping("filament_colours", sourceId, dbEntity.Id);
@@ -252,14 +237,14 @@ public class CsvImporter
                         foreach (var t in types)
                         {
                             var sourceId = t.Id != 0 ? t.Id.ToString() : null;
-                            var r        = await _vm.AddFilamentTypeAsync(t).ConfigureAwait(false);
+                            var r        = await vm.AddFilamentTypeAsync(t).ConfigureAwait(false);
                             if (r == ValidationResult.Success)
                             {
                                 result.Created++;
                                 if (sourceId != null)
                                 {
-                                    var dbEntity = await _db.FilamentTypes.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Description, "NOCASE") == t.Description)
-                                                            .ConfigureAwait(false);
+                                    var dbEntity = await db.FilamentTypes.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Description, "NOCASE") == t.Description)
+                                                           .ConfigureAwait(false);
                                     if (dbEntity != null)
                                     {
                                         result.RecordMapping("filament_types", sourceId, dbEntity.Id);
@@ -280,7 +265,7 @@ public class CsvImporter
                         foreach (var f in filaments)
                         {
                             var sourceId = f.Id != 0 ? f.Id.ToString() : null;
-                            var r        = await _vm.AddFilamentAsync(f).ConfigureAwait(false);
+                            var r        = await vm.AddFilamentAsync(f).ConfigureAwait(false);
                             if (r == ValidationResult.Success)
                             {
                                 result.Created++;
@@ -289,16 +274,16 @@ public class CsvImporter
                                     Filament? dbEntity = null;
                                     if (!string.IsNullOrWhiteSpace(f.ProductId))
                                     {
-                                        dbEntity = await _db.Filaments.FirstOrDefaultAsync(x => x.ProductId == f.ProductId).ConfigureAwait(false);
+                                        dbEntity = await db.Filaments.FirstOrDefaultAsync(x => x.ProductId == f.ProductId).ConfigureAwait(false);
                                     }
 
                                     if (dbEntity == null)
                                     {
-                                        dbEntity = await _db.Filaments
-                                                            .FirstOrDefaultAsync(x => x.ManufacturerId      == f.Manufacturer.Id
-                                                                                      && x.FilamentTypeId   == f.FilamentType.Id
-                                                                                      && x.FilamentColourId == f.FilamentColour.Id)
-                                                            .ConfigureAwait(false);
+                                        dbEntity = await db.Filaments
+                                                           .FirstOrDefaultAsync(x => x.ManufacturerId      == f.Manufacturer.Id
+                                                                                     && x.FilamentTypeId   == f.FilamentType.Id
+                                                                                     && x.FilamentColourId == f.FilamentColour.Id)
+                                                           .ConfigureAwait(false);
                                     }
 
                                     if (dbEntity != null)
@@ -321,14 +306,14 @@ public class CsvImporter
                         foreach (var m in models)
                         {
                             var sourceId = m.Id != 0 ? m.Id.ToString() : null;
-                            var r        = await _vm.AddModelDesignAsync(m).ConfigureAwait(false);
+                            var r        = await vm.AddModelDesignAsync(m).ConfigureAwait(false);
                             if (r == ValidationResult.Success)
                             {
                                 result.Created++;
                                 if (sourceId != null)
                                 {
-                                    var dbEntity = await _db.ModelDesigns.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Description, "NOCASE") == m.Description)
-                                                            .ConfigureAwait(false);
+                                    var dbEntity = await db.ModelDesigns.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Description, "NOCASE") == m.Description)
+                                                           .ConfigureAwait(false);
                                     if (dbEntity != null)
                                     {
                                         result.RecordMapping("model_designs", sourceId, dbEntity.Id);
@@ -415,7 +400,7 @@ public class CsvImporter
                                 }
                             }
 
-                            var r = await _vm.AddPrintingProjectAsync(p).ConfigureAwait(false);
+                            var r = await vm.AddPrintingProjectAsync(p).ConfigureAwait(false);
                             if (r == ValidationResult.Success)
                             {
                                 result.Created++;
@@ -423,9 +408,9 @@ public class CsvImporter
                                 {
                                     var custId  = p.Customer?.Id    ?? 0;
                                     var modelId = p.ModelDesign?.Id ?? 0;
-                                    var dbEntity = await _db.PrintingProjects
-                                                            .FirstOrDefaultAsync(x => x.Cost == p.Cost && x.CustomerId == custId && x.ModelDesignId == modelId)
-                                                            .ConfigureAwait(false);
+                                    var dbEntity = await db.PrintingProjects
+                                                           .FirstOrDefaultAsync(x => x.Cost == p.Cost && x.CustomerId == custId && x.ModelDesignId == modelId)
+                                                           .ConfigureAwait(false);
                                     if (dbEntity != null)
                                     {
                                         result.RecordMapping("printing_projects", sourceId, dbEntity.Id);
@@ -454,6 +439,18 @@ public class CsvImporter
 
         return result;
     }
+
+    private static string EntityFileName(ImportEntity entity) => entity switch
+    {
+        ImportEntity.Customers        => "customers.csv",
+        ImportEntity.Manufacturers    => "manufacturers.csv",
+        ImportEntity.FilamentColours  => "filament_colours.csv",
+        ImportEntity.FilamentTypes    => "filament_types.csv",
+        ImportEntity.Filaments        => "filaments.csv",
+        ImportEntity.ModelDesigns     => "model_designs.csv",
+        ImportEntity.PrintingProjects => "printing_projects.csv",
+        _                             => string.Empty
+    };
 
     private ImportEntity DetectEntityFromFileName(string? fileName)
     {
@@ -500,18 +497,6 @@ public class CsvImporter
 
         return ImportEntity.Unknown;
     }
-
-    private string EntityFileName(ImportEntity entity) => entity switch
-    {
-        ImportEntity.Customers        => "customers.csv",
-        ImportEntity.Manufacturers    => "manufacturers.csv",
-        ImportEntity.FilamentColours  => "filament_colours.csv",
-        ImportEntity.FilamentTypes    => "filament_types.csv",
-        ImportEntity.Filaments        => "filaments.csv",
-        ImportEntity.ModelDesigns     => "model_designs.csv",
-        ImportEntity.PrintingProjects => "printing_projects.csv",
-        _                             => string.Empty
-    };
 
     private async Task<ImportResult> ImportFileAsync(
         string                                       filePath,
@@ -611,7 +596,7 @@ public class CsvImporter
                     var dto = id != 0 ? new CustomerDto(id, name) : new CustomerDto(name);
                     if (id != 0 && updateExisting)
                     {
-                        var r = await _vm.EditCustomerAsync(dto).ConfigureAwait(false);
+                        var r = await vm.EditCustomerAsync(dto).ConfigureAwait(false);
                         if (r == ValidationResult.Success)
                         {
                             result.Updated++;
@@ -624,13 +609,13 @@ public class CsvImporter
                     }
                     else
                     {
-                        var r = await _vm.AddCustomerAsync(dto).ConfigureAwait(false);
+                        var r = await vm.AddCustomerAsync(dto).ConfigureAwait(false);
                         if (r == ValidationResult.Success)
                         {
                             result.Created++;
                             if (id != 0)
                             {
-                                var dbEntity = await _db.Customers.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Name, "NOCASE") == name).ConfigureAwait(false);
+                                var dbEntity = await db.Customers.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Name, "NOCASE") == name).ConfigureAwait(false);
                                 if (dbEntity != null)
                                 {
                                     result.RecordMapping("customers", id.ToString(), dbEntity.Id);
@@ -661,7 +646,7 @@ public class CsvImporter
                     var dto = id != 0 ? new ManufacturerDto(id, name) : new ManufacturerDto(name);
                     if (id != 0 && updateExisting)
                     {
-                        var r = await _vm.EditManufacturerAsync(dto).ConfigureAwait(false);
+                        var r = await vm.EditManufacturerAsync(dto).ConfigureAwait(false);
                         if (r == ValidationResult.Success)
                         {
                             result.Updated++;
@@ -674,13 +659,13 @@ public class CsvImporter
                     }
                     else
                     {
-                        var r = await _vm.AddManufacturerAsync(dto).ConfigureAwait(false);
+                        var r = await vm.AddManufacturerAsync(dto).ConfigureAwait(false);
                         if (r == ValidationResult.Success)
                         {
                             result.Created++;
                             if (id != 0)
                             {
-                                var dbEntity = await _db.Manufacturers.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Name, "NOCASE") == name).ConfigureAwait(false);
+                                var dbEntity = await db.Manufacturers.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Name, "NOCASE") == name).ConfigureAwait(false);
                                 if (dbEntity != null)
                                 {
                                     result.RecordMapping("manufacturers", id.ToString(), dbEntity.Id);
@@ -711,7 +696,7 @@ public class CsvImporter
                     var dto = id != 0 ? new FilamentColourDto(id, desc) : new FilamentColourDto(desc);
                     if (id != 0 && updateExisting)
                     {
-                        var r = await _vm.EditFilamentColourAsync(dto).ConfigureAwait(false);
+                        var r = await vm.EditFilamentColourAsync(dto).ConfigureAwait(false);
                         if (r == ValidationResult.Success)
                         {
                             result.Updated++;
@@ -724,14 +709,14 @@ public class CsvImporter
                     }
                     else
                     {
-                        var r = await _vm.AddFilamentColourAsync(dto).ConfigureAwait(false);
+                        var r = await vm.AddFilamentColourAsync(dto).ConfigureAwait(false);
                         if (r == ValidationResult.Success)
                         {
                             result.Created++;
                             if (id != 0)
                             {
-                                var dbEntity = await _db.FilamentColours.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Description, "NOCASE") == desc)
-                                                        .ConfigureAwait(false);
+                                var dbEntity = await db.FilamentColours.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Description, "NOCASE") == desc)
+                                                       .ConfigureAwait(false);
                                 if (dbEntity != null)
                                 {
                                     result.RecordMapping("filament_colours", id.ToString(), dbEntity.Id);
@@ -762,7 +747,7 @@ public class CsvImporter
                     var dto = id != 0 ? new FilamentTypeDto(id, desc) : new FilamentTypeDto(desc);
                     if (id != 0 && updateExisting)
                     {
-                        var r = await _vm.EditFilamentTypeAsync(dto).ConfigureAwait(false);
+                        var r = await vm.EditFilamentTypeAsync(dto).ConfigureAwait(false);
                         if (r == ValidationResult.Success)
                         {
                             result.Updated++;
@@ -775,14 +760,13 @@ public class CsvImporter
                     }
                     else
                     {
-                        var r = await _vm.AddFilamentTypeAsync(dto).ConfigureAwait(false);
+                        var r = await vm.AddFilamentTypeAsync(dto).ConfigureAwait(false);
                         if (r == ValidationResult.Success)
                         {
                             result.Created++;
                             if (id != 0)
                             {
-                                var dbEntity = await _db.FilamentTypes.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Description, "NOCASE") == desc)
-                                                        .ConfigureAwait(false);
+                                var dbEntity = await db.FilamentTypes.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Description, "NOCASE") == desc).ConfigureAwait(false);
                                 if (dbEntity != null)
                                 {
                                     result.RecordMapping("filament_types", id.ToString(), dbEntity.Id);
@@ -819,7 +803,7 @@ public class CsvImporter
 
                     if (id != 0 && updateExisting)
                     {
-                        var r = await _vm.EditFilamentAsync(dto).ConfigureAwait(false);
+                        var r = await vm.EditFilamentAsync(dto).ConfigureAwait(false);
                         if (r == ValidationResult.Success)
                         {
                             result.Updated++;
@@ -832,7 +816,7 @@ public class CsvImporter
                     }
                     else
                     {
-                        var r = await _vm.AddFilamentAsync(dto).ConfigureAwait(false);
+                        var r = await vm.AddFilamentAsync(dto).ConfigureAwait(false);
                         if (r == ValidationResult.Success)
                         {
                             result.Created++;
@@ -841,14 +825,14 @@ public class CsvImporter
                                 Filament? dbEntity = null;
                                 if (!string.IsNullOrWhiteSpace(productId))
                                 {
-                                    dbEntity = await _db.Filaments.FirstOrDefaultAsync(x => x.ProductId == productId).ConfigureAwait(false);
+                                    dbEntity = await db.Filaments.FirstOrDefaultAsync(x => x.ProductId == productId).ConfigureAwait(false);
                                 }
 
                                 if (dbEntity == null)
                                 {
-                                    dbEntity = await _db.Filaments
-                                                        .FirstOrDefaultAsync(x => x.ManufacturerId == manId && x.FilamentTypeId == typeId && x.FilamentColourId == colourId)
-                                                        .ConfigureAwait(false);
+                                    dbEntity = await db.Filaments
+                                                       .FirstOrDefaultAsync(x => x.ManufacturerId == manId && x.FilamentTypeId == typeId && x.FilamentColourId == colourId)
+                                                       .ConfigureAwait(false);
                                 }
 
                                 if (dbEntity != null)
@@ -885,7 +869,7 @@ public class CsvImporter
                     var dto = id != 0 ? new ModelDesignDto(id, desc, length, summary ?? string.Empty, url) : new ModelDesignDto(desc, length, summary ?? string.Empty, url);
                     if (id != 0 && updateExisting)
                     {
-                        var r = await _vm.EditModelDesignAsync(dto).ConfigureAwait(false);
+                        var r = await vm.EditModelDesignAsync(dto).ConfigureAwait(false);
                         if (r == ValidationResult.Success)
                         {
                             result.Updated++;
@@ -898,13 +882,13 @@ public class CsvImporter
                     }
                     else
                     {
-                        var r = await _vm.AddModelDesignAsync(dto).ConfigureAwait(false);
+                        var r = await vm.AddModelDesignAsync(dto).ConfigureAwait(false);
                         if (r == ValidationResult.Success)
                         {
                             result.Created++;
                             if (id != 0)
                             {
-                                var dbEntity = await _db.ModelDesigns.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Description, "NOCASE") == desc).ConfigureAwait(false);
+                                var dbEntity = await db.ModelDesigns.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Description, "NOCASE") == desc).ConfigureAwait(false);
                                 if (dbEntity != null)
                                 {
                                     result.RecordMapping("model_designs", id.ToString(), dbEntity.Id);
@@ -987,7 +971,7 @@ public class CsvImporter
 
                     if (id != 0 && updateExisting)
                     {
-                        var r = await _vm.EditPrintingProjectAsync(projDto).ConfigureAwait(false);
+                        var r = await vm.EditPrintingProjectAsync(projDto).ConfigureAwait(false);
                         if (r == ValidationResult.Success)
                         {
                             result.Updated++;
@@ -1000,7 +984,7 @@ public class CsvImporter
                     }
                     else
                     {
-                        var r = await _vm.AddPrintingProjectAsync(projDto).ConfigureAwait(false);
+                        var r = await vm.AddPrintingProjectAsync(projDto).ConfigureAwait(false);
                         if (r == ValidationResult.Success)
                         {
                             result.Created++;
@@ -1008,9 +992,9 @@ public class CsvImporter
                             {
                                 var custId = projDto.Customer?.Id    ?? 0;
                                 var mdlId  = projDto.ModelDesign?.Id ?? 0;
-                                var dbEntity = await _db.PrintingProjects
-                                                        .FirstOrDefaultAsync(x => x.Cost == projDto.Cost && x.CustomerId == custId && x.ModelDesignId == mdlId)
-                                                        .ConfigureAwait(false);
+                                var dbEntity = await db.PrintingProjects
+                                                       .FirstOrDefaultAsync(x => x.Cost == projDto.Cost && x.CustomerId == custId && x.ModelDesignId == mdlId)
+                                                       .ConfigureAwait(false);
                                 if (dbEntity != null)
                                 {
                                     result.RecordMapping("printing_projects", id.ToString(), dbEntity.Id);
