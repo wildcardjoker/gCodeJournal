@@ -294,14 +294,56 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
         }
 
         // Create project entity and attach resolved relations
+        var filaments = new List<Filament>();
+        if (projectDto.Filaments != null)
+        {
+            foreach (var fDto in projectDto.Filaments)
+            {
+                Filament? fEntity = null;
+                if (fDto.Id != 0)
+                {
+                    fEntity = await _db.Filaments.FindAsync(fDto.Id).ConfigureAwait(false);
+                }
+
+                if (fEntity == null)
+                {
+                    // create filament entity, but attach related lookups (may be newly created and tracked)
+                    fEntity = new Filament { CostPerWeight = fDto.CostPerWeight, ProductId = fDto.ProductId, ReorderLink = fDto.ReorderLink };
+
+                    if (fDto.Manufacturer != null)
+                    {
+                        var man = await GetOrCreateManufacturerAsync(fDto.Manufacturer).ConfigureAwait(false);
+                        // prefer navigation property to ensure correct relationship when 'man' is newly added
+                        fEntity.Manufacturer = man;
+                    }
+
+                    if (fDto.FilamentColour != null)
+                    {
+                        var col = await GetOrCreateFilamentColourAsync(fDto.FilamentColour).ConfigureAwait(false);
+                        fEntity.Colour = col;
+                    }
+
+                    if (fDto.FilamentType != null)
+                    {
+                        var typ = await GetOrCreateFilamentTypeAsync(fDto.FilamentType).ConfigureAwait(false);
+                        fEntity.Type = typ;
+                    }
+
+                    await _db.Filaments.AddAsync(fEntity).ConfigureAwait(false);
+                }
+
+                filaments.Add(fEntity);
+            }
+        }
+
         var project = new PrintingProject
         {
-            Cost       = projectDto.Cost,
-            Submitted  = projectDto.Submitted.ToDateTime(TimeOnly.MinValue),
-            Completed  = projectDto.Completed?.ToDateTime(TimeOnly.MinValue),
-            Customer   = customer!,
-            Model      = model!,
-            FilamentId = projectDto.Filaments.First().Id // TODO: handle multiple filaments properly
+            Cost      = projectDto.Cost,
+            Submitted = projectDto.Submitted.ToDateTime(TimeOnly.MinValue),
+            Completed = projectDto.Completed?.ToDateTime(TimeOnly.MinValue),
+            Customer  = customer!,
+            Model     = model!,
+            Filaments = filaments
         };
 
         await _db.PrintingProjects.AddAsync(project).ConfigureAwait(false);
@@ -569,8 +611,6 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
                 await _db.Filaments.AddAsync(fEntity).ConfigureAwait(false);
                 await _db.SaveChangesAsync().ConfigureAwait(false); // ensure new filament has Id
             }
-
-            existing.FilamentId = fEntity.Id;
         }
 
         await _db.SaveChangesAsync().ConfigureAwait(false);

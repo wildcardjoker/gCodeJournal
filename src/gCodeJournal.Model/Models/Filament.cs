@@ -3,10 +3,8 @@
 namespace gCodeJournal.Model;
 
 #region Using Directives
-#region Using Directives
 using System.ComponentModel.DataAnnotations;
 using JetBrains.Annotations;
-#endregion
 #endregion
 
 /// <summary>
@@ -67,6 +65,12 @@ public class Filament
     /// </remarks>
     [StringLength(20)]
     public string? ProductId {get; set;}
+
+    /// <summary>
+    ///     Navigation property: the printing projects that reference this filament.
+    ///     Many-to-many relationship: a filament can be used by zero or more projects.
+    /// </summary>
+    public virtual ICollection<PrintingProject> Projects {get; set;} = new List<PrintingProject>();
 
     /// <summary>
     ///     Gets or sets the URL link to reorder this filament.
