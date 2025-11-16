@@ -245,6 +245,8 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                         {
                             var sourceId = t.Id != 0 ? t.Id.ToString() : null;
                             var r        = await vm.AddFilamentTypeAsync(t).ConfigureAwait(false);
+
+                            // TODO: Add ValidationResult.Skipped if duplicate and updateExisting is false
                             if (r == ValidationResult.Success)
                             {
                                 result.Created++;
@@ -452,6 +454,47 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
         return result;
     }
 
+    private static ImportEntity DetectEntityFromFileName(string? fileName)
+    {
+        if (string.IsNullOrWhiteSpace(fileName))
+        {
+            return ImportEntity.Unknown;
+        }
+
+        var name = fileName.ToLowerInvariant();
+        if (name.Contains("customers", StringComparison.OrdinalIgnoreCase))
+        {
+            return ImportEntity.Customers;
+        }
+
+        if (name.Contains("manufacturers", StringComparison.OrdinalIgnoreCase))
+        {
+            return ImportEntity.Manufacturers;
+        }
+
+        if (name.Contains("filament_colours", StringComparison.OrdinalIgnoreCase))
+        {
+            return ImportEntity.FilamentColours;
+        }
+
+        if (name.Contains("filament_types", StringComparison.OrdinalIgnoreCase))
+        {
+            return ImportEntity.FilamentTypes;
+        }
+
+        if (name.Contains("filaments"))
+        {
+            return ImportEntity.Filaments;
+        }
+
+        if (name.Contains("model_designs", StringComparison.OrdinalIgnoreCase))
+        {
+            return ImportEntity.ModelDesigns;
+        }
+
+        return name.Contains("printing_projects", StringComparison.OrdinalIgnoreCase) ? ImportEntity.PrintingProjects : ImportEntity.Unknown;
+    }
+
     private static string EntityFileName(ImportEntity entity) => entity switch
     {
         ImportEntity.Customers        => "customers.csv",
@@ -463,52 +506,6 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
         ImportEntity.PrintingProjects => "printing_projects.csv",
         _                             => string.Empty
     };
-
-    private ImportEntity DetectEntityFromFileName(string? fileName)
-    {
-        if (string.IsNullOrWhiteSpace(fileName))
-        {
-            return ImportEntity.Unknown;
-        }
-
-        var name = fileName.ToLowerInvariant();
-        if (name.Contains("customers"))
-        {
-            return ImportEntity.Customers;
-        }
-
-        if (name.Contains("manufacturers"))
-        {
-            return ImportEntity.Manufacturers;
-        }
-
-        if (name.Contains("filament_colours") || name.Contains("filamentcolors"))
-        {
-            return ImportEntity.FilamentColours;
-        }
-
-        if (name.Contains("filament_types") || name.Contains("filamenttypes"))
-        {
-            return ImportEntity.FilamentTypes;
-        }
-
-        if (name.Contains("filaments"))
-        {
-            return ImportEntity.Filaments;
-        }
-
-        if (name.Contains("model_designs") || name.Contains("models"))
-        {
-            return ImportEntity.ModelDesigns;
-        }
-
-        if (name.Contains("printing_projects") || name.Contains("projects"))
-        {
-            return ImportEntity.PrintingProjects;
-        }
-
-        return ImportEntity.Unknown;
-    }
 
     private async Task<ImportResult> ImportFileAsync(
         string                                       filePath,
