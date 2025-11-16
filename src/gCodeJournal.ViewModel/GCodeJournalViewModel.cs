@@ -986,8 +986,8 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
             existing = await _db.Manufacturers.FindAsync(dto.Id).ConfigureAwait(false);
         }
 
-        // case-insensitive lookup
-        existing ??= await _db.Manufacturers.FirstOrDefaultAsync(m => m.Name.ToLower() == dto.Name.ToLower()).ConfigureAwait(false);
+        // case-insensitive lookup using DB collation (SQLite NOCASE)
+        existing ??= await _db.Manufacturers.FirstOrDefaultAsync(m => EF.Functions.Collate(m.Name, "NOCASE") == dto.Name).ConfigureAwait(false);
         if (existing != null)
         {
             return existing;
@@ -1011,8 +1011,8 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
             existing = await _db.FilamentColours.FindAsync(dto.Id).ConfigureAwait(false);
         }
 
-        // case-insensitive lookup
-        existing ??= await _db.FilamentColours.FirstOrDefaultAsync(fc => fc.Description.ToLower() == dto.Description.ToLower()).ConfigureAwait(false);
+        // case-insensitive lookup using DB collation (SQLite NOCASE)
+        existing ??= await _db.FilamentColours.FirstOrDefaultAsync(fc => EF.Functions.Collate(fc.Description, "NOCASE") == dto.Description).ConfigureAwait(false);
         if (existing != null)
         {
             return existing;
@@ -1033,8 +1033,8 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
             existing = await _db.FilamentTypes.FindAsync(dto.Id).ConfigureAwait(false);
         }
 
-        // case-insensitive lookup
-        existing ??= await _db.FilamentTypes.FirstOrDefaultAsync(ft => ft.Description.ToLower() == dto.Description.ToLower()).ConfigureAwait(false);
+        // case-insensitive lookup using DB collation (SQLite NOCASE)
+        existing ??= await _db.FilamentTypes.FirstOrDefaultAsync(ft => EF.Functions.Collate(ft.Description, "NOCASE") == dto.Description).ConfigureAwait(false);
         if (existing != null)
         {
             return existing;
@@ -1055,7 +1055,7 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
             existing = await _db.Customers.FindAsync(dto.Id).ConfigureAwait(false);
         }
 
-        existing ??= await _db.Customers.FirstOrDefaultAsync(c => c.Name.ToLower() == dto.Name.ToLower()).ConfigureAwait(false);
+        existing ??= await _db.Customers.FirstOrDefaultAsync(c => EF.Functions.Collate(c.Name, "NOCASE") == dto.Name).ConfigureAwait(false);
         if (existing != null)
         {
             return existing;
@@ -1076,7 +1076,7 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
             existing = await _db.ModelDesigns.FindAsync(dto.Id).ConfigureAwait(false);
         }
 
-        existing ??= await _db.ModelDesigns.FirstOrDefaultAsync(md => md.Description.ToLower() == dto.Description.ToLower()).ConfigureAwait(false);
+        existing ??= await _db.ModelDesigns.FirstOrDefaultAsync(md => EF.Functions.Collate(md.Description, "NOCASE") == dto.Description).ConfigureAwait(false);
         if (existing != null)
         {
             return existing;
