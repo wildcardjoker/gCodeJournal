@@ -1056,6 +1056,12 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
         if (dto.Id != 0)
         {
             existing = await _db.FilamentTypes.FindAsync(dto.Id).ConfigureAwait(false);
+
+            // Check that the Description matches if Id is provided
+            if (!existing?.Description.Equals(dto.Description, StringComparison.OrdinalIgnoreCase) ?? false)
+            {
+                existing = null;
+            }
         }
 
         // case-insensitive lookup using DB collation (SQLite NOCASE)
