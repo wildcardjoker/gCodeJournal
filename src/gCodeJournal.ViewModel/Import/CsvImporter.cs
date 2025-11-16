@@ -233,9 +233,269 @@ public class CsvImporter
 
     private async Task ProcessRowAsync(ImportEntity entity, IDictionary<string, object> dict, ImportResult result, bool updateExisting, CancellationToken ct)
     {
-        // Not implemented: dynamic single-file processing. For now, add error.
-        result.Errors.Add("Dynamic single-file processing not supported in this implementation");
-        result.Failed++;
+        // helper locals
+        static string? GetString(IDictionary<string, object> d, string key)
+        {
+            foreach (var k in d.Keys)
+            {
+                if (string.Equals(k, key, StringComparison.OrdinalIgnoreCase))
+                {
+                    var v = d[k];
+                    return v?.ToString()?.Trim();
+                }
+            }
+
+            return null;
+        }
+
+        static int ParseIntOrZero(string? s)
+        {
+            return int.TryParse(s, out var i) ? i : 0;
+        }
+
+        static decimal ParseDecimalOrZero(string? s)
+        {
+            return decimal.TryParse(s, NumberStyles.Number, CultureInfo.InvariantCulture, out var d) ? d : 0m;
+        }
+
+        static DateOnly ParseDateOnlyOrDefault(string? s)
+        {
+            if (string.IsNullOrWhiteSpace(s)) return DateOnly.MinValue;
+            if (DateOnly.TryParse(s, CultureInfo.InvariantCulture, DateTimeStyles.None, out var d)) return d;
+            if (DateOnly.TryParse(s, out d)) return d;
+            if (DateTime.TryParse(s, CultureInfo.InvariantCulture, DateTimeStyles.None, out var dt)) return DateOnly.FromDateTime(dt);
+            return DateOnly.MinValue;
+        }
+
+        try
+        {
+            switch (entity)
+            {
+                case ImportEntity.Customers:
+                {
+                    var id = ParseIntOrZero(GetString(dict, "Id"));
+                    var name = GetString(dict, "Name");
+                    if (string.IsNullOrWhiteSpace(name))
+                    {
+                        result.Errors.Add("Customer: Name is required");
+                        result.Failed++;
+                        return;
+                    }
+
+                    var dto = id != 0 ? new CustomerDto(id, name) : new CustomerDto(name);
+                    if (id != 0 && updateExisting)
+                    {
+                        var r = await _vm.EditCustomerAsync(dto).ConfigureAwait(false);
+                        if (r == ValidationResult.Success) result.Updated++; else { result.Errors.Add(r.ErrorMessage ?? "EditCustomer failed"); result.Failed++; }
+                    }
+                    else
+                    {
+                        var r = await _vm.AddCustomerAsync(dto). ConfigureAwait(false);
+                        if (r == ValidationResult.Success) result.Created++; else { result.Errors.Add(r.ErrorMessage ?? "AddCustomer failed"); result.Failed++; }
+                    }
+
+                    break;
+                }
+
+                case ImportEntity.Manufacturers:
+                {
+                    var id = ParseIntOrZero(GetString(dict, "Id"));
+                    var name = GetString(dict, "Name");
+                    if (string.IsNullOrWhiteSpace(name))
+                    {
+                        result.Errors.Add("Manufacturer: Name is required");
+                        result.Failed++;
+                        return;
+                    }
+
+                    var dto = id != 0 ? new ManufacturerDto(id, name) : new ManufacturerDto(name);
+                    if (id != 0 && updateExisting)
+                    {
+                        var r = await _vm.EditManufacturerAsync(dto).ConfigureAwait(false);
+                        if (r == ValidationResult.Success) result.Updated++; else { result.Errors.Add(r.ErrorMessage ?? "EditManufacturer failed"); result.Failed++; }
+                    }
+                    else
+                    {
+                        var r = await _vm.AddManufacturerAsync(dto).ConfigureAwait(false);
+                        if (r == ValidationResult.Success) result.Created++; else { result.Errors.Add(r.ErrorMessage ?? "AddManufacturer failed"); result.Failed++; }
+                    }
+
+                    break;
+                }
+
+                case ImportEntity.FilamentColours:
+                {
+                    var id = ParseIntOrZero(GetString(dict, "Id"));
+                    var desc = GetString(dict, "Description") ?? GetString(dict, "Name");
+                    if (string.IsNullOrWhiteSpace(desc))
+                    {
+                        result.Errors.Add("FilamentColour: Description is required");
+                        result.Failed++;
+                        return;
+                    }
+
+                    var dto = id != 0 ? new FilamentColourDto(id, desc) : new FilamentColourDto(desc);
+                    if (id != 0 && updateExisting)
+                    {
+                        var r = await _vm.EditFilamentColourAsync(dto).ConfigureAwait(false);
+                        if (r == ValidationResult.Success) result.Updated++; else { result.Errors.Add(r.ErrorMessage ?? "EditFilamentColour failed"); result.Failed++; }
+                    }
+                    else
+                    {
+                        var r = await _vm.AddFilamentColourAsync(dto).ConfigureAwait(false);
+                        if (r == ValidationResult.Success) result.Created++; else { result.Errors.Add(r.ErrorMessage ?? "AddFilamentColour failed"); result.Failed++; }
+                    }
+
+                    break;
+                }
+
+                case ImportEntity.FilamentTypes:
+                {
+                    var id = ParseIntOrZero(GetString(dict, "Id"));
+                    var desc = GetString(dict, "Description") ?? GetString(dict, "Name");
+                    if (string.IsNullOrWhiteSpace(desc))
+                    {
+                        result.Errors.Add("FilamentType: Description is required");
+                        result.Failed++;
+                        return;
+                    }
+
+                    var dto = id != 0 ? new FilamentTypeDto(id, desc) : new FilamentTypeDto(desc);
+                    if (id != 0 && updateExisting)
+                    {
+                        var r = await _vm.EditFilamentTypeAsync(dto).ConfigureAwait(false);
+                        if (r == ValidationResult.Success) result.Updated++; else { result.Errors.Add(r.ErrorMessage ?? "EditFilamentType failed"); result.Failed++; }
+                    }
+                    else
+                    {
+                        var r = await _vm.AddFilamentTypeAsync(dto).ConfigureAwait(false);
+                        if (r == ValidationResult.Success) result.Created++; else { result.Errors.Add(r.ErrorMessage ?? "AddFilamentType failed"); result.Failed++; }
+                    }
+
+                    break;
+                }
+
+                case ImportEntity.Filaments:
+                {
+                    var id = ParseIntOrZero(GetString(dict, "Id"));
+                    var cost = ParseDecimalOrZero(GetString(dict, "CostPerWeight") ?? GetString(dict, "Cost"));
+                    var productId = GetString(dict, "ProductId");
+                    var reorder = GetString(dict, "ReorderLink") ?? GetString(dict, "ReorderUrl") ?? GetString(dict, "Url");
+                    var colourId = ParseIntOrZero(GetString(dict, "FilamentColourId") ?? GetString(dict, "FilamentColour") ?? GetString(dict, "ColourId"));
+                    var typeId = ParseIntOrZero(GetString(dict, "FilamentTypeId") ?? GetString(dict, "FilamentType") ?? GetString(dict, "TypeId"));
+                    var manId = ParseIntOrZero(GetString(dict, "ManufacturerId") ?? GetString(dict, "Manufacturer") ?? GetString(dict, "MakerId"));
+
+                    var colourDto = new FilamentColourDto(colourId, string.Empty);
+                    var typeDto = new FilamentTypeDto(typeId, string.Empty);
+                    var manDto = new ManufacturerDto(manId, string.Empty);
+
+                    var dto = id != 0
+                        ? new FilamentDto(id, cost, productId, reorder, colourDto, typeDto, manDto)
+                        : new FilamentDto(cost, productId, reorder, colourDto, typeDto, manDto);
+
+                    if (id != 0 && updateExisting)
+                    {
+                        var r = await _vm.EditFilamentAsync(dto).ConfigureAwait(false);
+                        if (r == ValidationResult.Success) result.Updated++; else { result.Errors.Add(r.ErrorMessage ?? "EditFilament failed"); result.Failed++; }
+                    }
+                    else
+                    {
+                        var r = await _vm.AddFilamentAsync(dto).ConfigureAwait(false);
+                        if (r == ValidationResult.Success) result.Created++; else { result.Errors.Add(r.ErrorMessage ?? "AddFilament failed"); result.Failed++; }
+                    }
+
+                    break;
+                }
+
+                case ImportEntity.ModelDesigns:
+                {
+                    var id = ParseIntOrZero(GetString(dict, "Id"));
+                    var desc = GetString(dict, "Description") ?? GetString(dict, "Name");
+                    var length = ParseDecimalOrZero(GetString(dict, "Length"));
+                    var summary = GetString(dict, "Summary");
+                    var url = GetString(dict, "Url");
+
+                    if (string.IsNullOrWhiteSpace(desc))
+                    {
+                        result.Errors.Add("ModelDesign: Description is required");
+                        result.Failed++;
+                        return;
+                    }
+
+                    var dto = id != 0 ? new ModelDesignDto(id, desc, length, summary ?? string.Empty, url) : new ModelDesignDto(desc, length, summary ?? string.Empty, url);
+                    if (id != 0 && updateExisting)
+                    {
+                        var r = await _vm.EditModelDesignAsync(dto).ConfigureAwait(false);
+                        if (r == ValidationResult.Success) result.Updated++; else { result.Errors.Add(r.ErrorMessage ?? "EditModelDesign failed"); result.Failed++; }
+                    }
+                    else
+                    {
+                        var r = await _vm.AddModelDesignAsync(dto).ConfigureAwait(false);
+                        if (r == ValidationResult.Success) result.Created++; else { result.Errors.Add(r.ErrorMessage ?? "AddModelDesign failed"); result.Failed++; }
+                    }
+
+                    break;
+                }
+
+                case ImportEntity.PrintingProjects:
+                {
+                    var id = ParseIntOrZero(GetString(dict, "Id"));
+                    var cost = ParseDecimalOrZero(GetString(dict, "Cost"));
+                    var submitted = ParseDateOnlyOrDefault(GetString(dict, "Submitted"));
+                    var completed = ParseDateOnlyOrDefault(GetString(dict, "Completed"));
+                    var customerId = ParseIntOrZero(GetString(dict, "CustomerId") ?? GetString(dict, "Customer"));
+                    var modelId = ParseIntOrZero(GetString(dict, "ModelDesignId") ?? GetString(dict, "ModelDesign"));
+                    var filamentIdsRaw = GetString(dict, "FilamentIds") ?? GetString(dict, "FilamentId") ?? GetString(dict, "Filaments");
+
+                    CustomerDto? custDto = null;
+                    if (customerId != 0) custDto = new CustomerDto(customerId, string.Empty);
+
+                    ModelDesignDto? modelDto = null;
+                    if (modelId != 0) modelDto = new ModelDesignDto(modelId, string.Empty, 0m, string.Empty, null);
+
+                    var filamentDtos = new List<FilamentDto>();
+                    if (!string.IsNullOrWhiteSpace(filamentIdsRaw))
+                    {
+                        var parts = filamentIdsRaw.Split(new[] {',', ';'}, StringSplitOptions.RemoveEmptyEntries);
+                        foreach (var p in parts)
+                        {
+                            var fid = ParseIntOrZero(p.Trim());
+                            if (fid == 0) continue;
+                            // create minimal filament DTO with id only; AddPrintingProjectAsync will resolve existing entity
+                            var placeholder = new FilamentDto(fid, 0m, null, null, new FilamentColourDto(0, string.Empty), new FilamentTypeDto(0, string.Empty), new ManufacturerDto(0, string.Empty));
+                            filamentDtos.Add(placeholder);
+                        }
+                    }
+
+                    var projDto = id != 0
+                        ? new PrintingProjectDto(id, cost, submitted == DateOnly.MinValue ? DateOnly.FromDateTime(DateTime.Now) : submitted, completed == DateOnly.MinValue ? null : completed, custDto, modelDto, filamentDtos)
+                        : new PrintingProjectDto(cost, submitted == DateOnly.MinValue ? DateOnly.FromDateTime(DateTime.Now) : submitted, completed == DateOnly.MinValue ? null : completed, custDto, modelDto, filamentDtos);
+
+                    if (id != 0 && updateExisting)
+                    {
+                        var r = await _vm.EditPrintingProjectAsync(projDto).ConfigureAwait(false);
+                        if (r == ValidationResult.Success) result.Updated++; else { result.Errors.Add(r.ErrorMessage ?? "EditPrintingProject failed"); result.Failed++; }
+                    }
+                    else
+                    {
+                        var r = await _vm.AddPrintingProjectAsync(projDto).ConfigureAwait(false);
+                        if (r == ValidationResult.Success) result.Created++; else { result.Errors.Add(r.ErrorMessage ?? "AddPrintingProject failed"); result.Failed++; }
+                    }
+
+                    break;
+                }
+
+                default:
+                    result.Errors.Add($"Unknown entity '{entity}'");
+                    result.Failed++;
+                    break;
+            }
+        }
+        catch (Exception ex)
+        {
+            result.Errors.Add(ex.Message);
+            result.Failed++;
+        }
     }
 
     private enum ImportEntity
