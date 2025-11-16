@@ -48,21 +48,14 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
             return validation;
         }
 
-        Customer? existing = null;
-        if (customerDto.Id != 0)
+        // Use helper to resolve or create customer (ensures tracked entity)
+        var customer = await GetOrCreateCustomerAsync(customerDto).ConfigureAwait(false);
+        // If new entity was created its Id will be 0 until saved; save to persist
+        if (customer.Id == 0)
         {
-            existing = await _db.Customers.FindAsync(customerDto.Id).ConfigureAwait(false);
+            await _db.SaveChangesAsync().ConfigureAwait(false);
         }
 
-        // perform case-insensitive lookup
-        existing ??= await _db.Customers.FirstOrDefaultAsync(c => c.Name.ToLower() == customerDto.Name.ToLower()).ConfigureAwait(false);
-        if (existing != null)
-        {
-            return ValidationResult.Success; // already exists — treat as successful no-op
-        }
-
-        await _db.Customers.AddAsync(customerDto.ToEntity()).ConfigureAwait(false);
-        await _db.SaveChangesAsync().ConfigureAwait(false);
         return ValidationResult.Success;
     }
 
@@ -116,21 +109,12 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
             return validation;
         }
 
-        FilamentColour? existing = null;
-        if (filamentColourDto.Id != 0)
+        var col = await GetOrCreateFilamentColourAsync(filamentColourDto).ConfigureAwait(false);
+        if (col.Id == 0)
         {
-            existing = await _db.FilamentColours.FindAsync(filamentColourDto.Id).ConfigureAwait(false);
+            await _db.SaveChangesAsync().ConfigureAwait(false);
         }
 
-        // case-insensitive lookup
-        existing ??= await _db.FilamentColours.FirstOrDefaultAsync(fc => fc.Description.ToLower() == filamentColourDto.Description.ToLower()).ConfigureAwait(false);
-        if (existing != null)
-        {
-            return ValidationResult.Success;
-        }
-
-        await _db.FilamentColours.AddAsync(filamentColourDto.ToEntity()).ConfigureAwait(false);
-        await _db.SaveChangesAsync().ConfigureAwait(false);
         return ValidationResult.Success;
     }
 
@@ -151,21 +135,12 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
             return validation;
         }
 
-        FilamentType? existing = null;
-        if (filamentTypeDto.Id != 0)
+        var typ = await GetOrCreateFilamentTypeAsync(filamentTypeDto).ConfigureAwait(false);
+        if (typ.Id == 0)
         {
-            existing = await _db.FilamentTypes.FindAsync(filamentTypeDto.Id).ConfigureAwait(false);
+            await _db.SaveChangesAsync().ConfigureAwait(false);
         }
 
-        // case-insensitive lookup
-        existing ??= await _db.FilamentTypes.FirstOrDefaultAsync(ft => ft.Description.ToLower() == filamentTypeDto.Description.ToLower()).ConfigureAwait(false);
-        if (existing != null)
-        {
-            return ValidationResult.Success;
-        }
-
-        await _db.FilamentTypes.AddAsync(filamentTypeDto.ToEntity()).ConfigureAwait(false);
-        await _db.SaveChangesAsync().ConfigureAwait(false);
         return ValidationResult.Success;
     }
 
@@ -179,20 +154,13 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
             return validation;
         }
 
-        Manufacturer? existing = null;
-        if (manufacturerDto.Id != 0)
+        var man = await GetOrCreateManufacturerAsync(manufacturerDto).ConfigureAwait(false);
+        if (man.Id == 0)
         {
-            existing = await _db.Manufacturers.FindAsync(manufacturerDto.Id).ConfigureAwait(false);
+            await _db.SaveChangesAsync().ConfigureAwait(false);
         }
 
-        // case-insensitive lookup
-        existing ??= await _db.Manufacturers.FirstOrDefaultAsync(m => m.Name.ToLower() == manufacturerDto.Name.ToLower()).ConfigureAwait(false);
-        if (existing != null)
-        {
-            return ValidationResult.Success;
-        }
-
-        return await AddManufacturerAsync(manufacturerDto.ToEntity()).ConfigureAwait(false);
+        return ValidationResult.Success;
     }
     #endregion
 
@@ -222,21 +190,12 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
             return validation;
         }
 
-        ModelDesign? existing = null;
-        if (modelDesignDto.Id != 0)
+        var model = await GetOrCreateModelDesignAsync(modelDesignDto).ConfigureAwait(false);
+        if (model.Id == 0)
         {
-            existing = await _db.ModelDesigns.FindAsync(modelDesignDto.Id).ConfigureAwait(false);
+            await _db.SaveChangesAsync().ConfigureAwait(false);
         }
 
-        // case-insensitive lookup
-        existing ??= await _db.ModelDesigns.FirstOrDefaultAsync(md => md.Description.ToLower() == modelDesignDto.Description.ToLower()).ConfigureAwait(false);
-        if (existing != null)
-        {
-            return ValidationResult.Success;
-        }
-
-        await _db.ModelDesigns.AddAsync(modelDesignDto.ToEntity()).ConfigureAwait(false);
-        await _db.SaveChangesAsync().ConfigureAwait(false);
         return ValidationResult.Success;
     }
 
@@ -261,36 +220,14 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
         Customer? customer = null;
         if (projectDto.Customer != null)
         {
-            if (projectDto.Customer.Id != 0)
-            {
-                customer = await _db.Customers.FindAsync(projectDto.Customer.Id).ConfigureAwait(false);
-            }
-
-            // case-insensitive lookup
-            customer ??= await _db.Customers.FirstOrDefaultAsync(c => c.Name.ToLower() == projectDto.Customer.Name.ToLower()).ConfigureAwait(false);
-            if (customer == null)
-            {
-                customer = projectDto.Customer.ToEntity();
-                await _db.Customers.AddAsync(customer).ConfigureAwait(false);
-            }
+            customer = await GetOrCreateCustomerAsync(projectDto.Customer).ConfigureAwait(false);
         }
 
         // Resolve or create ModelDesign
         ModelDesign? model = null;
         if (projectDto.ModelDesign != null)
         {
-            if (projectDto.ModelDesign.Id != 0)
-            {
-                model = await _db.ModelDesigns.FindAsync(projectDto.ModelDesign.Id).ConfigureAwait(false);
-            }
-
-            // case-insensitive lookup
-            model ??= await _db.ModelDesigns.FirstOrDefaultAsync(md => md.Description.ToLower() == projectDto.ModelDesign.Description.ToLower()).ConfigureAwait(false);
-            if (model == null)
-            {
-                model = projectDto.ModelDesign.ToEntity();
-                await _db.ModelDesigns.AddAsync(model).ConfigureAwait(false);
-            }
+            model = await GetOrCreateModelDesignAsync(projectDto.ModelDesign).ConfigureAwait(false);
         }
 
         // Create project entity and attach resolved relations
@@ -399,9 +336,26 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
         existing.CostPerWeight = filamentDto.CostPerWeight;
         existing.ProductId     = filamentDto.ProductId;
         existing.ReorderLink   = filamentDto.ReorderLink;
-        existing.Manufacturer  = filamentDto.Manufacturer.ToEntity();
-        existing.Colour        = filamentDto.FilamentColour.ToEntity();
-        existing.Type          = filamentDto.FilamentType.ToEntity();
+
+        // Resolve or create and attach related lookup entities using helpers so EF tracking is correct
+        if (filamentDto.Manufacturer != null)
+        {
+            var man = await GetOrCreateManufacturerAsync(filamentDto.Manufacturer).ConfigureAwait(false);
+            existing.Manufacturer = man; // attach tracked navigation property
+        }
+
+        if (filamentDto.FilamentColour != null)
+        {
+            var col = await GetOrCreateFilamentColourAsync(filamentDto.FilamentColour).ConfigureAwait(false);
+            existing.Colour = col; // attach tracked navigation property
+        }
+
+        if (filamentDto.FilamentType != null)
+        {
+            var typ = await GetOrCreateFilamentTypeAsync(filamentDto.FilamentType).ConfigureAwait(false);
+            existing.Type = typ; // attach tracked navigation property
+        }
+
         await _db.SaveChangesAsync().ConfigureAwait(false);
         return ValidationResult.Success;
     }
@@ -529,16 +483,9 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
         Customer? customer = null;
         if (printingProjectDto.Customer != null)
         {
-            if (printingProjectDto.Customer.Id != 0)
+            customer = await GetOrCreateCustomerAsync(printingProjectDto.Customer).ConfigureAwait(false);
+            if (customer.Id == 0)
             {
-                customer = await _db.Customers.FindAsync(printingProjectDto.Customer.Id).ConfigureAwait(false);
-            }
-
-            customer ??= await _db.Customers.FirstOrDefaultAsync(c => c.Name.ToLower() == printingProjectDto.Customer.Name.ToLower()).ConfigureAwait(false);
-            if (customer == null)
-            {
-                customer = printingProjectDto.Customer.ToEntity();
-                await _db.Customers.AddAsync(customer).ConfigureAwait(false);
                 await _db.SaveChangesAsync().ConfigureAwait(false); // ensure customer.Id is populated
             }
         }
@@ -547,17 +494,9 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
         ModelDesign? model = null;
         if (printingProjectDto.ModelDesign != null)
         {
-            if (printingProjectDto.ModelDesign.Id != 0)
+            model = await GetOrCreateModelDesignAsync(printingProjectDto.ModelDesign).ConfigureAwait(false);
+            if (model.Id == 0)
             {
-                model = await _db.ModelDesigns.FindAsync(printingProjectDto.ModelDesign.Id).ConfigureAwait(false);
-            }
-
-            model ??= await _db.ModelDesigns.FirstOrDefaultAsync(md => md.Description.ToLower() == printingProjectDto.ModelDesign.Description.ToLower())
-                               .ConfigureAwait(false);
-            if (model == null)
-            {
-                model = printingProjectDto.ModelDesign.ToEntity();
-                await _db.ModelDesigns.AddAsync(model).ConfigureAwait(false);
                 await _db.SaveChangesAsync().ConfigureAwait(false); // ensure model.Id is populated
             }
         }
@@ -721,7 +660,7 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
             return new ValidationResult("Manufacturer DTO is required");
         }
 
-        return string.IsNullOrWhiteSpace(dto.Name) ? new ValidationResult("Manufacturer name is required", [nameof(dto.Name)]) : ValidationResult.Success!;
+        return string.IsNullOrWhiteSpace(dto.Name) ? new ValidationResult("Manufacturer name is required", new[] {nameof(dto.Name)}) : ValidationResult.Success!;
     }
 
     private static ValidationResult ValidateFilamentColourDto(FilamentColourDto dto)
@@ -1055,6 +994,8 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
         }
 
         var created = dto.ToEntity();
+        // ensure new entity doesn't carry an explicit Id
+        created.Id = 0;
         await _db.Manufacturers.AddAsync(created).ConfigureAwait(false);
 
         // Note: do not SaveChanges here; caller will save once after composing related entities
@@ -1078,6 +1019,7 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
         }
 
         var created = dto.ToEntity();
+        created.Id = 0;
         await _db.FilamentColours.AddAsync(created).ConfigureAwait(false);
         return created;
     }
@@ -1099,7 +1041,50 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
         }
 
         var created = dto.ToEntity();
+        created.Id = 0;
         await _db.FilamentTypes.AddAsync(created).ConfigureAwait(false);
+        return created;
+    }
+
+    private async Task<Customer> GetOrCreateCustomerAsync(CustomerDto dto)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+        Customer? existing = null;
+        if (dto.Id != 0)
+        {
+            existing = await _db.Customers.FindAsync(dto.Id).ConfigureAwait(false);
+        }
+
+        existing ??= await _db.Customers.FirstOrDefaultAsync(c => c.Name.ToLower() == dto.Name.ToLower()).ConfigureAwait(false);
+        if (existing != null)
+        {
+            return existing;
+        }
+
+        var created = dto.ToEntity();
+        created.Id = 0;
+        await _db.Customers.AddAsync(created).ConfigureAwait(false);
+        return created;
+    }
+
+    private async Task<ModelDesign> GetOrCreateModelDesignAsync(ModelDesignDto dto)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+        ModelDesign? existing = null;
+        if (dto.Id != 0)
+        {
+            existing = await _db.ModelDesigns.FindAsync(dto.Id).ConfigureAwait(false);
+        }
+
+        existing ??= await _db.ModelDesigns.FirstOrDefaultAsync(md => md.Description.ToLower() == dto.Description.ToLower()).ConfigureAwait(false);
+        if (existing != null)
+        {
+            return existing;
+        }
+
+        var created = dto.ToEntity();
+        created.Id = 0;
+        await _db.ModelDesigns.AddAsync(created).ConfigureAwait(false);
         return created;
     }
     #endregion
