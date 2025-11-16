@@ -160,7 +160,7 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                                 result.Created++;
                                 if (sourceId != null)
                                 {
-                                    var dbEntity = await db.Customers.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Name, "NOCASE") == c.Name).ConfigureAwait(false);
+                                    var dbEntity = await db.Customers.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Name, "NOCASE") == c.Name, ct).ConfigureAwait(false);
                                     if (dbEntity != null)
                                     {
                                         result.RecordMapping("customers", sourceId, dbEntity.Id);
