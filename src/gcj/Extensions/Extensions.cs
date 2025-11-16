@@ -9,6 +9,37 @@
 
     public static partial class Program
     {
+        private static bool IsPathValid(this string? path, ILogger appLogger)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                appLogger.LogError($"{Emoji.Known.Warning}  Path is null or empty");
+                return false;
+            }
+
+            try
+            {
+                var fullPath = Path.GetFullPath(path);
+                if (File.Exists(fullPath))
+                {
+                    return true;
+                }
+
+                if (Directory.Exists(fullPath))
+                {
+                    return true;
+                }
+
+                appLogger.LogError(Emoji.Known.Warning + "  Failed to find file or directory {Path}", fullPath);
+                return false;
+            }
+            catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
+            {
+                appLogger.LogError(Emoji.Known.CrossMark + "  The provided path is invalid: {Path}. Error: {ErrorMessage}", path, ex.Message);
+                return false;
+            }
+        }
+
         private static void LogSaveFailure(this ILogger appLogger, ValidationResult result)
         {
             appLogger.LogError(Emoji.Known.CrossMark + "  Error saving data: {ValidationResult}", result);
