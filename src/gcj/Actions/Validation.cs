@@ -8,9 +8,9 @@
 
     public static partial class Program
     {
-        private static async Task<string?> ValidateCustomerNameInputAsync(ILogger appLogger)
+        private static async Task<string?> ValidateCustomerNameInputAsync(this string defaultValue, ILogger appLogger)
         {
-            var customerName = await "customer's name".GetInputFromConsoleAsync().ConfigureAwait(false);
+            var customerName = await defaultValue.GetCustomerNameAsync().ConfigureAwait(false);
             if (string.IsNullOrWhiteSpace(customerName))
             {
                 appLogger.LogError(Emoji.Known.Warning + "  Customer name cannot be empty");
