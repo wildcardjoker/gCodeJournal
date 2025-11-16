@@ -507,6 +507,7 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
         _                             => string.Empty
     };
 
+    private static ImportEntity ParseEntityName(string name)
     private async Task<ImportResult> ImportFileAsync(
         string                                       filePath,
         ILogger                                      appLogger,
@@ -518,21 +519,6 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
     {
         await using var fs = File.OpenRead(filePath);
         return await ImportStreamAsync(fs, appLogger, Path.GetFileName(filePath), updateExisting, delimiter, ct, existingMap).ConfigureAwait(false);
-    }
-
-    private ImportEntity ParseEntityName(string name)
-    {
-        return name.ToLowerInvariant() switch
-        {
-            "customers" or "customer"                                     => ImportEntity.Customers,
-            "manufacturers" or "manufacturer"                             => ImportEntity.Manufacturers,
-            "filament_colours" or "filament_colours" or "filamentcolours" => ImportEntity.FilamentColours,
-            "filament_types" or "filamenttypes"                           => ImportEntity.FilamentTypes,
-            "filaments" or "filament"                                     => ImportEntity.Filaments,
-            "model_designs" or "modeldesigns" or "models"                 => ImportEntity.ModelDesigns,
-            "printing_projects" or "printingprojects" or "projects"       => ImportEntity.PrintingProjects,
-            _                                                             => ImportEntity.Unknown
-        };
     }
 
     private async Task ProcessRowAsync(
