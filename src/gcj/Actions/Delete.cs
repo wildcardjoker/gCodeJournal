@@ -37,7 +37,7 @@
             }
             else
             {
-                DisplayCancelDeleteMessage<CustomerDto>(appLogger);
+                appLogger.DisplayCancelDeleteMessage<CustomerDto>();
             }
         }
 
@@ -65,7 +65,7 @@
             }
             else
             {
-                DisplayCancelDeleteMessage<Filament>(appLogger);
+                appLogger.DisplayCancelDeleteMessage<Filament>();
             }
         }
 
@@ -93,16 +93,48 @@
             }
             else
             {
-                DisplayCancelDeleteMessage<FilamentColour>(appLogger);
+                appLogger.DisplayCancelDeleteMessage<FilamentColour>();
             }
         }
 
-        private static async Task DeleteFilamentTypeAsync(IGCodeJournalViewModel vm, ILogger appLogger) => throw new NotImplementedException();
+        private static async Task DeleteFilamentTypeAsync(IGCodeJournalViewModel vm, ILogger appLogger)
+        {
+            var filamentTypes        = await vm.GetAllFilamentTypesAsync().ConfigureAwait(false);
+            var selectedFilamentType = await filamentTypes.GetEntitySelectionAsync().ConfigureAwait(false);
+            if (selectedFilamentType is null)
+            {
+                appLogger.LogReturnToMenu();
+                return;
+            }
+
+            if (await selectedFilamentType.ConfirmDeleteAsync().ConfigureAwait(false))
+            {
+                var result = await vm.DeleteFilamentTypeAsync(selectedFilamentType).ConfigureAwait(false);
+                if (result == ValidationResult.Success)
+                {
+                    appLogger.DisplayDeleteConfirmedMessage<FilamentType>(selectedFilamentType.ToString());
+                }
+                else
+                {
+                    appLogger.LogSaveFailure(result);
+                }
+            }
+            else
+            {
+                appLogger.DisplayCancelDeleteMessage<FilamentType>();
+            }
+        }
 
         private static async Task DeleteManufacturerAsync(IGCodeJournalViewModel vm, ILogger appLogger)
         {
             var manufacturers        = await vm.GetAllManufacturersAsync().ConfigureAwait(false);
             var selectedManufacturer = await manufacturers.GetEntitySelectionAsync().ConfigureAwait(false);
+            if (selectedManufacturer is null)
+            {
+                appLogger.LogReturnToMenu();
+                return;
+            }
+
             if (await selectedManufacturer.ConfirmDeleteAsync().ConfigureAwait(false))
             {
                 var result = await vm.DeleteManufacturerAsync(selectedManufacturer).ConfigureAwait(false);
@@ -117,7 +149,7 @@
             }
             else
             {
-                DisplayCancelDeleteMessage<Manufacturer>(appLogger);
+                appLogger.DisplayCancelDeleteMessage<Manufacturer>();
             }
         }
 
@@ -145,7 +177,7 @@
             }
             else
             {
-                DisplayCancelDeleteMessage<ModelDesign>(appLogger);
+                appLogger.DisplayCancelDeleteMessage<ModelDesign>();
             }
         }
 
@@ -185,7 +217,7 @@
 
         private static void DisplayDeleteConfirmedMessage<T>(this ILogger appLogger, string description) where T : class
         {
-            appLogger.LogInformation(Emoji.Known.Collision + "  Updated {ObjectType} {ObjectValue}", typeof(T).Name.HumanizeDtoName(), description);
+            appLogger.LogInformation(Emoji.Known.Collision + "  Deleted {ObjectType} {ObjectValue}", typeof(T).Name.HumanizeDtoName(), description);
         }
     }
 }
