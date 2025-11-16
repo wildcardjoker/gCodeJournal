@@ -11,7 +11,7 @@
     {
         private static async Task AddCustomerAsync(IGCodeJournalViewModel vm, ILogger appLogger)
         {
-            var customerName = await ValidateCustomerNameInputAsync(appLogger).ConfigureAwait(false);
+            var customerName = await string.Empty.ValidateCustomerNameInputAsync(appLogger).ConfigureAwait(false);
             if (string.IsNullOrWhiteSpace(customerName))
             {
                 return;
