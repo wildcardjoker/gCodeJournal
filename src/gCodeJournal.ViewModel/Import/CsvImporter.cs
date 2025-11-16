@@ -543,29 +543,6 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
         CancellationToken                            ct,
         Dictionary<string, Dictionary<string, int>>? existingMappings = null)
     {
-        // helper locals
-        static string? GetString(IDictionary<string, object> d, string key) =>
-            (from k in d.Keys where string.Equals(k, key, StringComparison.OrdinalIgnoreCase) select d[k] into v select v?.ToString()?.Trim()).FirstOrDefault();
-
-        static int ParseIntOrZero(string? s) => int.TryParse(s, out var i) ? i : 0;
-
-        static decimal ParseDecimalOrZero(string? s) => decimal.TryParse(s, NumberStyles.Number, CultureInfo.InvariantCulture, out var d) ? d : 0m;
-
-        static DateOnly ParseDateOnlyOrDefault(string? s)
-        {
-            if (string.IsNullOrWhiteSpace(s))
-            {
-                return DateOnly.MinValue;
-            }
-
-            if (DateOnly.TryParse(s, CultureInfo.InvariantCulture, DateTimeStyles.None, out var d) || DateOnly.TryParse(s, out d))
-            {
-                return d;
-            }
-
-            return DateTime.TryParse(s, CultureInfo.InvariantCulture, DateTimeStyles.None, out var dt) ? DateOnly.FromDateTime(dt) : DateOnly.MinValue;
-        }
-
         try
         {
             switch (entity)
@@ -1010,6 +987,31 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
         {
             result.Errors.Add(ex.Message);
             result.Failed++;
+        }
+
+        return;
+
+        // helper locals
+        static string? GetString(IDictionary<string, object> d, string key) =>
+            (from k in d.Keys where string.Equals(k, key, StringComparison.OrdinalIgnoreCase) select d[k] into v select v?.ToString()?.Trim()).FirstOrDefault();
+
+        static int ParseIntOrZero(string? s) => int.TryParse(s, out var i) ? i : 0;
+
+        static decimal ParseDecimalOrZero(string? s) => decimal.TryParse(s, NumberStyles.Number, CultureInfo.InvariantCulture, out var d) ? d : 0m;
+
+        static DateOnly ParseDateOnlyOrDefault(string? s)
+        {
+            if (string.IsNullOrWhiteSpace(s))
+            {
+                return DateOnly.MinValue;
+            }
+
+            if (DateOnly.TryParse(s, CultureInfo.InvariantCulture, DateTimeStyles.None, out var d) || DateOnly.TryParse(s, out d))
+            {
+                return d;
+            }
+
+            return DateTime.TryParse(s, CultureInfo.InvariantCulture, DateTimeStyles.None, out var dt) ? DateOnly.FromDateTime(dt) : DateOnly.MinValue;
         }
     }
 }
