@@ -126,7 +126,14 @@ public class CsvImporter
     {
         var       result = new ImportResult();
         using var sr     = new StreamReader(stream, Encoding.UTF8, true, 8192, true);
-        using var csv    = new CsvReader(sr, new CsvConfiguration(CultureInfo.InvariantCulture) {Delimiter = delimiter.ToString()});
+
+        // Configure header normalization so headers like 'ID' match 'Id'/'id'
+        var csvConfig = new CsvConfiguration(CultureInfo.InvariantCulture)
+        {
+            Delimiter = delimiter.ToString(), PrepareHeaderForMatch = args => args.Header?.Trim().ToLowerInvariant()
+        };
+
+        using var csv = new CsvReader(sr, csvConfig);
 
         // Try to detect entity from filename
         var entity = DetectEntityFromFileName(fileName);
