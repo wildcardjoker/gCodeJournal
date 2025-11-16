@@ -45,8 +45,8 @@ public static class DtoToEntityExtensions
         {
             Id            = dto.Id,
             Cost          = dto.Cost,
-            Submitted     = dto.Submitted,
-            Completed     = dto.Completed,
+            Submitted     = dto.Submitted.ToDateTime(TimeOnly.MinValue),
+            Completed     = dto.Completed?.ToDateTime(TimeOnly.MinValue),
             CustomerId    = dto.Customer?.Id    ?? 0,
             ModelDesignId = dto.ModelDesign?.Id ?? 0
         };
