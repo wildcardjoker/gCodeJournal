@@ -22,6 +22,9 @@
         public static void DisplayInfoMessage(this    string message) => message.DisplayConsoleMessageWithLeadingEmoji(Emoji.Known.Information);
         public static void DisplayWarningMessage(this string message) => message.DisplayConsoleMessageWithLeadingEmoji(Emoji.Known.Warning);
 
+        public static async Task<string?> GetCustomerNameAsync(this string defaultValue) =>
+            await "customer's name".GetInputFromConsoleAsync(defaultValue).ConfigureAwait(false);
+
         public static async Task<DateOnly?> GetDateFromConsoleAsync(this string promptMessage, DateOnly? defaultValue = null)
         {
             var selectedDate = await $"date {promptMessage} (yyyy-MM-dd)".GetInputFromConsoleAsync(defaultValue).ConfigureAwait(false);
