@@ -544,19 +544,8 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
         Dictionary<string, Dictionary<string, int>>? existingMappings = null)
     {
         // helper locals
-        static string? GetString(IDictionary<string, object> d, string key)
-        {
-            foreach (var k in d.Keys)
-            {
-                if (string.Equals(k, key, StringComparison.OrdinalIgnoreCase))
-                {
-                    var v = d[k];
-                    return v?.ToString()?.Trim();
-                }
-            }
-
-            return null;
-        }
+        static string? GetString(IDictionary<string, object> d, string key) =>
+            (from k in d.Keys where string.Equals(k, key, StringComparison.OrdinalIgnoreCase) select d[k] into v select v?.ToString()?.Trim()).FirstOrDefault();
 
         static int ParseIntOrZero(string? s) => int.TryParse(s, out var i) ? i : 0;
 
