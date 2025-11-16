@@ -3,6 +3,7 @@
 namespace gCodeJournal.Model;
 
 #region Using Directives
+using System.Collections.Generic;
 using JetBrains.Annotations;
 #endregion
 
@@ -53,19 +54,13 @@ public class PrintingProject
     public int CustomerId {get; set;}
 
     /// <summary>
-    ///     Foreign key identifier referencing the primary filament used for this project.
-    /// </summary>
-    /// <value>An integer representing the filament record's primary key.</value>
-    public int FilamentId {get; set;}
-
-    /// <summary>
     ///     Navigation property: collection of filament records associated with this project.
     /// </summary>
     /// <value>
     ///     A collection of <see cref="Filament" /> instances; expected to be non-null when the entity
-    ///     is in a valid state (may be empty if no specific filaments are recorded).
+    ///     is in a valid state (can be empty if no specific filaments are recorded).
     /// </value>
-    public virtual ICollection<Filament> Filaments {get; set;} = null!;
+    public virtual ICollection<Filament> Filaments {get; set;} = new List<Filament>();
 
     /// <summary>
     ///     Primary key identifier for the printing project.

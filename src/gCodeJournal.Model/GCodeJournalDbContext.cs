@@ -201,6 +201,12 @@ public class GCodeJournalDbContext : DbContext
                 CostPerWeight    = 19.95M
             });
 
+        // Configure many-to-many relationship between PrintingProject and Filament
+        modelBuilder.Entity<PrintingProject>()
+                    .HasMany(p => p.Filaments)
+                    .WithMany(f => f.Projects)
+                    .UsingEntity(j => j.ToTable("PrintingProjectFilaments"));
+
         // Call the base method
         base.OnModelCreating(modelBuilder);
     }
