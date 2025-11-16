@@ -1,3 +1,5 @@
+#pragma warning disable CA2208
+#pragma warning disable CA1860
 namespace gCodeJournal.ViewModel.Import;
 
 #region Using Directives
@@ -375,12 +377,7 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                                 if (resolveMap.TryGetValue("model_designs", out var modelMap) && modelMap.TryGetValue(sid, out var mappedId))
                                 {
                                     // replace with db id by creating a new DTO (Id is init-only)
-                                    p.ModelDesign = new ModelDesignDto(
-                                        mappedId,
-                                        p.ModelDesign.Description ?? string.Empty,
-                                        p.ModelDesign.Length,
-                                        p.ModelDesign.Summary ?? string.Empty,
-                                        p.ModelDesign.Url);
+                                    p.ModelDesign = new ModelDesignDto(mappedId, p.ModelDesign.Description, p.ModelDesign.Length, p.ModelDesign.Summary, p.ModelDesign.Url);
                                 }
                             }
 
