@@ -1,7 +1,9 @@
 ﻿namespace gcj
 {
     #region Using Directives
+    using System.Diagnostics;
     using gCodeJournal.ViewModel;
+    using gCodeJournal.ViewModel.Import;
     using Humanizer;
     using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Logging;
@@ -108,6 +110,7 @@
         {
             using var scope = provider.CreateScope();
             var       vm    = scope.ServiceProvider.GetRequiredService<IGCodeJournalViewModel>();
+
             var path = await AnsiConsole.PromptAsync(new TextPrompt<string?>("Please enter the path to the CSV file(s) (ENTER to cancel import):").AllowEmpty())
                                         .ConfigureAwait(false);
 
@@ -117,9 +120,44 @@
                 return;
             }
 
-            await vm.ImportFromCsvAsync(path!, appLogger).ConfigureAwait(false);
+            appLogger.LogInformation("Import: starting CSV import for path '{Path}'.", path);
+            ImportResult? result    = null;
+            var           stopwatch = Stopwatch.StartNew();
+            try
+            {
+                result = await vm.ImportFromCsvAsync(path!, appLogger).ConfigureAwait(false);
+                stopwatch.Stop();
 
-            // TODO: Display import summary
+                appLogger.LogInformation("Import: completed successfully for path '{Path}' in {ElapsedMilliseconds} ms.", path, stopwatch.ElapsedMilliseconds);
+            }
+            catch (OperationCanceledException)
+            {
+                stopwatch.Stop();
+                appLogger.LogInformation("Import: cancelled by user for path '{Path}' after {ElapsedMilliseconds} ms.", path, stopwatch.ElapsedMilliseconds);
+            }
+            catch (Exception ex)
+            {
+                stopwatch.Stop();
+                appLogger.LogError(ex, "Import: failed for path '{Path}' after {ElapsedMilliseconds} ms.", path, stopwatch.ElapsedMilliseconds);
+            }
+            finally
+            {
+                if (result is not null)
+                {
+                    appLogger.LogInformation("Created: {Imported}", result.Created);
+                    appLogger.LogInformation("Updated: {Updated}",  result.Updated);
+                    appLogger.LogInformation("Skipped: {Skipped}",  result.Skipped);
+                    appLogger.LogInformation("Failed:  {Failed}",   result.Failed);
+                    if (!result.Success)
+                    {
+                        appLogger.LogError(Emoji.Known.Warning + "  Import was not successful!");
+                        foreach (var resultError in result.Errors)
+                        {
+                            appLogger.LogError(Emoji.Known.Warning + "  {Error}", resultError);
+                        }
+                    }
+                }
+            }
         }
     }
 }
