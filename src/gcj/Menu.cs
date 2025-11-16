@@ -1,6 +1,7 @@
 ﻿namespace gcj
 {
     #region Using Directives
+    using gCodeJournal.ViewModel;
     using Humanizer;
     using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Logging;
@@ -16,6 +17,7 @@
         private const string MenuFilamentColours   = "Filament Colours";
         private const string MenuFilaments         = "Filaments";
         private const string MenuFilamentTypes     = "Filament Types";
+        private const string MenuImportData        = "Import data";
         private const string MenuManufacturers     = "Manufacturers";
         private const string MenuModelDesigns      = "Model Designs";
         private const string MenuPrintingProjects  = "Printing Projects";
@@ -36,6 +38,7 @@
             MenuFilamentTypes,
             MenuModelDesigns,
             MenuPrintingProjects,
+            MenuImportData,
             MenuExit
         ];
 
@@ -54,9 +57,16 @@
             var subMenuSelection = await GetMenuSelectionAsync(MainMenuLevel, MainMenu).ConfigureAwait(false);
             while (!subMenuSelection.Equals(MenuExit))
             {
-                while (!subMenuSelection.Equals(SubMenuBackToMain))
+                if (subMenuSelection.Equals(MenuImportData))
                 {
-                    subMenuSelection = await GetSubMenuSelectionAsync(subMenuSelection, provider, appLogger).ConfigureAwait(false);
+                    await ImportData(provider, appLogger).ConfigureAwait(false);
+                }
+                else
+                {
+                    while (!subMenuSelection.Equals(SubMenuBackToMain))
+                    {
+                        subMenuSelection = await GetSubMenuSelectionAsync(subMenuSelection, provider, appLogger).ConfigureAwait(false);
+                    }
                 }
 
                 subMenuSelection = await GetMenuSelectionAsync(MainMenuLevel, MainMenu).ConfigureAwait(false);
@@ -92,6 +102,24 @@
             }
 
             return response;
+        }
+
+        private static async Task ImportData(ServiceProvider provider, ILogger appLogger)
+        {
+            using var scope = provider.CreateScope();
+            var       vm    = scope.ServiceProvider.GetRequiredService<IGCodeJournalViewModel>();
+            var path = await AnsiConsole.PromptAsync(new TextPrompt<string?>("Please enter the path to the CSV file(s) (ENTER to cancel import):").AllowEmpty())
+                                        .ConfigureAwait(false);
+
+            if (!path.IsPathValid(appLogger))
+            {
+                appLogger.LogReturnToMenu();
+                return;
+            }
+
+            await vm.ImportFromCsvAsync(path!, appLogger).ConfigureAwait(false);
+
+            // TODO: Display import summary
         }
     }
 }
