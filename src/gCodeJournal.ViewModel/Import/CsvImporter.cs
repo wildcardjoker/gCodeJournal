@@ -508,6 +508,20 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
     };
 
     private static ImportEntity ParseEntityName(string name)
+    {
+        return name.ToLowerInvariant() switch
+        {
+            "customers" or "customer"                               => ImportEntity.Customers,
+            "manufacturers" or "manufacturer"                       => ImportEntity.Manufacturers,
+            "filament_colours" or "filamentcolours"                 => ImportEntity.FilamentColours,
+            "filament_types" or "filamenttypes"                     => ImportEntity.FilamentTypes,
+            "filaments" or "filament"                               => ImportEntity.Filaments,
+            "model_designs" or "modeldesigns" or "models"           => ImportEntity.ModelDesigns,
+            "printing_projects" or "printingprojects" or "projects" => ImportEntity.PrintingProjects,
+            _                                                       => ImportEntity.Unknown
+        };
+    }
+
     private async Task<ImportResult> ImportFileAsync(
         string                                       filePath,
         ILogger                                      appLogger,
@@ -555,22 +569,12 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                 return DateOnly.MinValue;
             }
 
-            if (DateOnly.TryParse(s, CultureInfo.InvariantCulture, DateTimeStyles.None, out var d))
+            if (DateOnly.TryParse(s, CultureInfo.InvariantCulture, DateTimeStyles.None, out var d) || DateOnly.TryParse(s, out d))
             {
                 return d;
             }
 
-            if (DateOnly.TryParse(s, out d))
-            {
-                return d;
-            }
-
-            if (DateTime.TryParse(s, CultureInfo.InvariantCulture, DateTimeStyles.None, out var dt))
-            {
-                return DateOnly.FromDateTime(dt);
-            }
-
-            return DateOnly.MinValue;
+            return DateTime.TryParse(s, CultureInfo.InvariantCulture, DateTimeStyles.None, out var dt) ? DateOnly.FromDateTime(dt) : DateOnly.MinValue;
         }
 
         try
@@ -1006,7 +1010,7 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
 
                     break;
                 }
-
+                case ImportEntity.Unknown:
                 default:
                     result.Errors.Add($"Unknown entity '{entity}'");
                     result.Failed++;
