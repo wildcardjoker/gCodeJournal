@@ -75,7 +75,7 @@ public class CsvImporter
                 var file     = Path.Combine(path, fileName);
                 if (!File.Exists(file))
                 {
-                    result.Errors.Add($"Could not process file {file}");
+                    result.Errors.Add($"{file} does not exist; skipping");
                     continue;
                 }
 
