@@ -19,7 +19,7 @@
                 return;
             }
 
-            var customerName = await ValidateCustomerNameInputAsync(appLogger).ConfigureAwait(false);
+            var customerName = await customer.Name.ValidateCustomerNameInputAsync(appLogger).ConfigureAwait(false);
             if (string.IsNullOrWhiteSpace(customerName))
             {
                 return;
