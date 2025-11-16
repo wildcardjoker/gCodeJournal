@@ -187,14 +187,15 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                             if (r == ValidationResult.Success)
                             {
                                 result.Created++;
-                                if (sourceId != null)
+                                if (sourceId == null)
                                 {
-                                    var dbEntity = await db.Manufacturers.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Name, "NOCASE") == m.Name, ct)
-                                                           .ConfigureAwait(false);
-                                    if (dbEntity != null)
-                                    {
-                                        result.RecordMapping("manufacturers", sourceId, dbEntity.Id);
-                                    }
+                                    continue;
+                                }
+
+                                var dbEntity = await db.Manufacturers.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Name, "NOCASE") == m.Name, ct).ConfigureAwait(false);
+                                if (dbEntity != null)
+                                {
+                                    result.RecordMapping("manufacturers", sourceId, dbEntity.Id);
                                 }
                             }
                             else
@@ -215,14 +216,16 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                             if (r == ValidationResult.Success)
                             {
                                 result.Created++;
-                                if (sourceId != null)
+                                if (sourceId == null)
                                 {
-                                    var dbEntity = await db.FilamentColours.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Description, "NOCASE") == c.Description, ct)
-                                                           .ConfigureAwait(false);
-                                    if (dbEntity != null)
-                                    {
-                                        result.RecordMapping("filament_colours", sourceId, dbEntity.Id);
-                                    }
+                                    continue;
+                                }
+
+                                var dbEntity = await db.FilamentColours.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Description, "NOCASE") == c.Description, ct)
+                                                       .ConfigureAwait(false);
+                                if (dbEntity != null)
+                                {
+                                    result.RecordMapping("filament_colours", sourceId, dbEntity.Id);
                                 }
                             }
                             else
@@ -243,14 +246,16 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                             if (r == ValidationResult.Success)
                             {
                                 result.Created++;
-                                if (sourceId != null)
+                                if (sourceId == null)
                                 {
-                                    var dbEntity = await db.FilamentTypes.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Description, "NOCASE") == t.Description, ct)
-                                                           .ConfigureAwait(false);
-                                    if (dbEntity != null)
-                                    {
-                                        result.RecordMapping("filament_types", sourceId, dbEntity.Id);
-                                    }
+                                    continue;
+                                }
+
+                                var dbEntity = await db.FilamentTypes.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Description, "NOCASE") == t.Description, ct)
+                                                       .ConfigureAwait(false);
+                                if (dbEntity != null)
+                                {
+                                    result.RecordMapping("filament_types", sourceId, dbEntity.Id);
                                 }
                             }
                             else
@@ -271,28 +276,30 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                             if (r == ValidationResult.Success)
                             {
                                 result.Created++;
-                                if (sourceId != null)
+                                if (sourceId == null)
                                 {
-                                    Filament? dbEntity = null;
-                                    if (!string.IsNullOrWhiteSpace(f.ProductId))
-                                    {
-                                        dbEntity = await db.Filaments.FirstOrDefaultAsync(x => x.ProductId == f.ProductId, ct).ConfigureAwait(false);
-                                    }
+                                    continue;
+                                }
 
-                                    if (dbEntity == null)
-                                    {
-                                        dbEntity = await db.Filaments.FirstOrDefaultAsync(
-                                                               x => x.ManufacturerId      == f.Manufacturer.Id
-                                                                    && x.FilamentTypeId   == f.FilamentType.Id
-                                                                    && x.FilamentColourId == f.FilamentColour.Id,
-                                                               ct)
-                                                           .ConfigureAwait(false);
-                                    }
+                                Filament? dbEntity = null;
+                                if (!string.IsNullOrWhiteSpace(f.ProductId))
+                                {
+                                    dbEntity = await db.Filaments.FirstOrDefaultAsync(x => x.ProductId == f.ProductId, ct).ConfigureAwait(false);
+                                }
 
-                                    if (dbEntity != null)
-                                    {
-                                        result.RecordMapping("filaments", sourceId, dbEntity.Id);
-                                    }
+                                if (dbEntity == null)
+                                {
+                                    dbEntity = await db.Filaments.FirstOrDefaultAsync(
+                                                           x => x.ManufacturerId      == f.Manufacturer.Id
+                                                                && x.FilamentTypeId   == f.FilamentType.Id
+                                                                && x.FilamentColourId == f.FilamentColour.Id,
+                                                           ct)
+                                                       .ConfigureAwait(false);
+                                }
+
+                                if (dbEntity != null)
+                                {
+                                    result.RecordMapping("filaments", sourceId, dbEntity.Id);
                                 }
                             }
                             else
@@ -313,14 +320,16 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                             if (r == ValidationResult.Success)
                             {
                                 result.Created++;
-                                if (sourceId != null)
+                                if (sourceId == null)
                                 {
-                                    var dbEntity = await db.ModelDesigns.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Description, "NOCASE") == m.Description, ct)
-                                                           .ConfigureAwait(false);
-                                    if (dbEntity != null)
-                                    {
-                                        result.RecordMapping("model_designs", sourceId, dbEntity.Id);
-                                    }
+                                    continue;
+                                }
+
+                                var dbEntity = await db.ModelDesigns.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Description, "NOCASE") == m.Description, ct)
+                                                       .ConfigureAwait(false);
+                                if (dbEntity != null)
+                                {
+                                    result.RecordMapping("model_designs", sourceId, dbEntity.Id);
                                 }
                             }
                             else
@@ -407,18 +416,20 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                             if (r == ValidationResult.Success)
                             {
                                 result.Created++;
-                                if (sourceId != null)
+                                if (sourceId == null)
                                 {
-                                    var custId  = p.Customer?.Id    ?? 0;
-                                    var modelId = p.ModelDesign?.Id ?? 0;
-                                    var dbEntity = await db.PrintingProjects.FirstOrDefaultAsync(
-                                                               x => x.Cost == p.Cost && x.CustomerId == custId && x.ModelDesignId == modelId,
-                                                               ct)
-                                                           .ConfigureAwait(false);
-                                    if (dbEntity != null)
-                                    {
-                                        result.RecordMapping("printing_projects", sourceId, dbEntity.Id);
-                                    }
+                                    continue;
+                                }
+
+                                var custId  = p.Customer?.Id    ?? 0;
+                                var modelId = p.ModelDesign?.Id ?? 0;
+                                var dbEntity = await db.PrintingProjects.FirstOrDefaultAsync(
+                                                           x => x.Cost == p.Cost && x.CustomerId == custId && x.ModelDesignId == modelId,
+                                                           ct)
+                                                       .ConfigureAwait(false);
+                                if (dbEntity != null)
+                                {
+                                    result.RecordMapping("printing_projects", sourceId, dbEntity.Id);
                                 }
                             }
                             else
