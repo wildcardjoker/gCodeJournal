@@ -217,7 +217,7 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                                 result.Created++;
                                 if (sourceId != null)
                                 {
-                                    var dbEntity = await db.FilamentColours.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Description, "NOCASE") == c.Description)
+                                    var dbEntity = await db.FilamentColours.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Description, "NOCASE") == c.Description, ct)
                                                            .ConfigureAwait(false);
                                     if (dbEntity != null)
                                     {
@@ -245,7 +245,7 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                                 result.Created++;
                                 if (sourceId != null)
                                 {
-                                    var dbEntity = await db.FilamentTypes.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Description, "NOCASE") == t.Description)
+                                    var dbEntity = await db.FilamentTypes.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Description, "NOCASE") == t.Description, ct)
                                                            .ConfigureAwait(false);
                                     if (dbEntity != null)
                                     {
@@ -276,15 +276,16 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                                     Filament? dbEntity = null;
                                     if (!string.IsNullOrWhiteSpace(f.ProductId))
                                     {
-                                        dbEntity = await db.Filaments.FirstOrDefaultAsync(x => x.ProductId == f.ProductId).ConfigureAwait(false);
+                                        dbEntity = await db.Filaments.FirstOrDefaultAsync(x => x.ProductId == f.ProductId, ct).ConfigureAwait(false);
                                     }
 
                                     if (dbEntity == null)
                                     {
-                                        dbEntity = await db.Filaments
-                                                           .FirstOrDefaultAsync(x => x.ManufacturerId      == f.Manufacturer.Id
-                                                                                     && x.FilamentTypeId   == f.FilamentType.Id
-                                                                                     && x.FilamentColourId == f.FilamentColour.Id)
+                                        dbEntity = await db.Filaments.FirstOrDefaultAsync(
+                                                               x => x.ManufacturerId      == f.Manufacturer.Id
+                                                                    && x.FilamentTypeId   == f.FilamentType.Id
+                                                                    && x.FilamentColourId == f.FilamentColour.Id,
+                                                               ct)
                                                            .ConfigureAwait(false);
                                     }
 
@@ -314,7 +315,7 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                                 result.Created++;
                                 if (sourceId != null)
                                 {
-                                    var dbEntity = await db.ModelDesigns.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Description, "NOCASE") == m.Description)
+                                    var dbEntity = await db.ModelDesigns.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Description, "NOCASE") == m.Description, ct)
                                                            .ConfigureAwait(false);
                                     if (dbEntity != null)
                                     {
@@ -410,8 +411,9 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                                 {
                                     var custId  = p.Customer?.Id    ?? 0;
                                     var modelId = p.ModelDesign?.Id ?? 0;
-                                    var dbEntity = await db.PrintingProjects
-                                                           .FirstOrDefaultAsync(x => x.Cost == p.Cost && x.CustomerId == custId && x.ModelDesignId == modelId)
+                                    var dbEntity = await db.PrintingProjects.FirstOrDefaultAsync(
+                                                               x => x.Cost == p.Cost && x.CustomerId == custId && x.ModelDesignId == modelId,
+                                                               ct)
                                                            .ConfigureAwait(false);
                                     if (dbEntity != null)
                                     {
@@ -427,6 +429,9 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                         }
 
                         break;
+                    case ImportEntity.Unknown:
+                    default:
+                        throw new ArgumentOutOfRangeException(nameof(entity));
                 }
             }
 
@@ -617,7 +622,7 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                             result.Created++;
                             if (id != 0)
                             {
-                                var dbEntity = await db.Customers.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Name, "NOCASE") == name).ConfigureAwait(false);
+                                var dbEntity = await db.Customers.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Name, "NOCASE") == name, ct).ConfigureAwait(false);
                                 if (dbEntity != null)
                                 {
                                     result.RecordMapping("customers", id.ToString(), dbEntity.Id);
@@ -667,7 +672,7 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                             result.Created++;
                             if (id != 0)
                             {
-                                var dbEntity = await db.Manufacturers.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Name, "NOCASE") == name).ConfigureAwait(false);
+                                var dbEntity = await db.Manufacturers.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Name, "NOCASE") == name, ct).ConfigureAwait(false);
                                 if (dbEntity != null)
                                 {
                                     result.RecordMapping("manufacturers", id.ToString(), dbEntity.Id);
@@ -717,7 +722,7 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                             result.Created++;
                             if (id != 0)
                             {
-                                var dbEntity = await db.FilamentColours.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Description, "NOCASE") == desc)
+                                var dbEntity = await db.FilamentColours.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Description, "NOCASE") == desc, ct)
                                                        .ConfigureAwait(false);
                                 if (dbEntity != null)
                                 {
@@ -768,7 +773,8 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                             result.Created++;
                             if (id != 0)
                             {
-                                var dbEntity = await db.FilamentTypes.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Description, "NOCASE") == desc).ConfigureAwait(false);
+                                var dbEntity = await db.FilamentTypes.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Description, "NOCASE") == desc, ct)
+                                                       .ConfigureAwait(false);
                                 if (dbEntity != null)
                                 {
                                     result.RecordMapping("filament_types", id.ToString(), dbEntity.Id);
@@ -827,13 +833,14 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                                 Filament? dbEntity = null;
                                 if (!string.IsNullOrWhiteSpace(productId))
                                 {
-                                    dbEntity = await db.Filaments.FirstOrDefaultAsync(x => x.ProductId == productId).ConfigureAwait(false);
+                                    dbEntity = await db.Filaments.FirstOrDefaultAsync(x => x.ProductId == productId, ct).ConfigureAwait(false);
                                 }
 
                                 if (dbEntity == null)
                                 {
-                                    dbEntity = await db.Filaments
-                                                       .FirstOrDefaultAsync(x => x.ManufacturerId == manId && x.FilamentTypeId == typeId && x.FilamentColourId == colourId)
+                                    dbEntity = await db.Filaments.FirstOrDefaultAsync(
+                                                           x => x.ManufacturerId == manId && x.FilamentTypeId == typeId && x.FilamentColourId == colourId,
+                                                           ct)
                                                        .ConfigureAwait(false);
                                 }
 
@@ -890,7 +897,8 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                             result.Created++;
                             if (id != 0)
                             {
-                                var dbEntity = await db.ModelDesigns.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Description, "NOCASE") == desc).ConfigureAwait(false);
+                                var dbEntity = await db.ModelDesigns.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Description, "NOCASE") == desc, ct)
+                                                       .ConfigureAwait(false);
                                 if (dbEntity != null)
                                 {
                                     result.RecordMapping("model_designs", id.ToString(), dbEntity.Id);
@@ -994,8 +1002,9 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                             {
                                 var custId = projDto.Customer?.Id    ?? 0;
                                 var mdlId  = projDto.ModelDesign?.Id ?? 0;
-                                var dbEntity = await db.PrintingProjects
-                                                       .FirstOrDefaultAsync(x => x.Cost == projDto.Cost && x.CustomerId == custId && x.ModelDesignId == mdlId)
+                                var dbEntity = await db.PrintingProjects.FirstOrDefaultAsync(
+                                                           x => x.Cost == projDto.Cost && x.CustomerId == custId && x.ModelDesignId == mdlId,
+                                                           ct)
                                                        .ConfigureAwait(false);
                                 if (dbEntity != null)
                                 {
