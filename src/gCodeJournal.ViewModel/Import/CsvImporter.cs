@@ -891,7 +891,7 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                     var filamentDtos = new List<FilamentDto>();
                     if (!string.IsNullOrWhiteSpace(filamentIdsRaw))
                     {
-                        var parts = filamentIdsRaw.Split(new[] {',', ';'}, StringSplitOptions.RemoveEmptyEntries);
+                        var parts = filamentIdsRaw.Split([',', ';'], StringSplitOptions.RemoveEmptyEntries);
                         foreach (var p in parts)
                         {
                             var fid = ParseIntOrZero(p.Trim());
