@@ -379,7 +379,7 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                                 }
                             }
 
-                            if (p.Filaments?.Any() == true)
+                            if (p.Filaments.Any())
                             {
                                 for (var i = 0; i < p.Filaments.Count; i++)
                                 {
