@@ -30,15 +30,20 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
     }
     #endregion
 
-    public async Task<ImportResult> ImportFromPathAsync(string path, ILogger appLogger, bool updateExisting, char delimiter, CancellationToken ct)
+    #region Nested type: ImportFileResult
+    public record ImportFileResult(string FileName, ImportResult Result);
+    #endregion
+
+    public async Task<List<ImportFileResult>> ImportFromPathAsync(string path, ILogger appLogger, bool updateExisting, char delimiter, CancellationToken ct)
     {
-        var result = new ImportResult();
+        var results = new List<ImportFileResult>();
         if (File.Exists(path))
         {
             // single file - delegate to stream overload
-            await using var fs  = File.OpenRead(path);
-            var             res = await ImportStreamAsync(fs, appLogger, Path.GetFileName(path), updateExisting, delimiter, ct).ConfigureAwait(false);
-            return res;
+            await using var fs      = File.OpenRead(path);
+            var             fileRes = await ImportStreamAsync(fs, appLogger, Path.GetFileName(path), updateExisting, delimiter, ct).ConfigureAwait(false);
+            results.Add(fileRes);
+            return results;
         }
 
         if (Directory.Exists(path))
@@ -58,26 +63,16 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
             // mergedMap carries mappings between files so later files can resolve references
             var mergedMap = new Dictionary<string, Dictionary<string, int>>(StringComparer.OrdinalIgnoreCase);
 
-            foreach (var file in ordered.Select(EntityFileName).Select(fileName => Path.Combine(path, fileName)))
+            foreach (var file in ordered.Select(EntityFileName).Select(fileName => Path.Combine(path, fileName)).Where(File.Exists))
             {
-                if (!File.Exists(file))
-                {
-                    result.Errors.Add($"{file} does not exist; skipping");
-                    continue;
-                }
-
                 await using var fs = File.OpenRead(file);
                 var             r  = await ImportStreamAsync(fs, appLogger, Path.GetFileName(file), updateExisting, delimiter, ct, mergedMap).ConfigureAwait(false);
 
-                // merge results
-                result.Created += r.Created;
-                result.Updated += r.Updated;
-                result.Skipped += r.Skipped;
-                result.Failed  += r.Failed;
-                result.Errors.AddRange(r.Errors);
+                // add unmerged per-file result
+                results.Add(r);
 
-                // merge id maps into mergedMap and result.IdMap
-                foreach (var kv in r.IdMap)
+                // merge id maps into mergedMap for later file resolution
+                foreach (var kv in r.Result.IdMap)
                 {
                     if (!mergedMap.TryGetValue(kv.Key, out var inner))
                     {
@@ -88,21 +83,22 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                     foreach (var entry in kv.Value)
                     {
                         inner[entry.Key] = entry.Value;
-                        result.RecordMapping(kv.Key, entry.Key, entry.Value);
                     }
                 }
             }
 
-            return result;
+            return results;
         }
 
-        result.Errors.Add($"Path '{path}' does not exist");
-        result.Failed++;
-        return result;
+        var notFound = new ImportResult();
+        notFound.Errors.Add($"Path '{path}' does not exist");
+        notFound.Failed++;
+        results.Add(new ImportFileResult(string.Empty, notFound));
+        return results;
     }
 
     // accept optional existing mappings so single-file imports in a batch can resolve earlier-created ids
-    public async Task<ImportResult> ImportStreamAsync(
+    public async Task<ImportFileResult> ImportStreamAsync(
         Stream                                       stream,
         ILogger                                      appLogger,
         string?                                      fileName,
@@ -451,7 +447,7 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
             result.Failed++;
         }
 
-        return result;
+        return new ImportFileResult(fileName ?? string.Empty, result);
     }
 
     private static ImportEntity DetectEntityFromFileName(string? fileName)
@@ -522,7 +518,7 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
         };
     }
 
-    private async Task<ImportResult> ImportFileAsync(
+    private async Task<ImportFileResult> ImportFileAsync(
         string                                       filePath,
         ILogger                                      appLogger,
         ImportEntity                                 entity,
