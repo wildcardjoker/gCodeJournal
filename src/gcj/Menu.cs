@@ -121,11 +121,11 @@
             }
 
             appLogger.LogInformation("Import: starting CSV import for path '{Path}'.", path);
-            ImportResult? result    = null;
+            List<CsvImporter.ImportFileResult>? fileResults = null;
             var           stopwatch = Stopwatch.StartNew();
             try
             {
-                result = await vm.ImportFromCsvAsync(path!, appLogger).ConfigureAwait(false);
+                fileResults = await vm.ImportFromCsvAsync(path!, appLogger).ConfigureAwait(false);
                 stopwatch.Stop();
 
                 appLogger.LogInformation("Import: completed successfully for path '{Path}' in {ElapsedMilliseconds} ms.", path, stopwatch.ElapsedMilliseconds);
@@ -142,20 +142,36 @@
             }
             finally
             {
-                if (result is not null)
+                if (fileResults is not null)
                 {
-                    appLogger.LogInformation("Created: {Imported}", result.Created);
-                    appLogger.LogInformation("Updated: {Updated}",  result.Updated);
-                    appLogger.LogInformation("Skipped: {Skipped}",  result.Skipped);
-                    appLogger.LogInformation("Failed:  {Failed}",   result.Failed);
-                    if (!result.Success)
+                    var totalCreated = 0;
+                    var totalUpdated = 0;
+                    var totalSkipped = 0;
+                    var totalFailed  = 0;
+                    foreach (var fr in fileResults)
                     {
-                        appLogger.LogError(Emoji.Known.Warning + "  Import was not successful!");
-                        foreach (var resultError in result.Errors)
+                        var r = fr.Result;
+                        totalCreated += r.Created;
+                        totalUpdated += r.Updated;
+                        totalSkipped += r.Skipped;
+                        totalFailed  += r.Failed;
+
+                        appLogger.LogInformation("File: {File}", fr.FileName);
+                        appLogger.LogInformation("  Created: {Created}", r.Created);
+                        appLogger.LogInformation("  Updated: {Updated}", r.Updated);
+                        appLogger.LogInformation("  Skipped: {Skipped}", r.Skipped);
+                        appLogger.LogInformation("  Failed:  {Failed}", r.Failed);
+                        if (r.Errors.Any())
                         {
-                            appLogger.LogError(Emoji.Known.Warning + "  {Error}", resultError);
+                            appLogger.LogError(Emoji.Known.Warning + "  Errors for {File}:", fr.FileName);
+                            foreach (var err in r.Errors)
+                            {
+                                appLogger.LogError(Emoji.Known.Warning + "  {Error}", err);
+                            }
                         }
                     }
+
+                    appLogger.LogInformation("Import totals -- Created: {Created}, Updated: {Updated}, Skipped: {Skipped}, Failed: {Failed}", totalCreated, totalUpdated, totalSkipped, totalFailed);
                 }
             }
         }
