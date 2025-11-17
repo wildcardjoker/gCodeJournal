@@ -294,13 +294,14 @@ namespace gCodeJournal.ViewModel
         // Import operations
         /// <summary>
         ///     Import data from CSV (file path). Supports a directory containing per-entity CSV files or a single CSV file.
+        ///     Returns per-file results.
         /// </summary>
-        Task<ImportResult> ImportFromCsvAsync(string csvPath, ILogger appLogger, bool updateExisting = false, char delimiter = ',', CancellationToken ct = default);
+        Task<List<CsvImporter.ImportFileResult>> ImportFromCsvAsync(string csvPath, ILogger appLogger, bool updateExisting = false, char delimiter = ',', CancellationToken ct = default);
 
         /// <summary>
         ///     Import data from a CSV stream. Optional fileName helps infer entity from the file name.
         /// </summary>
-        Task<ImportResult> ImportFromCsvAsync(
+        Task<CsvImporter.ImportFileResult> ImportFromCsvAsync(
             Stream            stream,
             ILogger           appLogger,
             string?           fileName       = null,

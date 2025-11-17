@@ -641,14 +641,14 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
     }
 
     /// <inheritdoc />
-    public async Task<ImportResult> ImportFromCsvAsync(string csvPath, ILogger appLogger, bool updateExisting = false, char delimiter = ',', CancellationToken ct = default)
+    public async Task<List<CsvImporter.ImportFileResult>> ImportFromCsvAsync(string csvPath, ILogger appLogger, bool updateExisting = false, char delimiter = ',', CancellationToken ct = default)
     {
         var importer = new CsvImporter(_db, this);
         return await importer.ImportFromPathAsync(csvPath, appLogger, updateExisting, delimiter, ct).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
-    public async Task<ImportResult> ImportFromCsvAsync(
+    public async Task<CsvImporter.ImportFileResult> ImportFromCsvAsync(
         Stream            stream,
         ILogger           appLogger,
         string?           fileName       = null,
