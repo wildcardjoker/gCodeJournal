@@ -641,7 +641,12 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
     }
 
     /// <inheritdoc />
-    public async Task<List<CsvImporter.ImportFileResult>> ImportFromCsvAsync(string csvPath, ILogger appLogger, bool updateExisting = false, char delimiter = ',', CancellationToken ct = default)
+    public async Task<List<CsvImporter.ImportFileResult>> ImportFromCsvAsync(
+        string            csvPath,
+        ILogger           appLogger,
+        bool              updateExisting = false,
+        char              delimiter      = ',',
+        CancellationToken ct             = default)
     {
         var importer = new CsvImporter(_db, this);
         return await importer.ImportFromPathAsync(csvPath, appLogger, updateExisting, delimiter, ct).ConfigureAwait(false);
@@ -669,12 +674,7 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
             return new ValidationResult("Customer DTO is required");
         }
 
-        if (string.IsNullOrWhiteSpace(dto.Name))
-        {
-            return new ValidationResult("Customer name is required", new[] {nameof(dto.Name)});
-        }
-
-        return ValidationResult.Success!;
+        return string.IsNullOrWhiteSpace(dto.Name) ? new ValidationResult("Customer name is required", [nameof(dto.Name)]) : ValidationResult.Success!;
     }
 
     private static ValidationResult ValidateManufacturerDto(ManufacturerDto dto)
@@ -684,7 +684,7 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
             return new ValidationResult("Manufacturer DTO is required");
         }
 
-        return string.IsNullOrWhiteSpace(dto.Name) ? new ValidationResult("Manufacturer name is required", new[] {nameof(dto.Name)}) : ValidationResult.Success!;
+        return string.IsNullOrWhiteSpace(dto.Name) ? new ValidationResult("Manufacturer name is required", [nameof(dto.Name)]) : ValidationResult.Success!;
     }
 
     private static ValidationResult ValidateFilamentColourDto(FilamentColourDto dto)
@@ -694,12 +694,9 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
             return new ValidationResult("Filament colour DTO is required");
         }
 
-        if (string.IsNullOrWhiteSpace(dto.Description))
-        {
-            return new ValidationResult("Filament colour description is required", new[] {nameof(dto.Description)});
-        }
-
-        return ValidationResult.Success!;
+        return string.IsNullOrWhiteSpace(dto.Description)
+                   ? new ValidationResult("Filament colour description is required", [nameof(dto.Description)])
+                   : ValidationResult.Success!;
     }
 
     private static ValidationResult ValidateFilamentTypeDto(FilamentTypeDto dto)
@@ -709,12 +706,9 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
             return new ValidationResult("Filament type DTO is required");
         }
 
-        if (string.IsNullOrWhiteSpace(dto.Description))
-        {
-            return new ValidationResult("Filament type description is required", new[] {nameof(dto.Description)});
-        }
-
-        return ValidationResult.Success!;
+        return string.IsNullOrWhiteSpace(dto.Description)
+                   ? new ValidationResult("Filament type description is required", [nameof(dto.Description)])
+                   : ValidationResult.Success!;
     }
 
     private static ValidationResult ValidateModelDesignDto(ModelDesignDto dto)
@@ -726,15 +720,10 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
 
         if (string.IsNullOrWhiteSpace(dto.Description))
         {
-            return new ValidationResult("ModelDesign description is required", new[] {nameof(dto.Description)});
+            return new ValidationResult("ModelDesign description is required", [nameof(dto.Description)]);
         }
 
-        if (dto.Length < 0)
-        {
-            return new ValidationResult("ModelDesign length must be non-negative", new[] {nameof(dto.Length)});
-        }
-
-        return ValidationResult.Success!;
+        return dto.Length < 0 ? new ValidationResult("ModelDesign length must be non-negative", [nameof(dto.Length)]) : ValidationResult.Success!;
     }
 
     private static ValidationResult ValidateFilamentDto(FilamentDto dto)
@@ -747,30 +736,25 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
         var errors = new List<ValidationResult>();
         if (dto.CostPerWeight < 0)
         {
-            errors.Add(new ValidationResult("Filament cost must be non-negative", new[] {nameof(dto.CostPerWeight)}));
+            errors.Add(new ValidationResult("Filament cost must be non-negative", [nameof(dto.CostPerWeight)]));
         }
 
         if (dto.Manufacturer is null)
         {
-            errors.Add(new ValidationResult("Filament manufacturer is required", new[] {nameof(dto.Manufacturer)}));
+            errors.Add(new ValidationResult("Filament manufacturer is required", [nameof(dto.Manufacturer)]));
         }
 
         if (dto.FilamentColour is null)
         {
-            errors.Add(new ValidationResult("Filament colour is required", new[] {nameof(dto.FilamentColour)}));
+            errors.Add(new ValidationResult("Filament colour is required", [nameof(dto.FilamentColour)]));
         }
 
         if (dto.FilamentType is null)
         {
-            errors.Add(new ValidationResult("Filament type is required", new[] {nameof(dto.FilamentType)}));
+            errors.Add(new ValidationResult("Filament type is required", [nameof(dto.FilamentType)]));
         }
 
-        if (errors.Count > 0)
-        {
-            return new ValidationResult(string.Join("; ", errors.Select(e => e.ErrorMessage)));
-        }
-
-        return ValidationResult.Success!;
+        return errors.Count > 0 ? new ValidationResult(string.Join("; ", errors.Select(e => e.ErrorMessage))) : ValidationResult.Success!;
     }
 
     private static ValidationResult ValidatePrintingProjectDto(PrintingProjectDto dto)
@@ -783,25 +767,20 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
         var errors = new List<ValidationResult>();
         if (dto.Cost < 0)
         {
-            errors.Add(new ValidationResult("Printing project cost must be non-negative", new[] {nameof(dto.Cost)}));
+            errors.Add(new ValidationResult("Printing project cost must be non-negative", [nameof(dto.Cost)]));
         }
 
         if (dto.Customer is null)
         {
-            errors.Add(new ValidationResult("Printing project must have a customer", new[] {nameof(dto.Customer)}));
+            errors.Add(new ValidationResult("Printing project must have a customer", [nameof(dto.Customer)]));
         }
 
         if (dto.ModelDesign is null)
         {
-            errors.Add(new ValidationResult("Printing project must have a model design", new[] {nameof(dto.ModelDesign)}));
+            errors.Add(new ValidationResult("Printing project must have a model design", [nameof(dto.ModelDesign)]));
         }
 
-        if (errors.Count > 0)
-        {
-            return new ValidationResult(string.Join("; ", errors.Select(e => e.ErrorMessage)));
-        }
-
-        return ValidationResult.Success!;
+        return errors.Count > 0 ? new ValidationResult(string.Join("; ", errors.Select(e => e.ErrorMessage))) : ValidationResult.Success!;
     }
     #endregion
 
