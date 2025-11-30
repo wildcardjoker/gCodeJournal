@@ -268,42 +268,11 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                         break;
 
                     case ImportEntity.Filaments:
-                        var filaments = csv.GetRecords<FilamentDto>().ToList();
-                        foreach (var f in filaments)
+                        // Use the dynamic reader and reuse ProcessRowAsync which already contains robust parsing logic for filaments (handles multiple header name variants).
+                        var filamentRecords = csv.GetRecords<dynamic>();
+                        foreach (var rec in filamentRecords.Select(r => (IDictionary<string, object>) r))
                         {
-                            var sourceId = f.Id != 0 ? f.Id.ToString() : null;
-                            var r        = await vm.AddFilamentAsync(f).ConfigureAwait(false);
-                            if (r == ValidationResult.Success)
-                            {
-                                result.Created++;
-                                if (sourceId == null)
-                                {
-                                    continue;
-                                }
-
-                                Filament? dbEntity = null;
-                                if (!string.IsNullOrWhiteSpace(f.ProductId))
-                                {
-                                    dbEntity = await db.Filaments.FirstOrDefaultAsync(x => x.ProductId == f.ProductId, ct).ConfigureAwait(false);
-                                }
-
-                                dbEntity ??= await db.Filaments.FirstOrDefaultAsync(
-                                                         x => x.ManufacturerId      == f.Manufacturer.Id
-                                                              && x.FilamentTypeId   == f.FilamentType.Id
-                                                              && x.FilamentColourId == f.FilamentColour.Id,
-                                                         ct)
-                                                     .ConfigureAwait(false);
-
-                                if (dbEntity != null)
-                                {
-                                    result.RecordMapping("filaments", sourceId, dbEntity.Id);
-                                }
-                            }
-                            else
-                            {
-                                result.Errors.Add(r.ErrorMessage ?? "AddFilament failed");
-                                result.Failed++;
-                            }
+                            await ProcessRowAsync(ImportEntity.Filaments, rec, result, updateExisting, ct, existingMappings).ConfigureAwait(false);
                         }
 
                         break;
@@ -778,6 +747,23 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                     }
                     else
                     {
+                        // Check whether a filament with the same
+                        // ManufacturerId, FilamentTypeId and FilamentColourId already exists to avoid duplicates.
+                        if (manId != 0 && typeId != 0 && colourId != 0)
+                        {
+                            var existingFilament = await db.Filaments.FirstOrDefaultAsync(
+                                                               x => x.ManufacturerId == manId && x.FilamentTypeId == typeId && x.FilamentColourId == colourId,
+                                                               ct)
+                                                           .ConfigureAwait(false);
+                            if (existingFilament is not null)
+                            {
+                                // Considered already existing; skip creation.
+                                result.Skipped++;
+
+                                break;
+                            }
+                        }
+
                         var r = await vm.AddFilamentAsync(dto).ConfigureAwait(false);
                         if (r == ValidationResult.Success)
                         {
