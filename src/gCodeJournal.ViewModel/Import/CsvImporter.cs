@@ -308,96 +308,10 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                         break;
 
                     case ImportEntity.PrintingProjects:
-                        var projects = csv.GetRecords<PrintingProjectDto>().ToList();
-                        foreach (var p in projects)
+                        var projectRecords = csv.GetRecords<dynamic>();
+                        foreach (var rec in projectRecords.Select(r => (IDictionary<string, object>) r))
                         {
-                            var sourceId = p.Id != 0 ? p.Id.ToString() : null;
-
-                            // resolve referenced ids from existingMappings (provided from earlier files) or from result.IdMap
-                            var resolveMap = new Dictionary<string, Dictionary<string, int>>(StringComparer.OrdinalIgnoreCase);
-                            if (existingMappings != null)
-                            {
-                                foreach (var kv in existingMappings)
-                                {
-                                    resolveMap[kv.Key] = new Dictionary<string, int>(kv.Value, StringComparer.OrdinalIgnoreCase);
-                                }
-                            }
-
-                            foreach (var kv in result.IdMap)
-                            {
-                                resolveMap[kv.Key] = kv.Value;
-                            }
-
-                            if (p.Customer != null && p.Customer.Id != 0)
-                            {
-                                var sid = p.Customer.Id.ToString();
-                                if (resolveMap.TryGetValue("customers", out var customerMap) && customerMap.TryGetValue(sid, out var mappedId))
-                                {
-                                    // replace with db id by creating a new DTO (Id is init-only)
-                                    p.Customer = new CustomerDto(mappedId, p.Customer.Name);
-                                }
-                            }
-
-                            if (p.ModelDesign != null && p.ModelDesign.Id != 0)
-                            {
-                                var sid = p.ModelDesign.Id.ToString();
-                                if (resolveMap.TryGetValue("model_designs", out var modelMap) && modelMap.TryGetValue(sid, out var mappedId))
-                                {
-                                    // replace with db id by creating a new DTO (Id is init-only)
-                                    p.ModelDesign = new ModelDesignDto(mappedId, p.ModelDesign.Description, p.ModelDesign.Length, p.ModelDesign.Summary, p.ModelDesign.Url);
-                                }
-                            }
-
-                            if (p.Filaments.Any())
-                            {
-                                for (var i = 0; i < p.Filaments.Count; i++)
-                                {
-                                    var fd = p.Filaments[i];
-                                    if (fd.Id == 0)
-                                    {
-                                        continue;
-                                    }
-
-                                    var sid = fd.Id.ToString();
-                                    if (resolveMap.TryGetValue("filaments", out var filMap) && filMap.TryGetValue(sid, out var mappedId))
-                                    {
-                                        p.Filaments[i] = new FilamentDto(
-                                            mappedId,
-                                            fd.CostPerWeight,
-                                            fd.ProductId,
-                                            fd.ReorderLink,
-                                            fd.FilamentColour,
-                                            fd.FilamentType,
-                                            fd.Manufacturer);
-                                    }
-                                }
-                            }
-
-                            var r = await vm.AddPrintingProjectAsync(p).ConfigureAwait(false);
-                            if (r == ValidationResult.Success)
-                            {
-                                result.Created++;
-                                if (sourceId == null)
-                                {
-                                    continue;
-                                }
-
-                                var customerId = p.Customer?.Id    ?? 0;
-                                var modelId    = p.ModelDesign?.Id ?? 0;
-                                var dbEntity = await db.PrintingProjects.FirstOrDefaultAsync(
-                                                           x => x.Cost == p.Cost && x.CustomerId == customerId && x.ModelDesignId == modelId,
-                                                           ct)
-                                                       .ConfigureAwait(false);
-                                if (dbEntity != null)
-                                {
-                                    result.RecordMapping("printing_projects", sourceId, dbEntity.Id);
-                                }
-                            }
-                            else
-                            {
-                                result.Errors.Add(r.ErrorMessage ?? "AddPrintingProject failed");
-                                result.Failed++;
-                            }
+                            await ProcessRowAsync(ImportEntity.PrintingProjects, rec, result, updateExisting, ct, existingMappings).ConfigureAwait(false);
                         }
 
                         break;
