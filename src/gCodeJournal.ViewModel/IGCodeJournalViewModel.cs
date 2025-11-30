@@ -291,12 +291,25 @@ namespace gCodeJournal.ViewModel
         /// <returns>A task representing the asynchronous operation, with a list of printing projects as the result.</returns>
         Task<List<PrintingProjectDto>> GetAllPrintingProjectsAsync();
 
+        /// <summary>
+        ///     Retrieves the path of the last imported file, if available.
+        /// </summary>
+        /// <returns>
+        ///     A string representing the path of the last imported file, or <c>null</c> if no import has been performed.
+        /// </returns>
+        string? GetLastImportPath();
+
         // Import operations
         /// <summary>
         ///     Import data from CSV (file path). Supports a directory containing per-entity CSV files or a single CSV file.
         ///     Returns per-file results.
         /// </summary>
-        Task<List<CsvImporter.ImportFileResult>> ImportFromCsvAsync(string csvPath, ILogger appLogger, bool updateExisting = false, char delimiter = ',', CancellationToken ct = default);
+        Task<List<CsvImporter.ImportFileResult>> ImportFromCsvAsync(
+            string            csvPath,
+            ILogger           appLogger,
+            bool              updateExisting = false,
+            char              delimiter      = ',',
+            CancellationToken ct             = default);
 
         /// <summary>
         ///     Import data from a CSV stream. Optional fileName helps infer entity from the file name.
@@ -308,5 +321,12 @@ namespace gCodeJournal.ViewModel
             bool              updateExisting = false,
             char              delimiter      = ',',
             CancellationToken ct             = default);
+
+        /// <summary>
+        ///     Sets the import path for the application.
+        /// </summary>
+        /// <param name="path">The file system path to set as the import path.</param>
+        /// <returns>The previously set import path, or <c>null</c> if no path was previously set.</returns>
+        void SetImportPath(string path);
     }
 }

@@ -111,7 +111,10 @@
             using var scope = provider.CreateScope();
             var       vm    = scope.ServiceProvider.GetRequiredService<IGCodeJournalViewModel>();
 
-            var path = await AnsiConsole.PromptAsync(new TextPrompt<string?>("Please enter the path to the CSV file(s) (ENTER to cancel import):").AllowEmpty())
+            var importPath = vm.GetLastImportPath();
+            var path = await AnsiConsole.PromptAsync(
+                                            new TextPrompt<string?>("Please enter the path to the CSV file(s) (ENTER to cancel import):").AllowEmpty()
+                                                .DefaultValue(importPath))
                                         .ConfigureAwait(false);
 
             if (!path.IsPathValid(appLogger))
@@ -120,9 +123,10 @@
                 return;
             }
 
+            vm.SetImportPath(path!);
             appLogger.LogInformation("Import: starting CSV import for path '{Path}'.", path);
             List<CsvImporter.ImportFileResult>? fileResults = null;
-            var           stopwatch = Stopwatch.StartNew();
+            var                                 stopwatch   = Stopwatch.StartNew();
             try
             {
                 fileResults = await vm.ImportFromCsvAsync(path!, appLogger).ConfigureAwait(false);
@@ -156,11 +160,11 @@
                         totalSkipped += r.Skipped;
                         totalFailed  += r.Failed;
 
-                        appLogger.LogInformation("File: {File}", fr.FileName);
+                        appLogger.LogInformation("File: {File}",         fr.FileName);
                         appLogger.LogInformation("  Created: {Created}", r.Created);
                         appLogger.LogInformation("  Updated: {Updated}", r.Updated);
                         appLogger.LogInformation("  Skipped: {Skipped}", r.Skipped);
-                        appLogger.LogInformation("  Failed:  {Failed}", r.Failed);
+                        appLogger.LogInformation("  Failed:  {Failed}",  r.Failed);
                         if (r.Errors.Any())
                         {
                             appLogger.LogError(Emoji.Known.Warning + "  Errors for {File}:", fr.FileName);
@@ -171,7 +175,12 @@
                         }
                     }
 
-                    appLogger.LogInformation("Import totals -- Created: {Created}, Updated: {Updated}, Skipped: {Skipped}, Failed: {Failed}", totalCreated, totalUpdated, totalSkipped, totalFailed);
+                    appLogger.LogInformation(
+                        "Import totals -- Created: {Created}, Updated: {Updated}, Skipped: {Skipped}, Failed: {Failed}",
+                        totalCreated,
+                        totalUpdated,
+                        totalSkipped,
+                        totalFailed);
                 }
             }
         }

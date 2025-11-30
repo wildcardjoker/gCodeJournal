@@ -7,12 +7,18 @@ using Import;
 using Mapping;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Win32;
 using Model;
 #endregion
 
 /// <inheritdoc />
 public class GCodeJournalViewModel : IGCodeJournalViewModel
 {
+    #region Constants
+    private const string GCodeJournalRegistryPath = @"HKEY_CURRENT_USER\SOFTWARE\WildCardJoker\gCodeJournal";
+    private const string ImportPathRegistryKey    = "ImportPath";
+    #endregion
+
     #region Fields
     private readonly GCodeJournalDbContext _db;
     #endregion
@@ -641,6 +647,9 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
     }
 
     /// <inheritdoc />
+    public string? GetLastImportPath() => OperatingSystem.IsWindows() ? Registry.GetValue(GCodeJournalRegistryPath, ImportPathRegistryKey, null) as string : null;
+
+    /// <inheritdoc />
     public async Task<List<CsvImporter.ImportFileResult>> ImportFromCsvAsync(
         string            csvPath,
         ILogger           appLogger,
@@ -663,6 +672,14 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
     {
         var importer = new CsvImporter(_db, this);
         return await importer.ImportStreamAsync(stream, appLogger, fileName, updateExisting, delimiter, ct).ConfigureAwait(false);
+    }
+
+    public void SetImportPath(string path)
+    {
+        if (OperatingSystem.IsWindows() && !string.IsNullOrWhiteSpace(GetLastImportPath()) && GetLastImportPath()!.Equals(path, StringComparison.OrdinalIgnoreCase))
+        {
+            Registry.SetValue(GCodeJournalRegistryPath, ImportPathRegistryKey, path);
+        }
     }
     #endregion
 
