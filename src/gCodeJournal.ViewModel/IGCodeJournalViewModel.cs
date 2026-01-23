@@ -307,7 +307,7 @@ namespace gCodeJournal.ViewModel
         Task<List<CsvImporter.ImportFileResult>> ImportFromCsvAsync(
             string            csvPath,
             ILogger           appLogger,
-            bool              updateExisting = false,
+            bool              updateExisting = true,
             char              delimiter      = ',',
             CancellationToken ct             = default);
 
@@ -318,7 +318,7 @@ namespace gCodeJournal.ViewModel
             Stream            stream,
             ILogger           appLogger,
             string?           fileName       = null,
-            bool              updateExisting = false,
+            bool              updateExisting = true,
             char              delimiter      = ',',
             CancellationToken ct             = default);
 
