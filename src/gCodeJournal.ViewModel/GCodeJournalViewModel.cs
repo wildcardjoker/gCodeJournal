@@ -676,7 +676,7 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
 
     public void SetImportPath(string path)
     {
-        if (OperatingSystem.IsWindows() && !string.IsNullOrWhiteSpace(GetLastImportPath()) && GetLastImportPath()!.Equals(path, StringComparison.OrdinalIgnoreCase))
+        if (OperatingSystem.IsWindows())
         {
             Registry.SetValue(GCodeJournalRegistryPath, ImportPathRegistryKey, path);
         }
