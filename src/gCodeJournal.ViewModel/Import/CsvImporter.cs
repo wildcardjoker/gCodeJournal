@@ -152,25 +152,52 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                         foreach (var c in customers)
                         {
                             var sourceId = c.Id != 0 ? c.Id.ToString() : null;
-                            var r        = await vm.AddCustomerAsync(c).ConfigureAwait(false);
-                            if (r == ValidationResult.Success)
-                            {
-                                result.Created++;
-                                if (sourceId == null)
-                                {
-                                    continue;
-                                }
 
-                                var dbEntity = await db.Customers.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Name, "NOCASE") == c.Name, ct).ConfigureAwait(false);
-                                if (dbEntity != null)
+                            if (c.Id != 0 && updateExisting)
+                            {
+                                var r = await vm.EditCustomerAsync(c).ConfigureAwait(false);
+                                if (r == ValidationResult.Success)
                                 {
-                                    result.RecordMapping("customers", sourceId, dbEntity.Id);
+                                    result.Updated++;
+
+                                    if (sourceId != null)
+                                    {
+                                        var dbEntity = await db.Customers.FindAsync(new object[] { c.Id }, ct).ConfigureAwait(false)
+                                                       ?? await db.Customers.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Name, "NOCASE") == c.Name, ct).ConfigureAwait(false);
+                                        if (dbEntity != null)
+                                        {
+                                            result.RecordMapping("customers", sourceId, dbEntity.Id);
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    result.Errors.Add(r.ErrorMessage ?? "EditCustomer failed");
+                                    result.Failed++;
                                 }
                             }
                             else
                             {
-                                result.Errors.Add(r.ErrorMessage ?? "AddCustomer failed");
-                                result.Failed++;
+                                var r = await vm.AddCustomerAsync(c).ConfigureAwait(false);
+                                if (r == ValidationResult.Success)
+                                {
+                                    result.Created++;
+                                    if (sourceId == null)
+                                    {
+                                        continue;
+                                    }
+
+                                    var dbEntity = await db.Customers.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Name, "NOCASE") == c.Name, ct).ConfigureAwait(false);
+                                    if (dbEntity != null)
+                                    {
+                                        result.RecordMapping("customers", sourceId, dbEntity.Id);
+                                    }
+                                }
+                                else
+                                {
+                                    result.Errors.Add(r.ErrorMessage ?? "AddCustomer failed");
+                                    result.Failed++;
+                                }
                             }
                         }
 
@@ -181,25 +208,51 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                         foreach (var m in mans)
                         {
                             var sourceId = m.Id != 0 ? m.Id.ToString() : null;
-                            var r        = await vm.AddManufacturerAsync(m).ConfigureAwait(false);
-                            if (r == ValidationResult.Success)
-                            {
-                                result.Created++;
-                                if (sourceId == null)
-                                {
-                                    continue;
-                                }
 
-                                var dbEntity = await db.Manufacturers.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Name, "NOCASE") == m.Name, ct).ConfigureAwait(false);
-                                if (dbEntity != null)
+                            if (m.Id != 0 && updateExisting)
+                            {
+                                var r = await vm.EditManufacturerAsync(m).ConfigureAwait(false);
+                                if (r == ValidationResult.Success)
                                 {
-                                    result.RecordMapping("manufacturers", sourceId, dbEntity.Id);
+                                    result.Updated++;
+                                    if (sourceId != null)
+                                    {
+                                        var dbEntity = await db.Manufacturers.FindAsync(new object[] { m.Id }, ct).ConfigureAwait(false)
+                                                       ?? await db.Manufacturers.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Name, "NOCASE") == m.Name, ct).ConfigureAwait(false);
+                                        if (dbEntity != null)
+                                        {
+                                            result.RecordMapping("manufacturers", sourceId, dbEntity.Id);
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    result.Errors.Add(r.ErrorMessage ?? "EditManufacturer failed");
+                                    result.Failed++;
                                 }
                             }
                             else
                             {
-                                result.Errors.Add(r.ErrorMessage ?? "AddManufacturer failed");
-                                result.Failed++;
+                                var r = await vm.AddManufacturerAsync(m).ConfigureAwait(false);
+                                if (r == ValidationResult.Success)
+                                {
+                                    result.Created++;
+                                    if (sourceId == null)
+                                    {
+                                        continue;
+                                    }
+
+                                    var dbEntity = await db.Manufacturers.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Name, "NOCASE") == m.Name, ct).ConfigureAwait(false);
+                                    if (dbEntity != null)
+                                    {
+                                        result.RecordMapping("manufacturers", sourceId, dbEntity.Id);
+                                    }
+                                }
+                                else
+                                {
+                                    result.Errors.Add(r.ErrorMessage ?? "AddManufacturer failed");
+                                    result.Failed++;
+                                }
                             }
                         }
 
@@ -210,26 +263,52 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                         foreach (var c in cols)
                         {
                             var sourceId = c.Id != 0 ? c.Id.ToString() : null;
-                            var r        = await vm.AddFilamentColourAsync(c).ConfigureAwait(false);
-                            if (r == ValidationResult.Success)
-                            {
-                                result.Created++;
-                                if (sourceId == null)
-                                {
-                                    continue;
-                                }
 
-                                var dbEntity = await db.FilamentColours.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Description, "NOCASE") == c.Description, ct)
-                                                       .ConfigureAwait(false);
-                                if (dbEntity != null)
+                            if (c.Id != 0 && updateExisting)
+                            {
+                                var r = await vm.EditFilamentColourAsync(c).ConfigureAwait(false);
+                                if (r == ValidationResult.Success)
                                 {
-                                    result.RecordMapping("filament_colours", sourceId, dbEntity.Id);
+                                    result.Updated++;
+                                    if (sourceId != null)
+                                    {
+                                        var dbEntity = await db.FilamentColours.FindAsync(new object[] { c.Id }, ct).ConfigureAwait(false)
+                                                       ?? await db.FilamentColours.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Description, "NOCASE") == c.Description, ct).ConfigureAwait(false);
+                                        if (dbEntity != null)
+                                        {
+                                            result.RecordMapping("filament_colours", sourceId, dbEntity.Id);
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    result.Errors.Add(r.ErrorMessage ?? "EditFilamentColour failed");
+                                    result.Failed++;
                                 }
                             }
                             else
                             {
-                                result.Errors.Add(r.ErrorMessage ?? "AddFilamentColour failed");
-                                result.Failed++;
+                                var r = await vm.AddFilamentColourAsync(c).ConfigureAwait(false);
+                                if (r == ValidationResult.Success)
+                                {
+                                    result.Created++;
+                                    if (sourceId == null)
+                                    {
+                                        continue;
+                                    }
+
+                                    var dbEntity = await db.FilamentColours.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Description, "NOCASE") == c.Description, ct)
+                                                           .ConfigureAwait(false);
+                                    if (dbEntity != null)
+                                    {
+                                        result.RecordMapping("filament_colours", sourceId, dbEntity.Id);
+                                    }
+                                }
+                                else
+                                {
+                                    result.Errors.Add(r.ErrorMessage ?? "AddFilamentColour failed");
+                                    result.Failed++;
+                                }
                             }
                         }
 
@@ -240,28 +319,54 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                         foreach (var t in types)
                         {
                             var sourceId = t.Id != 0 ? t.Id.ToString() : null;
-                            var r        = await vm.AddFilamentTypeAsync(t).ConfigureAwait(false);
 
-                            // TODO: Add ValidationResult.Skipped if duplicate and updateExisting is false
-                            if (r == ValidationResult.Success)
+                            if (t.Id != 0 && updateExisting)
                             {
-                                result.Created++;
-                                if (sourceId == null)
+                                var r = await vm.EditFilamentTypeAsync(t).ConfigureAwait(false);
+                                if (r == ValidationResult.Success)
                                 {
-                                    continue;
+                                    result.Updated++;
+                                    if (sourceId != null)
+                                    {
+                                        var dbEntity = await db.FilamentTypes.FindAsync(new object[] { t.Id }, ct).ConfigureAwait(false)
+                                                       ?? await db.FilamentTypes.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Description, "NOCASE") == t.Description, ct).ConfigureAwait(false);
+                                        if (dbEntity != null)
+                                        {
+                                            result.RecordMapping("filament_types", sourceId, dbEntity.Id);
+                                        }
+                                    }
                                 }
-
-                                var dbEntity = await db.FilamentTypes.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Description, "NOCASE") == t.Description, ct)
-                                                       .ConfigureAwait(false);
-                                if (dbEntity != null)
+                                else
                                 {
-                                    result.RecordMapping("filament_types", sourceId, dbEntity.Id);
+                                    result.Errors.Add(r.ErrorMessage ?? "EditFilamentType failed");
+                                    result.Failed++;
                                 }
                             }
                             else
                             {
-                                result.Errors.Add(r.ErrorMessage ?? "AddFilamentType failed");
-                                result.Failed++;
+                                var r = await vm.AddFilamentTypeAsync(t).ConfigureAwait(false);
+
+                                // TODO: Add ValidationResult.Skipped if duplicate and updateExisting is false
+                                if (r == ValidationResult.Success)
+                                {
+                                    result.Created++;
+                                    if (sourceId == null)
+                                    {
+                                        continue;
+                                    }
+
+                                    var dbEntity = await db.FilamentTypes.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Description, "NOCASE") == t.Description, ct)
+                                                           .ConfigureAwait(false);
+                                    if (dbEntity != null)
+                                    {
+                                        result.RecordMapping("filament_types", sourceId, dbEntity.Id);
+                                    }
+                                }
+                                else
+                                {
+                                    result.Errors.Add(r.ErrorMessage ?? "AddFilamentType failed");
+                                    result.Failed++;
+                                }
                             }
                         }
 
@@ -282,26 +387,52 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                         foreach (var m in models)
                         {
                             var sourceId = m.Id != 0 ? m.Id.ToString() : null;
-                            var r        = await vm.AddModelDesignAsync(m).ConfigureAwait(false);
-                            if (r == ValidationResult.Success)
-                            {
-                                result.Created++;
-                                if (sourceId == null)
-                                {
-                                    continue;
-                                }
 
-                                var dbEntity = await db.ModelDesigns.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Description, "NOCASE") == m.Description, ct)
-                                                       .ConfigureAwait(false);
-                                if (dbEntity != null)
+                            if (m.Id != 0 && updateExisting)
+                            {
+                                var r = await vm.EditModelDesignAsync(m).ConfigureAwait(false);
+                                if (r == ValidationResult.Success)
                                 {
-                                    result.RecordMapping("model_designs", sourceId, dbEntity.Id);
+                                    result.Updated++;
+                                    if (sourceId != null)
+                                    {
+                                        var dbEntity = await db.ModelDesigns.FindAsync(new object[] { m.Id }, ct).ConfigureAwait(false)
+                                                       ?? await db.ModelDesigns.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Description, "NOCASE") == m.Description, ct).ConfigureAwait(false);
+                                        if (dbEntity != null)
+                                        {
+                                            result.RecordMapping("model_designs", sourceId, dbEntity.Id);
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    result.Errors.Add(r.ErrorMessage ?? "EditModelDesign failed");
+                                    result.Failed++;
                                 }
                             }
                             else
                             {
-                                result.Errors.Add(r.ErrorMessage ?? "AddModelDesign failed");
-                                result.Failed++;
+                                var r = await vm.AddModelDesignAsync(m).ConfigureAwait(false);
+                                if (r == ValidationResult.Success)
+                                {
+                                    result.Created++;
+                                    if (sourceId == null)
+                                    {
+                                        continue;
+                                    }
+
+                                    var dbEntity = await db.ModelDesigns.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Description, "NOCASE") == m.Description, ct)
+                                                           .ConfigureAwait(false);
+                                    if (dbEntity != null)
+                                    {
+                                        result.RecordMapping("model_designs", sourceId, dbEntity.Id);
+                                    }
+                                }
+                                else
+                                {
+                                    result.Errors.Add(r.ErrorMessage ?? "AddModelDesign failed");
+                                    result.Failed++;
+                                }
                             }
                         }
 
