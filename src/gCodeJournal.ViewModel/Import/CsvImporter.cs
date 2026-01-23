@@ -124,12 +124,13 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
         await using var tx = await db.Database.BeginTransactionAsync(ct).ConfigureAwait(false);
         try
         {
-            if (entity == ImportEntity.Unknown)
+                if (entity == ImportEntity.Unknown)
             {
                 // assume one-row-per-file contains Entity column
                 var records = csv.GetRecords<dynamic>();
                 foreach (var dict in records.Select(rec => (IDictionary<string, object>) rec))
                 {
+                        appLogger.LogDebug("Processing dynamic record for unknown-entity CSV: {@Record}", dict);
                     if (!dict.TryGetValue("Entity", out var en))
                     {
                         result.Errors.Add("No Entity column found in CSV and filename did not match a known entity");
@@ -139,7 +140,7 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
 
                     var entityName = en?.ToString() ?? string.Empty;
                     var ent        = ParseEntityName(entityName);
-                    await ProcessRowAsync(ent, dict, result, updateExisting, ct, existingMappings).ConfigureAwait(false);
+                    await ProcessRowAsync(ent, dict, result, updateExisting, ct, existingMappings, appLogger).ConfigureAwait(false);
                 }
             }
             else
@@ -151,6 +152,7 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                         var customers = csv.GetRecords<CustomerDto>().ToList();
                         foreach (var c in customers)
                         {
+                            appLogger.LogDebug("Processing Customer DTO: {@Dto}", c);
                             var sourceId = c.Id != 0 ? c.Id.ToString() : null;
 
                             if (c.Id != 0 && updateExisting)
@@ -207,6 +209,7 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                         var mans = csv.GetRecords<ManufacturerDto>().ToList();
                         foreach (var m in mans)
                         {
+                            appLogger.LogDebug("Processing Manufacturer DTO: {@Dto}", m);
                             var sourceId = m.Id != 0 ? m.Id.ToString() : null;
 
                             if (m.Id != 0 && updateExisting)
@@ -262,6 +265,7 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                         var cols = csv.GetRecords<FilamentColourDto>().ToList();
                         foreach (var c in cols)
                         {
+                            appLogger.LogDebug("Processing FilamentColour DTO: {@Dto}", c);
                             var sourceId = c.Id != 0 ? c.Id.ToString() : null;
 
                             if (c.Id != 0 && updateExisting)
@@ -318,6 +322,7 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                         var types = csv.GetRecords<FilamentTypeDto>().ToList();
                         foreach (var t in types)
                         {
+                            appLogger.LogDebug("Processing FilamentType DTO: {@Dto}", t);
                             var sourceId = t.Id != 0 ? t.Id.ToString() : null;
 
                             if (t.Id != 0 && updateExisting)
@@ -377,7 +382,8 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                         var filamentRecords = csv.GetRecords<dynamic>();
                         foreach (var rec in filamentRecords.Select(r => (IDictionary<string, object>) r))
                         {
-                            await ProcessRowAsync(ImportEntity.Filaments, rec, result, updateExisting, ct, existingMappings).ConfigureAwait(false);
+                            appLogger.LogDebug("Processing dynamic Filaments record: {@Record}", rec);
+                            await ProcessRowAsync(ImportEntity.Filaments, rec, result, updateExisting, ct, existingMappings, appLogger).ConfigureAwait(false);
                         }
 
                         break;
@@ -386,6 +392,7 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                         var models = csv.GetRecords<ModelDesignDto>().ToList();
                         foreach (var m in models)
                         {
+                            appLogger.LogDebug("Processing ModelDesign DTO: {@Dto}", m);
                             var sourceId = m.Id != 0 ? m.Id.ToString() : null;
 
                             if (m.Id != 0 && updateExisting)
@@ -442,7 +449,8 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                         var projectRecords = csv.GetRecords<dynamic>();
                         foreach (var rec in projectRecords.Select(r => (IDictionary<string, object>) r))
                         {
-                            await ProcessRowAsync(ImportEntity.PrintingProjects, rec, result, updateExisting, ct, existingMappings).ConfigureAwait(false);
+                            appLogger.LogDebug("Processing dynamic PrintingProjects record: {@Record}", rec);
+                            await ProcessRowAsync(ImportEntity.PrintingProjects, rec, result, updateExisting, ct, existingMappings, appLogger).ConfigureAwait(false);
                         }
 
                         break;
@@ -551,10 +559,12 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
         ImportResult                                 result,
         bool                                         updateExisting,
         CancellationToken                            ct,
-        Dictionary<string, Dictionary<string, int>>? existingMappings = null)
+        Dictionary<string, Dictionary<string, int>>? existingMappings = null,
+        ILogger?                                     appLogger = null)
     {
         try
         {
+            appLogger?.LogDebug("Processing row for entity {Entity}: {@Record}", entity, dict);
             switch (entity)
             {
                 case ImportEntity.Customers:
