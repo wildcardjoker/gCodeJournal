@@ -36,6 +36,12 @@ dotnet ef migrations add AddSomeChange --project src/gCodeJournal.Model --startu
 dotnet ef database update --project src/gCodeJournal.Model --startup-project src/gCodeJournal.Model
 ```
 
+- If you prefer to use the Nuget Package Manager Console in Visual Studio, use:
+```
+# Apply migrations
+Update-Database -StartupProject gCodeJournal.Model -Project gCodeJournal.Model
+```
+
 - Programmatically apply migrations at app startup (recommended for apps):
 
 ```csharp
