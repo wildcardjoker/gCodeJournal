@@ -32,7 +32,7 @@ namespace gCodeJournal.ViewModel
         ///     A task representing the asynchronous operation; returns a ValidationResult indicating success or validation
         ///     errors.
         /// </returns>
-        Task<ValidationResult> AddCustomerAsync(CustomerDto customerDto);
+        Task<DbUpdateResult> AddCustomerAsync(CustomerDto customerDto);
 
         /// <summary>
         ///     Adds a new filament asynchronously.

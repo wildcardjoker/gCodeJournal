@@ -48,24 +48,26 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
     }
 
     /// <inheritdoc />
-    public async Task<ValidationResult> AddCustomerAsync(CustomerDto customerDto)
+    public async Task<DbUpdateResult> AddCustomerAsync(CustomerDto customerDto)
     {
         var validation = ValidateCustomerDto(customerDto);
         if (validation != ValidationResult.Success)
         {
-            return validation;
+            return new DbUpdateResult(validation, AddRecordResult.Failed);
         }
 
         // Use helper to resolve or create customer (ensures tracked entity)
         var customer = await GetOrCreateCustomerAsync(customerDto).ConfigureAwait(false);
-
+        // Assume record already exists
+        var result = AddRecordResult.Exists;
         // If new entity was created its Id will be 0 until saved; save to persist
-        if (customer.Id == 0)
-        {
-            await _db.SaveChangesAsync().ConfigureAwait(false);
-        }
+        if (customer.Id != 0) return new DbUpdateResult(ValidationResult.Success, result);
 
-        return ValidationResult.Success;
+        // New entity created
+        result = AddRecordResult.Added;
+        await _db.SaveChangesAsync().ConfigureAwait(false);
+
+        return new DbUpdateResult(ValidationResult.Success, result);
     }
 
     /// <inheritdoc />
