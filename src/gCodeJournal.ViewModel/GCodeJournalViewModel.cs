@@ -48,6 +48,88 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
     }
 
     /// <inheritdoc />
+    public async Task<CustomerDto?> GetCustomerAsync(int id)
+    {
+        var c = await _db.Customers.FindAsync(id).ConfigureAwait(false);
+        return c == null ? null : new CustomerDto(c.Id, c.Name);
+    }
+
+    /// <inheritdoc />
+    public async Task<FilamentDto?> GetFilamentAsync(int id)
+    {
+        var f = await _db.Filaments.Include(x => x.Colour).Include(x => x.Manufacturer).Include(x => x.Type).FirstOrDefaultAsync(x => x.Id == id).ConfigureAwait(false);
+        if (f == null) return null;
+
+        return new FilamentDto(
+            f.Id,
+            f.CostPerWeight,
+            f.ProductId,
+            f.ReorderLink,
+            new FilamentColourDto(f.Colour.Id, f.Colour.Description),
+            new FilamentTypeDto(f.Type.Id, f.Type.Description),
+            new ManufacturerDto(f.Manufacturer.Id, f.Manufacturer.Name));
+    }
+
+    /// <inheritdoc />
+    public async Task<FilamentColourDto?> GetFilamentColourAsync(int id)
+    {
+        var fc = await _db.FilamentColours.FindAsync(id).ConfigureAwait(false);
+        return fc == null ? null : new FilamentColourDto(fc.Id, fc.Description);
+    }
+
+    /// <inheritdoc />
+    public async Task<FilamentTypeDto?> GetFilamentTypeAsync(int id)
+    {
+        var ft = await _db.FilamentTypes.FindAsync(id).ConfigureAwait(false);
+        return ft == null ? null : new FilamentTypeDto(ft.Id, ft.Description);
+    }
+
+    /// <inheritdoc />
+    public async Task<ManufacturerDto?> GetManufacturerAsync(int id)
+    {
+        var m = await _db.Manufacturers.FindAsync(id).ConfigureAwait(false);
+        return m == null ? null : new ManufacturerDto(m.Id, m.Name);
+    }
+
+    /// <inheritdoc />
+    public async Task<ModelDesignDto?> GetModelDesignAsync(int id)
+    {
+        var md = await _db.ModelDesigns.FindAsync(id).ConfigureAwait(false);
+        return md == null ? null : new ModelDesignDto(md.Id, md.Description, md.Length, md.Summary, md.Url);
+    }
+
+    /// <inheritdoc />
+    public async Task<PrintingProjectDto?> GetPrintingProjectAsync(int id)
+    {
+        var p = await _db.PrintingProjects.Include(pr => pr.Customer)
+                                         .Include(pr => pr.Model)
+                                         .Include(pr => pr.Filaments).ThenInclude(f => f.Manufacturer)
+                                         .Include(pr => pr.Filaments).ThenInclude(f => f.Colour)
+                                         .Include(pr => pr.Filaments).ThenInclude(f => f.Type)
+                                         .FirstOrDefaultAsync(pr => pr.Id == id).ConfigureAwait(false);
+
+        if (p == null) return null;
+
+        var filaments = p.Filaments.Select(f => new FilamentDto(
+            f.Id,
+            f.CostPerWeight,
+            f.ProductId,
+            f.ReorderLink,
+            new FilamentColourDto(f.Colour.Id, f.Colour.Description),
+            new FilamentTypeDto(f.Type.Id, f.Type.Description),
+            new ManufacturerDto(f.Manufacturer.Id, f.Manufacturer.Name))).ToList();
+
+        return new PrintingProjectDto(
+            p.Id,
+            p.Cost,
+            DateOnly.FromDateTime(p.Submitted),
+            p.Completed == null ? null : DateOnly.FromDateTime(p.Completed.Value),
+            p.Customer == null ? null : new CustomerDto(p.Customer.Id, p.Customer.Name),
+            p.Model == null ? null : new ModelDesignDto(p.Model.Id, p.Model.Description, p.Model.Length, p.Model.Summary, p.Model.Url),
+            filaments);
+    }
+
+    /// <inheritdoc />
     public async Task<DbUpdateResult> AddCustomerAsync(CustomerDto customerDto)
     {
         var validation = ValidateCustomerDto(customerDto);

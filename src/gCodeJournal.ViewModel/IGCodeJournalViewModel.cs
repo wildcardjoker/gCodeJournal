@@ -292,6 +292,55 @@ namespace gCodeJournal.ViewModel
         Task<List<PrintingProjectDto>> GetAllPrintingProjectsAsync();
 
         /// <summary>
+        ///     Retrieves a single customer DTO by identifier.
+        /// </summary>
+        /// <param name="id">The customer identifier.</param>
+        /// <returns>A task that returns the matching <see cref="CustomerDto"/> or <c>null</c> if not found.</returns>
+        Task<CustomerDto?> GetCustomerAsync(int id);
+
+        /// <summary>
+        ///     Retrieves a single filament DTO by identifier.
+        /// </summary>
+        /// <param name="id">The filament identifier.</param>
+        /// <returns>A task that returns the matching <see cref="FilamentDto"/> or <c>null</c> if not found.</returns>
+        Task<FilamentDto?> GetFilamentAsync(int id);
+
+        /// <summary>
+        ///     Retrieves a single filament colour DTO by identifier.
+        /// </summary>
+        /// <param name="id">The filament colour identifier.</param>
+        /// <returns>A task that returns the matching <see cref="FilamentColourDto"/> or <c>null</c> if not found.</returns>
+        Task<FilamentColourDto?> GetFilamentColourAsync(int id);
+
+        /// <summary>
+        ///     Retrieves a single filament type DTO by identifier.
+        /// </summary>
+        /// <param name="id">The filament type identifier.</param>
+        /// <returns>A task that returns the matching <see cref="FilamentTypeDto"/> or <c>null</c> if not found.</returns>
+        Task<FilamentTypeDto?> GetFilamentTypeAsync(int id);
+
+        /// <summary>
+        ///     Retrieves a single manufacturer DTO by identifier.
+        /// </summary>
+        /// <param name="id">The manufacturer identifier.</param>
+        /// <returns>A task that returns the matching <see cref="ManufacturerDto"/> or <c>null</c> if not found.</returns>
+        Task<ManufacturerDto?> GetManufacturerAsync(int id);
+
+        /// <summary>
+        ///     Retrieves a single model design DTO by identifier.
+        /// </summary>
+        /// <param name="id">The model design identifier.</param>
+        /// <returns>A task that returns the matching <see cref="ModelDesignDto"/> or <c>null</c> if not found.</returns>
+        Task<ModelDesignDto?> GetModelDesignAsync(int id);
+
+        /// <summary>
+        ///     Retrieves a single printing project DTO by identifier.
+        /// </summary>
+        /// <param name="id">The printing project identifier.</param>
+        /// <returns>A task that returns the matching <see cref="PrintingProjectDto"/> or <c>null</c> if not found.</returns>
+        Task<PrintingProjectDto?> GetPrintingProjectAsync(int id);
+
+        /// <summary>
         ///     Retrieves the path of the last imported file, if available.
         /// </summary>
         /// <returns>
