@@ -412,53 +412,48 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                         {
                             appLogger.LogDebug("Processing ModelDesign DTO: {@Dto}", m);
                             var sourceId = m.Id != 0 ? m.Id.ToString() : null;
-
-                            if (m.Id != 0 && updateExisting)
+                            var r = await vm.AddModelDesignAsync(m).ConfigureAwait(false);
+                            switch (r)
                             {
-                                var r = await vm.EditModelDesignAsync(m).ConfigureAwait(false);
-                                if (r == ValidationResult.Success)
-                                {
-                                    result.Updated++;
-                                    if (sourceId != null)
-                                    {
-                                        var dbEntity = await db.ModelDesigns.FindAsync(new object[] { m.Id }, ct).ConfigureAwait(false)
-                                                       ?? await db.ModelDesigns.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Description, "NOCASE") == m.Description, ct).ConfigureAwait(false);
-                                        if (dbEntity != null)
-                                        {
-                                            result.RecordMapping("model_designs", sourceId, dbEntity.Id);
-                                        }
-                                    }
-                                }
-                                else
-                                {
-                                    result.Errors.Add(r.ErrorMessage ?? "EditModelDesign failed");
-                                    result.Failed++;
-                                }
-                            }
-                            else
-                            {
-                                var r = await vm.AddModelDesignAsync(m).ConfigureAwait(false);
-                                if (r.ValidationResult == ValidationResult.Success)
-                                {
+                                case (var v, AddRecordResult.Added) when v == ValidationResult.Success:
+                                    // added
                                     result.Created++;
-                                    if (sourceId == null)
+                                    break;
+
+                                case (var v, AddRecordResult.Exists) when v == ValidationResult.Success:
+                                    // Exists - check that properties match
+                                    var modelDto = await vm.GetModelDesignAsync(m.Id).ConfigureAwait(false);
+                                    if (modelDto is null)
                                     {
-                                        continue;
+                                        result.Errors.Add($"Model with ID {m.Id} not found");
+                                        result.Failed++;
+                                        break;
                                     }
 
-                                    var dbEntity = await db.ModelDesigns.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Description, "NOCASE") == m.Description, ct)
-                                                           .ConfigureAwait(false);
-                                    if (dbEntity != null)
+                                    var comparisonResult = modelDto.CompareTo(m);
+                                    if (comparisonResult.IsMatch)
                                     {
-                                        result.RecordMapping("model_designs", sourceId, dbEntity.Id);
+                                        result.Skipped++;
+                                        break;
                                     }
-                                }
-                                else
-                                {
-                                    result.Errors.Add(r.ValidationResult.ErrorMessage ?? "AddModelDesign failed");
-                                    result.Failed++;
-                                }
+
+                                    // Modify existing model
+                                    appLogger.LogDebug("Modifying existing model {@Model}", modelDto);
+                                    appLogger.LogDebug("Properties to be updated: {@Properties}", string.Join(',', comparisonResult.MismatchedProperties));
+                                    modelDto.Description = m.Description;
+                                    modelDto.Length = m.Length;
+                                    modelDto.Summary = m.Summary;
+                                    modelDto.Url = m.Url;
+                                    await vm.EditModelDesignAsync(modelDto).ConfigureAwait(false);
+                                    result.Updated++;
+                                    break;
+
+                                case var (v, _) when v != ValidationResult.Success:
+                                    // validation error
+                                    result.Errors.Add(v.ErrorMessage ?? $"{nameof(vm.AddModelDesignAsync)} failed");
+                                    break;
                             }
+
                         }
 
                         break;
