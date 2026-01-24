@@ -10,11 +10,6 @@ namespace gCodeJournal.Model.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            // SQLite requires PRAGMA statements that change connection state to run outside
-            // of a transaction. Execute the foreign_keys toggle with suppressTransaction: true
-            // so EF Core will run it outside the migration transaction.
-            migrationBuilder.Sql("PRAGMA foreign_keys = 0;", suppressTransaction: true);
-
             migrationBuilder.DropForeignKey(
                 name: "FK_Filaments_PrintingProjects_PrintingProjectId",
                 table: "Filaments");
@@ -59,17 +54,11 @@ namespace gCodeJournal.Model.Migrations
                 name: "IX_PrintingProjectFilaments_ProjectsId",
                 table: "PrintingProjectFilaments",
                 column: "ProjectsId");
-
-            // Re-enable foreign key enforcement after schema changes
-            migrationBuilder.Sql("PRAGMA foreign_keys = 1;", suppressTransaction: true);
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            // Ensure PRAGMA runs outside the migration transaction
-            migrationBuilder.Sql("PRAGMA foreign_keys = 0;", suppressTransaction: true);
-
             migrationBuilder.DropTable(
                 name: "PrintingProjectFilaments");
 
@@ -111,9 +100,6 @@ namespace gCodeJournal.Model.Migrations
                 column: "PrintingProjectId",
                 principalTable: "PrintingProjects",
                 principalColumn: "Id");
-
-            // Re-enable foreign key enforcement after reverting schema changes
-            migrationBuilder.Sql("PRAGMA foreign_keys = 1;", suppressTransaction: true);
         }
     }
 }
