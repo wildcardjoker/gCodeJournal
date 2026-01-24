@@ -120,6 +120,7 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
         using var csv = new CsvReader(sr, csvConfig);
         // Register CSV class maps for DTOs that require custom mapping
         csv.Context.RegisterClassMap<FilamentMap>();
+        csv.Context.RegisterClassMap<PrintingProjectMap>();
 
         // Try to detect entity from filename
         var entity = DetectEntityFromFileName(fileName);
@@ -460,11 +461,107 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                         break;
 
                     case ImportEntity.PrintingProjects:
-                        var projectRecords = csv.GetRecords<dynamic>();
-                        foreach (var rec in projectRecords.Select(r => (IDictionary<string, object>) r))
+                        var projects = csv.GetRecords<PrintingProjectDto>().ToList();
+                        foreach (var p in projects)
                         {
-                            appLogger.LogDebug("Processing dynamic PrintingProjects record: {@Record}", rec);
-                            await ProcessRowAsync(ImportEntity.PrintingProjects, rec, result, updateExisting, ct, existingMappings, appLogger).ConfigureAwait(false);
+                            appLogger.LogDebug("Processing PrintingProject DTO: {@Dto}", p);
+                            var sourceId = p.Id != 0 ? p.Id.ToString() : null;
+
+                            var r = await vm.AddPrintingProjectAsync(p).ConfigureAwait(false);
+                            switch (r)
+                            {
+                                case (var v, AddRecordResult.Added) when v == ValidationResult.Success:
+                                    // added
+                                    result.Created++;
+                                    break;
+
+                                case (var v, AddRecordResult.Exists) when v == ValidationResult.Success:
+                                    // Exists - check that properties match
+                                    var printingProjectDto = await vm.GetPrintingProjectAsync(p.Id).ConfigureAwait(false);
+                                    if (printingProjectDto is null)
+                                    {
+                                        result.Errors.Add($"Printing project with ID {p.Id} not found");
+                                        result.Failed++;
+                                        break;
+                                    }
+
+                                    var comparisonResult = printingProjectDto.CompareTo(p);
+                                    if (comparisonResult.IsMatch)
+                                    {
+                                        result.Skipped++;
+                                        break;
+                                    }
+
+                                    // Modify existing project
+                                    appLogger.LogDebug("Modifying existing project {@Project}", printingProjectDto);
+                                    appLogger.LogDebug("Properties to be updated: {@Properties}", string.Join(',', comparisonResult.MismatchedProperties));
+                                    printingProjectDto.Submitted = p.Submitted;
+                                    printingProjectDto.Completed = p.Completed;
+                                    printingProjectDto.Cost = p.Cost; // To be calculated based on length/mass of filament(s) used
+
+                                    // Validate required related entities
+                                    if (p.Customer?.Id is null)
+                                    {
+                                        result.Errors.Add($"No customer ID specified for project"); result.Failed++;
+                                        break;
+                                    }
+                                    if (p.ModelDesign?.Id is null)
+                                    {
+                                        result.Errors.Add($"No model design ID specified for project"); result.Failed++;
+                                        break;
+                                    }
+                                    if (p.Filaments.Count==0)
+                                    {
+                                        result.Errors.Add($"No filaments specified for project"); result.Failed++;
+                                        break;
+                                    }
+
+                                    // Get customer DTO
+                                    var customer = await vm.GetCustomerAsync(p.Customer.Id).ConfigureAwait(false);
+                                    if (customer is null)
+                                    {
+                                        result.Errors.Add($"Customer with ID {p.Customer.Id} not found");
+                                        result.Failed++;
+                                        break;
+                                    }
+
+                                    printingProjectDto.Customer = customer;
+
+                                    // Get Model Design DTO
+                                    var modelDto = await vm.GetModelDesignAsync(p.ModelDesign.Id).ConfigureAwait(false);
+                                    if (modelDto is null)
+                                    {
+                                        result.Errors.Add($"Model with ID {p.ModelDesign.Id} not found");
+                                        result.Failed++;
+                                        break;
+                                    }
+                                    printingProjectDto.ModelDesign = modelDto;
+                                    
+                                    // Get Filaments from list of IDs
+                                    var filaments = new List<FilamentDto>();
+                                    foreach (var pFilament in p.Filaments)
+                                    {
+                                        var filament = await vm.GetFilamentAsync(pFilament.Id).ConfigureAwait(false);
+                                        if (filament is null)
+                                        {
+                                            result.Errors.Add($"Filament with ID {pFilament.Id} not found");
+                                            result.Failed++;
+                                            break;
+                                        }
+                                        filaments.Add(filament);
+                                    }
+
+                                    p.Filaments = filaments;
+                                    
+                                    await vm.EditPrintingProjectAsync(printingProjectDto).ConfigureAwait(false);
+                                    result.Updated++;
+                                    break;
+
+                                case var (v, _) when v != ValidationResult.Success:
+                                    // validation error
+                                    result.Errors.Add(v.ErrorMessage ?? $"{nameof(vm.AddFilamentTypeAsync)} failed");
+                                    break;
+                            }
                         }
 
                         break;
