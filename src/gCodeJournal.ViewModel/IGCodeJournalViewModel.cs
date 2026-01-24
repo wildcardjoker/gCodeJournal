@@ -49,7 +49,7 @@ namespace gCodeJournal.ViewModel
         ///     A task representing the asynchronous operation; returns a ValidationResult indicating success or validation
         ///     errors.
         /// </returns>
-        Task<ValidationResult> AddFilamentAsync(FilamentDto filamentDto);
+        Task<DbUpdateResult> AddFilamentAsync(FilamentDto filamentDto);
 
         /// <summary>
         ///     Adds a new filament color asynchronously.
@@ -66,7 +66,7 @@ namespace gCodeJournal.ViewModel
         ///     A task representing the asynchronous operation; returns a ValidationResult indicating success or validation
         ///     errors.
         /// </returns>
-        Task<ValidationResult> AddFilamentColourAsync(FilamentColourDto filamentColourDto);
+        Task<DbUpdateResult> AddFilamentColourAsync(FilamentColourDto filamentColourDto);
 
         /// <summary>
         ///     Adds a new filament type asynchronously.
@@ -83,7 +83,7 @@ namespace gCodeJournal.ViewModel
         ///     A task representing the asynchronous operation; returns a ValidationResult indicating success or validation
         ///     errors.
         /// </returns>
-        Task<ValidationResult> AddFilamentTypeAsync(FilamentTypeDto filamentTypeDto);
+        Task<DbUpdateResult> AddFilamentTypeAsync(FilamentTypeDto filamentTypeDto);
 
         /// <summary>
         ///     Adds a new manufacturer asynchronously.
@@ -95,7 +95,7 @@ namespace gCodeJournal.ViewModel
         /// </remarks>
         /// <returns>A task representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown if <paramref name="manufacturer" /> is <c>null</c>.</exception>
-        Task<ValidationResult> AddManufacturerAsync(Manufacturer manufacturer);
+        Task AddManufacturerAsync(Manufacturer manufacturer);
 
         /// <summary>
         ///     Adds a new manufacturer asynchronously using a DTO.
@@ -105,7 +105,7 @@ namespace gCodeJournal.ViewModel
         ///     A task representing the asynchronous operation; returns a <see cref="ValidationResult" /> indicating success or
         ///     validation errors.
         /// </returns>
-        Task<ValidationResult> AddManufacturerAsync(ManufacturerDto manufacturer);
+        Task<DbUpdateResult> AddManufacturerAsync(ManufacturerDto manufacturer);
 
         /// <summary>
         ///     Adds a new model design asynchronously.
@@ -122,7 +122,7 @@ namespace gCodeJournal.ViewModel
         ///     A task representing the asynchronous operation; returns a ValidationResult indicating success or validation
         ///     errors.
         /// </returns>
-        Task<ValidationResult> AddModelDesignAsync(ModelDesignDto modelDesignDto);
+        Task<DbUpdateResult> AddModelDesignAsync(ModelDesignDto modelDesignDto);
 
         /// <summary>
         ///     Adds a new printing project asynchronously.
@@ -139,7 +139,7 @@ namespace gCodeJournal.ViewModel
         ///     A task representing the asynchronous operation; returns a ValidationResult indicating success or validation
         ///     errors.
         /// </returns>
-        Task<ValidationResult> AddPrintingProjectAsync(PrintingProjectDto projectDto);
+        Task<DbUpdateResult> AddPrintingProjectAsync(PrintingProjectDto projectDto);
 
         // Delete operations (DTO-based)
         /// <summary>

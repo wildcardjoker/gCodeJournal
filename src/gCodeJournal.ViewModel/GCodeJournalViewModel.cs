@@ -161,15 +161,20 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
     }
 
     /// <inheritdoc />
-    public async Task<ValidationResult> AddFilamentAsync(FilamentDto filamentDto)
+    public async Task<DbUpdateResult> AddFilamentAsync(FilamentDto filamentDto)
     {
         var validation = ValidateFilamentDto(filamentDto);
         if (validation != ValidationResult.Success)
         {
-            return validation;
+            return new DbUpdateResult(validation, AddRecordResult.Failed);
         }
 
-        // Build filament entity and attach existing related entities if present
+        var existing = await GetFilamentAsync(filamentDto.Id).ConfigureAwait(false);
+        // Assume filament already exists
+        var result = AddRecordResult.Exists;
+        if (existing is null)
+        {
+                    // Build filament entity and attach existing related entities if present
         var filament = new Filament
         {
             CostPerWeight    = filamentDto.CostPerWeight,
@@ -179,10 +184,11 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
             FilamentTypeId   = filamentDto.FilamentType.Id,
             ManufacturerId   = filamentDto.Manufacturer.Id
         };
-
         await _db.Filaments.AddAsync(filament).ConfigureAwait(false);
         await _db.SaveChangesAsync().ConfigureAwait(false);
-        return ValidationResult.Success;
+        result = AddRecordResult.Added;
+        }
+        return new DbUpdateResult(ValidationResult.Success, result);
     }
 
     /// <inheritdoc />
@@ -194,21 +200,24 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
     }
 
     /// <inheritdoc />
-    public async Task<ValidationResult> AddFilamentColourAsync(FilamentColourDto filamentColourDto)
+    public async Task<DbUpdateResult> AddFilamentColourAsync(FilamentColourDto filamentColourDto)
     {
         var validation = ValidateFilamentColourDto(filamentColourDto);
         if (validation != ValidationResult.Success)
         {
-            return validation;
+            return new DbUpdateResult(validation, AddRecordResult.Failed);
         }
 
         var col = await GetOrCreateFilamentColourAsync(filamentColourDto).ConfigureAwait(false);
+        // Assume colour already exists
+        var result = AddRecordResult.Exists;
         if (col.Id == 0)
         {
             await _db.SaveChangesAsync().ConfigureAwait(false);
+            result = AddRecordResult.Added;
         }
 
-        return ValidationResult.Success;
+        return new DbUpdateResult(ValidationResult.Success, result);
     }
 
     /// <inheritdoc />
@@ -220,50 +229,56 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
     }
 
     /// <inheritdoc />
-    public async Task<ValidationResult> AddFilamentTypeAsync(FilamentTypeDto filamentTypeDto)
+    public async Task<DbUpdateResult> AddFilamentTypeAsync(FilamentTypeDto filamentTypeDto)
     {
         var validation = ValidateFilamentTypeDto(filamentTypeDto);
         if (validation != ValidationResult.Success)
         {
-            return validation;
+            return new DbUpdateResult(validation, AddRecordResult.Failed);
         }
 
         var typ = await GetOrCreateFilamentTypeAsync(filamentTypeDto).ConfigureAwait(false);
+        // Assume filament type already exists
+        var result = AddRecordResult.Exists;
+
         if (typ.Id == 0)
         {
             await _db.SaveChangesAsync().ConfigureAwait(false);
+            result = AddRecordResult.Added;
         }
 
-        return ValidationResult.Success;
+        return new DbUpdateResult(ValidationResult.Success, result);
     }
 
     #region Implementation of IGCodeJournalViewModel
     /// <inheritdoc />
-    public async Task<ValidationResult> AddManufacturerAsync(ManufacturerDto manufacturerDto)
+    public async Task<DbUpdateResult> AddManufacturerAsync(ManufacturerDto manufacturerDto)
     {
         var validation = ValidateManufacturerDto(manufacturerDto);
         if (validation != ValidationResult.Success)
         {
-            return validation;
+            return new DbUpdateResult(validation, AddRecordResult.Failed);
         }
 
         var man = await GetOrCreateManufacturerAsync(manufacturerDto).ConfigureAwait(false);
+        // Assume manufacturer already exists
+        var result = AddRecordResult.Exists;
         if (man.Id == 0)
         {
             await _db.SaveChangesAsync().ConfigureAwait(false);
+            result = AddRecordResult.Added;
         }
 
-        return ValidationResult.Success;
+        return new DbUpdateResult(ValidationResult.Success, result);
     }
     #endregion
 
     /// <inheritdoc />
-    public async Task<ValidationResult> AddManufacturerAsync(Manufacturer manufacturer)
+    public async Task AddManufacturerAsync(Manufacturer manufacturer)
     {
         ArgumentNullException.ThrowIfNull(manufacturer);
         await _db.Manufacturers.AddAsync(manufacturer).ConfigureAwait(false);
         await _db.SaveChangesAsync().ConfigureAwait(false);
-        return ValidationResult.Success!;
     }
 
     /// <inheritdoc />
@@ -275,21 +290,24 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
     }
 
     /// <inheritdoc />
-    public async Task<ValidationResult> AddModelDesignAsync(ModelDesignDto modelDesignDto)
+    public async Task<DbUpdateResult> AddModelDesignAsync(ModelDesignDto modelDesignDto)
     {
         var validation = ValidateModelDesignDto(modelDesignDto);
         if (validation != ValidationResult.Success)
         {
-            return validation;
+            return new DbUpdateResult(validation, AddRecordResult.Failed);
         }
 
         var model = await GetOrCreateModelDesignAsync(modelDesignDto).ConfigureAwait(false);
+        // Assume design already exists
+        var result = AddRecordResult.Exists;
         if (model.Id == 0)
         {
             await _db.SaveChangesAsync().ConfigureAwait(false);
+            result = AddRecordResult.Added;
         }
 
-        return ValidationResult.Success;
+        return new DbUpdateResult(ValidationResult.Success, result);
     }
 
     /// <inheritdoc />
@@ -301,14 +319,19 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
     }
 
     /// <inheritdoc />
-    public async Task<ValidationResult> AddPrintingProjectAsync(PrintingProjectDto projectDto)
+    public async Task<DbUpdateResult> AddPrintingProjectAsync(PrintingProjectDto projectDto)
     {
         var validation = ValidatePrintingProjectDto(projectDto);
         if (validation != ValidationResult.Success)
         {
-            return validation;
+            return new DbUpdateResult(validation, AddRecordResult.Failed);
         }
 
+        var existing = await GetPrintingProjectAsync(projectDto.Id).ConfigureAwait(false);
+        if (existing is not null)
+        {
+            return new DbUpdateResult(ValidationResult.Success, AddRecordResult.Exists);
+        }
         // Resolve or create Customer
         Customer? customer = null;
         if (projectDto.Customer != null)
@@ -379,7 +402,7 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
 
         await _db.PrintingProjects.AddAsync(project).ConfigureAwait(false);
         await _db.SaveChangesAsync().ConfigureAwait(false);
-        return ValidationResult.Success;
+        return new DbUpdateResult(ValidationResult.Success, AddRecordResult.Added);
     }
 
     // --- Edit operations for DTOs -------------------------------------------------
