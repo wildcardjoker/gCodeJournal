@@ -14,6 +14,11 @@ public class PrintingProjectDto(
     List<FilamentDto> filaments)
 {
     #region Constructors
+    /// <summary>
+    /// Parameterless constructor to support serializers and CsvHelper when a factory is not provided.
+    /// </summary>
+    public PrintingProjectDto()
+        : this(0, 0m, DateOnly.FromDateTime(DateTime.Now), null, null, null, new List<FilamentDto>()) { }
     public PrintingProjectDto(decimal cost, DateOnly submitted, DateOnly? completed, CustomerDto? customer, ModelDesignDto? modelDesign, List<FilamentDto> filaments) :
         this(0, cost, submitted, completed, customer, modelDesign, filaments) {}
     #endregion
