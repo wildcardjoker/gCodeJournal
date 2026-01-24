@@ -166,7 +166,7 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                                     break;
 
                                 case (var v, AddRecordResult.Exists) when v == ValidationResult.Success:
-                                    // Exists - check if name matches
+                                    // Exists - check that properties match
                                     var customer = await vm.GetCustomerAsync(c.Id).ConfigureAwait(false);
                                     if (customer is null)
                                     {
@@ -180,6 +180,7 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                                         result.Skipped++;
                                         break;
                                     }
+
                                     // Modify existing customer
                                     appLogger.LogDebug("Modifying existing customer {@Customer}; updating to {@NewName}", customer, c.Name);
                                     customer.Name = c.Name;
@@ -211,7 +212,7 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                                     break;
 
                                 case (var v, AddRecordResult.Exists) when v == ValidationResult.Success:
-                                    // Exists - check if name matches
+                                    // Exists - check that properties match
                                     var manufacturer = await vm.GetManufacturerAsync(m.Id).ConfigureAwait(false);
                                     if (manufacturer is null)
                                     {
@@ -256,24 +257,24 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                                     break;
 
                                 case (var v, AddRecordResult.Exists) when v == ValidationResult.Success:
-                                    // Exists - check if name matches
-                                    var customer = await vm.GetFilamentColourAsync(c.Id).ConfigureAwait(false);
-                                    if (customer is null)
+                                    // Exists - check that properties match
+                                    var filamentColour = await vm.GetFilamentColourAsync(c.Id).ConfigureAwait(false);
+                                    if (filamentColour is null)
                                     {
                                         result.Errors.Add($"Filament colour with ID {c.Id} not found");
                                         result.Failed++;
                                         break;
                                     }
 
-                                    if (customer.Description.Equals(c.Description, StringComparison.OrdinalIgnoreCase))
+                                    if (filamentColour.Description.Equals(c.Description, StringComparison.OrdinalIgnoreCase))
                                     {
                                         result.Skipped++;
                                         break;
                                     }
-                                    // Modify existing customer
-                                    appLogger.LogDebug("Modifying existing filament colour {@FilamentColour}; updating to {@NewDescription}", customer, c.Description);
-                                    customer.Description = c.Description;
-                                    await vm.EditFilamentColourAsync(customer).ConfigureAwait(false);
+                                    // Modify existing record
+                                    appLogger.LogDebug("Modifying existing filament colour {@FilamentColour}; updating to {@NewDescription}", filamentColour, c.Description);
+                                    filamentColour.Description = c.Description;
+                                    await vm.EditFilamentColourAsync(filamentColour).ConfigureAwait(false);
                                     result.Updated++;
                                     break;
 
@@ -301,24 +302,24 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                                     break;
 
                                 case (var v, AddRecordResult.Exists) when v == ValidationResult.Success:
-                                    // Exists - check if name matches
-                                    var customer = await vm.GetFilamentTypeAsync(t.Id).ConfigureAwait(false);
-                                    if (customer is null)
+                                    // Exists - check that properties match
+                                    var filamentType = await vm.GetFilamentTypeAsync(t.Id).ConfigureAwait(false);
+                                    if (filamentType is null)
                                     {
                                         result.Errors.Add($"Filament type with ID {t.Id} not found");
                                         result.Failed++;
                                         break;
                                     }
 
-                                    if (customer.Description.Equals(t.Description, StringComparison.OrdinalIgnoreCase))
+                                    if (filamentType.Description.Equals(t.Description, StringComparison.OrdinalIgnoreCase))
                                     {
                                         result.Skipped++;
                                         break;
                                     }
-                                    // Modify existing customer
-                                    appLogger.LogDebug("Modifying existing filament type {@FilamentType}; updating to {@NewDescription}", customer, t.Description);
-                                    customer.Description = t.Description;
-                                    await vm.EditFilamentTypeAsync(customer).ConfigureAwait(false);
+                                    // Modify existing filament type
+                                    appLogger.LogDebug("Modifying existing filament type {@FilamentType}; updating to {@NewDescription}", filamentType, t.Description);
+                                    filamentType.Description = t.Description;
+                                    await vm.EditFilamentTypeAsync(filamentType).ConfigureAwait(false);
                                     result.Updated++;
                                     break;
 
@@ -345,7 +346,7 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                                     break;
 
                                 case (var v, AddRecordResult.Exists) when v == ValidationResult.Success:
-                                    // Exists - check if name matches
+                                    // Exists - check that properties match
                                     var filamentDto = await vm.GetFilamentAsync(f.Id).ConfigureAwait(false);
                                     if (filamentDto is null)
                                     {
