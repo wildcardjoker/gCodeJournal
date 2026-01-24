@@ -12,6 +12,7 @@ using DTOs;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Model;
+using Maps;
 #endregion
 
 public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
@@ -117,6 +118,8 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
         };
 
         using var csv = new CsvReader(sr, csvConfig);
+        // Register CSV class maps for DTOs that require custom mapping
+        csv.Context.RegisterClassMap<FilamentMap>();
 
         // Try to detect entity from filename
         var entity = DetectEntityFromFileName(fileName);
@@ -329,12 +332,76 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                         break;
 
                     case ImportEntity.Filaments:
-                        // Use the dynamic reader and reuse ProcessRowAsync which already contains robust parsing logic for filaments (handles multiple header name variants).
-                        var filamentRecords = csv.GetRecords<dynamic>();
-                        foreach (var rec in filamentRecords.Select(r => (IDictionary<string, object>) r))
+                        var filamentRecords = csv.GetRecords<FilamentDto>();
+                        foreach (var f in filamentRecords)
                         {
-                            appLogger.LogDebug("Processing dynamic Filaments record: {@Record}", rec);
-                            await ProcessRowAsync(ImportEntity.Filaments, rec, result, updateExisting, ct, existingMappings, appLogger).ConfigureAwait(false);
+                            appLogger.LogDebug("Processing Filament DTO: {@DtoId} ({@DtoProductId})", f.Id, f.ProductId);
+                            var r = await vm.AddFilamentAsync(f).ConfigureAwait(false);
+                            switch (r)
+                            {
+                                case (var v, AddRecordResult.Added) when v == ValidationResult.Success:
+                                    // added
+                                    result.Created++;
+                                    break;
+
+                                case (var v, AddRecordResult.Exists) when v == ValidationResult.Success:
+                                    // Exists - check if name matches
+                                    var filamentDto = await vm.GetFilamentAsync(f.Id).ConfigureAwait(false);
+                                    if (filamentDto is null)
+                                    {
+                                        result.Errors.Add($"Filament with ID {f.Id} not found");
+                                        result.Failed++;
+                                        break;
+                                    }
+
+                                    var comparisonResult = filamentDto.CompareTo(f);
+                                    if (comparisonResult.IsMatch)
+                                    {
+                                        result.Skipped++;
+                                        break;
+                                    }
+
+                                    // Modify existing filament
+                                    appLogger.LogDebug("Modifying existing filament {@Filament}", filamentDto);
+                                    appLogger.LogDebug("Properties to be updated: {@Properties}", string.Join(',',comparisonResult.MismatchedProperties));
+                                    filamentDto.CostPerWeight = f.CostPerWeight;
+                                    filamentDto.ProductId= f.ProductId;
+                                    filamentDto.ReorderLink = f.ReorderLink;
+                                    // Get DTOs for related entities
+                                    var filamentColour = await vm.GetFilamentColourAsync(f.FilamentColour.Id).ConfigureAwait(false);
+                                    if (filamentColour is null)
+                                    {
+                                        result.Errors.Add($"FilamentColour with ID {f.FilamentColour.Id} not found");
+                                        result.Failed++;
+                                        break;
+                                    }
+                                    filamentDto.FilamentColour = filamentColour;
+                                    var filamentType= await vm.GetFilamentTypeAsync(f.FilamentType.Id).ConfigureAwait(false);
+                                    if (filamentType is null)
+                                    {
+                                        result.Errors.Add($"FilamentType with ID {f.FilamentType.Id} not found");
+                                        result.Failed++;
+                                        break;
+                                    }
+                                    filamentDto.FilamentType = filamentType;
+                                    var manufacturer= await vm.GetManufacturerAsync(f.Manufacturer.Id).ConfigureAwait(false);
+                                    if (manufacturer is null)
+                                    {
+                                        result.Errors.Add($"Manufacturer with ID {f.Manufacturer.Id} not found");
+                                        result.Failed++;
+                                        break;
+                                    }
+                                    filamentDto.Manufacturer = manufacturer;
+                                    await vm.EditFilamentAsync(filamentDto).ConfigureAwait(false);
+                                    result.Updated++;
+                                    break;
+
+                                case var (v, _) when v != ValidationResult.Success:
+                                    // validation error
+                                    result.Errors.Add(v.ErrorMessage ?? $"{nameof(vm.AddFilamentTypeAsync)} failed");
+                                    break;
+                            }
+
                         }
 
                         break;
@@ -1001,5 +1068,7 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
 
             return DateTime.TryParse(s, CultureInfo.InvariantCulture, DateTimeStyles.None, out var dt) ? DateOnly.FromDateTime(dt) : DateOnly.MinValue;
         }
+
+
     }
 }
