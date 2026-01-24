@@ -14,6 +14,12 @@ public class FilamentDto(
     ManufacturerDto   manufacturer)
 {
     #region Constructors
+    /// <summary>
+    /// Parameterless constructor required by some serializers and CsvHelper when no factory is provided.
+    /// Creates a minimal instance with default nested DTOs.
+    /// </summary>
+    public FilamentDto()
+        : this(0, 0m, null, null, new FilamentColourDto(0, string.Empty), new FilamentTypeDto(0, string.Empty), new ManufacturerDto(0, string.Empty)) { }
     /// <inheritdoc />
     public FilamentDto(
         decimal           costPerWeight,
