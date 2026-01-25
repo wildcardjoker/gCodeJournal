@@ -1,18 +1,28 @@
-﻿namespace gCodeJournal.ViewModel;
+﻿// gCodeJournal.ViewModel
+
+namespace gCodeJournal.ViewModel;
 
 #region Using Directives
 using System.ComponentModel.DataAnnotations;
 using DTOs;
+using Import;
 using Mapping;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Microsoft.Win32;
 using Model;
 #endregion
 
 /// <inheritdoc />
 public class GCodeJournalViewModel : IGCodeJournalViewModel
 {
+    #region Constants
+    const string GCodeJournalRegistryPath = @"HKEY_CURRENT_USER\SOFTWARE\WildCardJoker\gCodeJournal";
+    const string ImportPathRegistryKey    = "ImportPath";
+    #endregion
+
     #region Fields
-    private readonly GCodeJournalDbContext _db;
+    readonly GCodeJournalDbContext _db;
     #endregion
 
     #region Constructors
@@ -40,23 +50,31 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
     }
 
     /// <inheritdoc />
-    public async Task<ValidationResult> AddCustomerAsync(CustomerDto customerDto)
+    public async Task<DbUpdateResult> AddCustomerAsync(CustomerDto customerDto)
     {
         var validation = ValidateCustomerDto(customerDto);
         if (validation != ValidationResult.Success)
         {
-            return validation;
+            return new DbUpdateResult(validation, AddRecordResult.Failed);
         }
 
         // Use helper to resolve or create customer (ensures tracked entity)
         var customer = await GetOrCreateCustomerAsync(customerDto).ConfigureAwait(false);
+
+        // Assume record already exists
+        var result = AddRecordResult.Exists;
+
         // If new entity was created its Id will be 0 until saved; save to persist
-        if (customer.Id == 0)
+        if (customer.Id != 0)
         {
-            await _db.SaveChangesAsync().ConfigureAwait(false);
+            return new DbUpdateResult(ValidationResult.Success, result);
         }
 
-        return ValidationResult.Success;
+        // New entity created
+        result = AddRecordResult.Added;
+        await _db.SaveChangesAsync().ConfigureAwait(false);
+
+        return new DbUpdateResult(ValidationResult.Success, result);
     }
 
     /// <inheritdoc />
@@ -68,28 +86,37 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
     }
 
     /// <inheritdoc />
-    public async Task<ValidationResult> AddFilamentAsync(FilamentDto filamentDto)
+    public async Task<DbUpdateResult> AddFilamentAsync(FilamentDto filamentDto)
     {
         var validation = ValidateFilamentDto(filamentDto);
         if (validation != ValidationResult.Success)
         {
-            return validation;
+            return new DbUpdateResult(validation, AddRecordResult.Failed);
         }
 
-        // Build filament entity and attach existing related entities if present
-        var filament = new Filament
-        {
-            CostPerWeight    = filamentDto.CostPerWeight,
-            ProductId        = filamentDto.ProductId,
-            ReorderLink      = filamentDto.ReorderLink,
-            FilamentColourId = filamentDto.FilamentColour.Id,
-            FilamentTypeId   = filamentDto.FilamentType.Id,
-            ManufacturerId   = filamentDto.Manufacturer.Id
-        };
+        var existing = await GetFilamentAsync(filamentDto.Id).ConfigureAwait(false);
 
-        await _db.Filaments.AddAsync(filament).ConfigureAwait(false);
-        await _db.SaveChangesAsync().ConfigureAwait(false);
-        return ValidationResult.Success;
+        // Assume filament already exists
+        var result = AddRecordResult.Exists;
+        if (existing is null)
+        {
+            // Build filament entity and attach existing related entities if present
+            var filament =
+                new Filament
+                {
+                    CostPerWeight    = filamentDto.CostPerWeight,
+                    ProductId        = filamentDto.ProductId,
+                    ReorderLink      = filamentDto.ReorderLink,
+                    FilamentColourId = filamentDto.FilamentColour.Id,
+                    FilamentTypeId   = filamentDto.FilamentType.Id,
+                    ManufacturerId   = filamentDto.Manufacturer.Id
+                };
+            await _db.Filaments.AddAsync(filament).ConfigureAwait(false);
+            await _db.SaveChangesAsync().ConfigureAwait(false);
+            result = AddRecordResult.Added;
+        }
+
+        return new DbUpdateResult(ValidationResult.Success, result);
     }
 
     /// <inheritdoc />
@@ -101,21 +128,25 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
     }
 
     /// <inheritdoc />
-    public async Task<ValidationResult> AddFilamentColourAsync(FilamentColourDto filamentColourDto)
+    public async Task<DbUpdateResult> AddFilamentColourAsync(FilamentColourDto filamentColourDto)
     {
         var validation = ValidateFilamentColourDto(filamentColourDto);
         if (validation != ValidationResult.Success)
         {
-            return validation;
+            return new DbUpdateResult(validation, AddRecordResult.Failed);
         }
 
         var col = await GetOrCreateFilamentColourAsync(filamentColourDto).ConfigureAwait(false);
+
+        // Assume colour already exists
+        var result = AddRecordResult.Exists;
         if (col.Id == 0)
         {
             await _db.SaveChangesAsync().ConfigureAwait(false);
+            result = AddRecordResult.Added;
         }
 
-        return ValidationResult.Success;
+        return new DbUpdateResult(ValidationResult.Success, result);
     }
 
     /// <inheritdoc />
@@ -127,50 +158,58 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
     }
 
     /// <inheritdoc />
-    public async Task<ValidationResult> AddFilamentTypeAsync(FilamentTypeDto filamentTypeDto)
+    public async Task<DbUpdateResult> AddFilamentTypeAsync(FilamentTypeDto filamentTypeDto)
     {
         var validation = ValidateFilamentTypeDto(filamentTypeDto);
         if (validation != ValidationResult.Success)
         {
-            return validation;
+            return new DbUpdateResult(validation, AddRecordResult.Failed);
         }
 
         var typ = await GetOrCreateFilamentTypeAsync(filamentTypeDto).ConfigureAwait(false);
+
+        // Assume filament type already exists
+        var result = AddRecordResult.Exists;
+
         if (typ.Id == 0)
         {
             await _db.SaveChangesAsync().ConfigureAwait(false);
+            result = AddRecordResult.Added;
         }
 
-        return ValidationResult.Success;
+        return new DbUpdateResult(ValidationResult.Success, result);
     }
 
     #region Implementation of IGCodeJournalViewModel
     /// <inheritdoc />
-    public async Task<ValidationResult> AddManufacturerAsync(ManufacturerDto manufacturerDto)
+    public async Task<DbUpdateResult> AddManufacturerAsync(ManufacturerDto manufacturerDto)
     {
         var validation = ValidateManufacturerDto(manufacturerDto);
         if (validation != ValidationResult.Success)
         {
-            return validation;
+            return new DbUpdateResult(validation, AddRecordResult.Failed);
         }
 
         var man = await GetOrCreateManufacturerAsync(manufacturerDto).ConfigureAwait(false);
+
+        // Assume manufacturer already exists
+        var result = AddRecordResult.Exists;
         if (man.Id == 0)
         {
             await _db.SaveChangesAsync().ConfigureAwait(false);
+            result = AddRecordResult.Added;
         }
 
-        return ValidationResult.Success;
+        return new DbUpdateResult(ValidationResult.Success, result);
     }
     #endregion
 
     /// <inheritdoc />
-    public async Task<ValidationResult> AddManufacturerAsync(Manufacturer manufacturer)
+    public async Task AddManufacturerAsync(Manufacturer manufacturer)
     {
         ArgumentNullException.ThrowIfNull(manufacturer);
         await _db.Manufacturers.AddAsync(manufacturer).ConfigureAwait(false);
         await _db.SaveChangesAsync().ConfigureAwait(false);
-        return ValidationResult.Success!;
     }
 
     /// <inheritdoc />
@@ -182,21 +221,25 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
     }
 
     /// <inheritdoc />
-    public async Task<ValidationResult> AddModelDesignAsync(ModelDesignDto modelDesignDto)
+    public async Task<DbUpdateResult> AddModelDesignAsync(ModelDesignDto modelDesignDto)
     {
         var validation = ValidateModelDesignDto(modelDesignDto);
         if (validation != ValidationResult.Success)
         {
-            return validation;
+            return new DbUpdateResult(validation, AddRecordResult.Failed);
         }
 
         var model = await GetOrCreateModelDesignAsync(modelDesignDto).ConfigureAwait(false);
+
+        // Assume design already exists
+        var result = AddRecordResult.Exists;
         if (model.Id == 0)
         {
             await _db.SaveChangesAsync().ConfigureAwait(false);
+            result = AddRecordResult.Added;
         }
 
-        return ValidationResult.Success;
+        return new DbUpdateResult(ValidationResult.Success, result);
     }
 
     /// <inheritdoc />
@@ -208,12 +251,18 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
     }
 
     /// <inheritdoc />
-    public async Task<ValidationResult> AddPrintingProjectAsync(PrintingProjectDto projectDto)
+    public async Task<DbUpdateResult> AddPrintingProjectAsync(PrintingProjectDto projectDto)
     {
         var validation = ValidatePrintingProjectDto(projectDto);
         if (validation != ValidationResult.Success)
         {
-            return validation;
+            return new DbUpdateResult(validation, AddRecordResult.Failed);
+        }
+
+        var existing = await GetPrintingProjectAsync(projectDto.Id).ConfigureAwait(false);
+        if (existing is not null)
+        {
+            return new DbUpdateResult(ValidationResult.Success, AddRecordResult.Exists);
         }
 
         // Resolve or create Customer
@@ -245,11 +294,12 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
                 if (fEntity == null)
                 {
                     // create filament entity, but attach related lookups (may be newly created and tracked)
-                    fEntity = new Filament { CostPerWeight = fDto.CostPerWeight, ProductId = fDto.ProductId, ReorderLink = fDto.ReorderLink };
+                    fEntity = new Filament {CostPerWeight = fDto.CostPerWeight, ProductId = fDto.ProductId, ReorderLink = fDto.ReorderLink};
 
                     if (fDto.Manufacturer != null)
                     {
                         var man = await GetOrCreateManufacturerAsync(fDto.Manufacturer).ConfigureAwait(false);
+
                         // prefer navigation property to ensure correct relationship when 'man' is newly added
                         fEntity.Manufacturer = man;
                     }
@@ -273,19 +323,21 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
             }
         }
 
-        var project = new PrintingProject
-        {
-            Cost      = projectDto.Cost,
-            Submitted = projectDto.Submitted.ToDateTime(TimeOnly.MinValue),
-            Completed = projectDto.Completed?.ToDateTime(TimeOnly.MinValue),
-            Customer  = customer!,
-            Model     = model!,
-            Filaments = filaments
-        };
+        var project =
+            new PrintingProject
+            {
+                Cost      = projectDto.Cost,
+                Submitted = projectDto.Submitted.ToDateTime(TimeOnly.MinValue),
+                Completed = projectDto.Completed?.ToDateTime(TimeOnly.MinValue),
+                Customer  = customer!,
+                Model     = model!,
+                Filaments = filaments
+            };
 
         await _db.PrintingProjects.AddAsync(project).ConfigureAwait(false);
         await _db.SaveChangesAsync().ConfigureAwait(false);
-        return ValidationResult.Success;
+
+        return new DbUpdateResult(ValidationResult.Success, AddRecordResult.Added);
     }
 
     // --- Edit operations for DTOs -------------------------------------------------
@@ -311,6 +363,7 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
 
         existing.Name = customerDto.Name;
         await _db.SaveChangesAsync().ConfigureAwait(false);
+
         return ValidationResult.Success;
     }
 
@@ -357,6 +410,7 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
         }
 
         await _db.SaveChangesAsync().ConfigureAwait(false);
+
         return ValidationResult.Success;
     }
 
@@ -381,6 +435,7 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
 
         existing.Description = filamentColourDto.Description;
         await _db.SaveChangesAsync().ConfigureAwait(false);
+
         return ValidationResult.Success;
     }
 
@@ -405,6 +460,7 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
 
         existing.Description = filamentTypeDto.Description;
         await _db.SaveChangesAsync().ConfigureAwait(false);
+
         return ValidationResult.Success;
     }
 
@@ -429,6 +485,7 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
 
         existing.Name = manufacturerDto.Name;
         await _db.SaveChangesAsync().ConfigureAwait(false);
+
         return ValidationResult.Success;
     }
 
@@ -457,6 +514,7 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
         existing.Url         = modelDesignDto.Url;
 
         await _db.SaveChangesAsync().ConfigureAwait(false);
+
         return ValidationResult.Success;
     }
 
@@ -553,147 +611,278 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
         }
 
         await _db.SaveChangesAsync().ConfigureAwait(false);
+
         return ValidationResult.Success;
     }
 
     /// <inheritdoc />
-    public Task<List<CustomerDto>> GetAllCustomersAsync()
+    public Task<List<CustomerDto>> GetAllCustomersAsync() => _db.Customers.OrderBy(c => c.Name).Select(c => new CustomerDto(c.Id, c.Name)).ToListAsync();
+
+    /// <inheritdoc />
+    public Task<List<FilamentColourDto>> GetAllFilamentColoursAsync() =>
+        _db.FilamentColours.OrderBy(fc => fc.Description).Select(fc => new FilamentColourDto(fc.Id, fc.Description)).ToListAsync();
+
+    /// <inheritdoc />
+    public Task<List<FilamentDto>> GetAllFilamentsAsync() =>
+        _db
+            .Filaments.Include(f => f.Colour)
+            .Include(f => f.Manufacturer)
+            .Include(f => f.Type)
+            .OrderBy(f => f.Manufacturer.Name)
+            .ThenBy(f => f.Type.Description)
+            .ThenBy(f => f.Colour.Description)
+            .Select(f =>
+                        new FilamentDto(
+                            f.Id,
+                            f.CostPerWeight,
+                            f.ProductId,
+                            f.ReorderLink,
+                            new FilamentColourDto(f.Colour.Id, f.Colour.Description),
+                            new FilamentTypeDto(f.Type.Id, f.Type.Description),
+                            new ManufacturerDto(f.Manufacturer.Id, f.Manufacturer.Name)))
+            .ToListAsync();
+
+    /// <inheritdoc />
+    public Task<List<FilamentTypeDto>> GetAllFilamentTypesAsync() =>
+        _db.FilamentTypes.OrderBy(ft => ft.Description).Select(ft => new FilamentTypeDto(ft.Id, ft.Description)).ToListAsync();
+
+    /// <inheritdoc />
+    public Task<List<ManufacturerDto>> GetAllManufacturersAsync() =>
+        _db.Manufacturers.OrderBy(m => m.Name).Select(m => new ManufacturerDto(m.Id, m.Name)).ToListAsync();
+
+    /// <inheritdoc />
+    public Task<List<ModelDesignDto>> GetAllModelDesignsAsync() => _db
+                                                                   .ModelDesigns.OrderBy(md => md.Summary)
+                                                                   .Select(md => new ModelDesignDto(md.Id, md.Description, md.Length, md.Summary, md.Url))
+                                                                   .ToListAsync();
+
+    /// <inheritdoc />
+    public Task<List<PrintingProjectDto>> GetAllPrintingProjectsAsync() =>
+        _db
+            .PrintingProjects.Include(p => p.Customer)
+            .Include(p => p.Model)
+            .Include(p => p.Filaments)
+            .ThenInclude(f => f.Manufacturer)
+            .Include(p => p.Filaments)
+            .ThenInclude(f => f.Colour)
+            .Include(p => p.Filaments)
+            .ThenInclude(f => f.Type)
+            .Select(p =>
+                        new PrintingProjectDto(
+                            p.Id,
+                            p.Cost,
+                            DateOnly.FromDateTime(p.Submitted),
+                            p.Completed == null ? null : DateOnly.FromDateTime(p.Completed.Value),
+                            p.Customer  == null ? null : new CustomerDto(p.Customer.Id, p.Customer.Name),
+                            p.Model     == null ? null : new ModelDesignDto(p.Model.Id, p.Model.Description, p.Model.Length, p.Model.Summary, p.Model.Url),
+                            p
+                                .Filaments.Select(f =>
+                                                      new FilamentDto(
+                                                          f.Id,
+                                                          f.CostPerWeight,
+                                                          f.ProductId,
+                                                          f.ReorderLink,
+                                                          new FilamentColourDto(f.Colour.Id, f.Colour.Description),
+                                                          new FilamentTypeDto(f.Type.Id, f.Type.Description),
+                                                          new ManufacturerDto(f.Manufacturer.Id, f.Manufacturer.Name)))
+                                .ToList()))
+            .ToListAsync();
+
+    /// <inheritdoc />
+    public async Task<CustomerDto?> GetCustomerAsync(int id)
     {
-        return _db.Customers.OrderBy(c => c.Name).Select(c => new CustomerDto(c.Id, c.Name)).ToListAsync();
+        var c = await _db.Customers.FindAsync(id).ConfigureAwait(false);
+
+        return c == null ? null : new CustomerDto(c.Id, c.Name);
     }
 
     /// <inheritdoc />
-    public Task<List<FilamentColourDto>> GetAllFilamentColoursAsync()
+    public async Task<FilamentDto?> GetFilamentAsync(int id)
     {
-        return _db.FilamentColours.OrderBy(fc => fc.Description).Select(fc => new FilamentColourDto(fc.Id, fc.Description)).ToListAsync();
+        var f =
+            await _db
+                  .Filaments.Include(x => x.Colour)
+                  .Include(x => x.Manufacturer)
+                  .Include(x => x.Type)
+                  .FirstOrDefaultAsync(x => x.Id == id)
+                  .ConfigureAwait(false);
+        if (f == null)
+        {
+            return null;
+        }
+
+        return new FilamentDto(
+            f.Id,
+            f.CostPerWeight,
+            f.ProductId,
+            f.ReorderLink,
+            new FilamentColourDto(f.Colour.Id, f.Colour.Description),
+            new FilamentTypeDto(f.Type.Id, f.Type.Description),
+            new ManufacturerDto(f.Manufacturer.Id, f.Manufacturer.Name));
     }
 
     /// <inheritdoc />
-    public Task<List<FilamentDto>> GetAllFilamentsAsync()
+    public async Task<FilamentColourDto?> GetFilamentColourAsync(int id)
     {
-        return _db.Filaments.Include(f => f.Colour)
-                  .Include(f => f.Manufacturer)
-                  .Include(f => f.Type)
-                  .OrderBy(f => f.Manufacturer.Name)
-                  .ThenBy(f => f.Type.Description)
-                  .ThenBy(f => f.Colour.Description)
-                  .Select(f => new FilamentDto(
-                              f.Id,
-                              f.CostPerWeight,
-                              f.ProductId,
-                              f.ReorderLink,
-                              new FilamentColourDto(f.Colour.Id, f.Colour.Description),
-                              new FilamentTypeDto(f.Type.Id, f.Type.Description),
-                              new ManufacturerDto(f.Manufacturer.Id, f.Manufacturer.Name)))
-                  .ToListAsync();
+        var fc = await _db.FilamentColours.FindAsync(id).ConfigureAwait(false);
+
+        return fc == null ? null : new FilamentColourDto(fc.Id, fc.Description);
     }
 
     /// <inheritdoc />
-    public Task<List<FilamentTypeDto>> GetAllFilamentTypesAsync()
+    public async Task<FilamentTypeDto?> GetFilamentTypeAsync(int id)
     {
-        return _db.FilamentTypes.OrderBy(ft => ft.Description).Select(ft => new FilamentTypeDto(ft.Id, ft.Description)).ToListAsync();
+        var ft = await _db.FilamentTypes.FindAsync(id).ConfigureAwait(false);
+
+        return ft == null ? null : new FilamentTypeDto(ft.Id, ft.Description);
     }
 
     /// <inheritdoc />
-    public Task<List<ManufacturerDto>> GetAllManufacturersAsync()
+    public string? GetLastImportPath() =>
+        OperatingSystem.IsWindows() ? Registry.GetValue(GCodeJournalRegistryPath, ImportPathRegistryKey, null) as string : null;
+
+    /// <inheritdoc />
+    public async Task<ManufacturerDto?> GetManufacturerAsync(int id)
     {
-        return _db.Manufacturers.OrderBy(m => m.Name).Select(m => new ManufacturerDto(m.Id, m.Name)).ToListAsync();
+        var m = await _db.Manufacturers.FindAsync(id).ConfigureAwait(false);
+
+        return m == null ? null : new ManufacturerDto(m.Id, m.Name);
     }
 
     /// <inheritdoc />
-    public Task<List<ModelDesignDto>> GetAllModelDesignsAsync()
+    public async Task<ModelDesignDto?> GetModelDesignAsync(int id)
     {
-        return _db.ModelDesigns.OrderBy(md => md.Summary).Select(md => new ModelDesignDto(md.Id, md.Description, md.Length, md.Summary, md.Url)).ToListAsync();
+        var md = await _db.ModelDesigns.FindAsync(id).ConfigureAwait(false);
+
+        return md == null ? null : new ModelDesignDto(md.Id, md.Description, md.Length, md.Summary, md.Url);
     }
 
     /// <inheritdoc />
-    public Task<List<PrintingProjectDto>> GetAllPrintingProjectsAsync()
+    public async Task<PrintingProjectDto?> GetPrintingProjectAsync(int id)
     {
-        return _db.PrintingProjects.Include(p => p.Customer)
-                  .Include(p => p.Model)
-                  .Include(p => p.Filaments)
+        var p =
+            await _db
+                  .PrintingProjects.Include(pr => pr.Customer)
+                  .Include(pr => pr.Model)
+                  .Include(pr => pr.Filaments)
                   .ThenInclude(f => f.Manufacturer)
-                  .Include(p => p.Filaments)
+                  .Include(pr => pr.Filaments)
                   .ThenInclude(f => f.Colour)
-                  .Include(p => p.Filaments)
+                  .Include(pr => pr.Filaments)
                   .ThenInclude(f => f.Type)
-                  .Select(p => new PrintingProjectDto(
-                              p.Id,
-                              p.Cost,
-                              DateOnly.FromDateTime(p.Submitted),
-                              p.Completed == null ? null : DateOnly.FromDateTime(p.Completed.Value),
-                              p.Customer  == null ? null : new CustomerDto(p.Customer.Id, p.Customer.Name),
-                              p.Model     == null ? null : new ModelDesignDto(p.Model.Id, p.Model.Description, p.Model.Length, p.Model.Summary, p.Model.Url),
-                              p.Filaments.Select(f => new FilamentDto(
-                                                     f.Id,
-                                                     f.CostPerWeight,
-                                                     f.ProductId,
-                                                     f.ReorderLink,
-                                                     new FilamentColourDto(f.Colour.Id, f.Colour.Description),
-                                                     new FilamentTypeDto(f.Type.Id, f.Type.Description),
-                                                     new ManufacturerDto(f.Manufacturer.Id, f.Manufacturer.Name)))
-                               .ToList()))
-                  .ToListAsync();
+                  .FirstOrDefaultAsync(pr => pr.Id == id)
+                  .ConfigureAwait(false);
+
+        if (p == null)
+        {
+            return null;
+        }
+
+        var filaments =
+            p
+                .Filaments.Select(f =>
+                                      new FilamentDto(
+                                          f.Id,
+                                          f.CostPerWeight,
+                                          f.ProductId,
+                                          f.ReorderLink,
+                                          new FilamentColourDto(f.Colour.Id, f.Colour.Description),
+                                          new FilamentTypeDto(f.Type.Id, f.Type.Description),
+                                          new ManufacturerDto(f.Manufacturer.Id, f.Manufacturer.Name)))
+                .ToList();
+
+        return new PrintingProjectDto(
+            p.Id,
+            p.Cost,
+            DateOnly.FromDateTime(p.Submitted),
+            p.Completed == null ? null : DateOnly.FromDateTime(p.Completed.Value),
+            p.Customer  == null ? null : new CustomerDto(p.Customer.Id, p.Customer.Name),
+            p.Model     == null ? null : new ModelDesignDto(p.Model.Id, p.Model.Description, p.Model.Length, p.Model.Summary, p.Model.Url),
+            filaments);
+    }
+
+    /// <inheritdoc />
+    public async Task<List<CsvImporter.ImportFileResult>> ImportFromCsvAsync(
+        string            csvPath,
+        ILogger           appLogger,
+        bool              updateExisting = true,
+        char              delimiter      = ',',
+        CancellationToken ct             = default)
+    {
+        var importer = new CsvImporter(_db, this);
+
+        return await importer.ImportFromPathAsync(csvPath, appLogger, updateExisting, delimiter, ct).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<CsvImporter.ImportFileResult> ImportFromCsvAsync(
+        Stream            stream,
+        ILogger           appLogger,
+        string?           fileName       = null,
+        bool              updateExisting = true,
+        char              delimiter      = ',',
+        CancellationToken ct             = default)
+    {
+        var importer = new CsvImporter(_db, this);
+
+        return await importer.ImportStreamAsync(stream, appLogger, fileName, updateExisting, delimiter, ct).ConfigureAwait(false);
+    }
+
+    public void SetImportPath(string path)
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            Registry.SetValue(GCodeJournalRegistryPath, ImportPathRegistryKey, path);
+        }
     }
     #endregion
 
     #region Validation helpers
-    private static ValidationResult ValidateCustomerDto(CustomerDto dto)
+    static ValidationResult ValidateCustomerDto(CustomerDto dto)
     {
         if (dto is null)
         {
             return new ValidationResult("Customer DTO is required");
         }
 
-        if (string.IsNullOrWhiteSpace(dto.Name))
-        {
-            return new ValidationResult("Customer name is required", new[] {nameof(dto.Name)});
-        }
-
-        return ValidationResult.Success!;
+        return string.IsNullOrWhiteSpace(dto.Name) ? new ValidationResult("Customer name is required", [nameof(dto.Name)]) : ValidationResult.Success!;
     }
 
-    private static ValidationResult ValidateManufacturerDto(ManufacturerDto dto)
+    static ValidationResult ValidateManufacturerDto(ManufacturerDto dto)
     {
         if (dto is null)
         {
             return new ValidationResult("Manufacturer DTO is required");
         }
 
-        return string.IsNullOrWhiteSpace(dto.Name) ? new ValidationResult("Manufacturer name is required", new[] {nameof(dto.Name)}) : ValidationResult.Success!;
+        return string.IsNullOrWhiteSpace(dto.Name) ? new ValidationResult("Manufacturer name is required", [nameof(dto.Name)]) : ValidationResult.Success!;
     }
 
-    private static ValidationResult ValidateFilamentColourDto(FilamentColourDto dto)
+    static ValidationResult ValidateFilamentColourDto(FilamentColourDto dto)
     {
         if (dto is null)
         {
             return new ValidationResult("Filament colour DTO is required");
         }
 
-        if (string.IsNullOrWhiteSpace(dto.Description))
-        {
-            return new ValidationResult("Filament colour description is required", new[] {nameof(dto.Description)});
-        }
-
-        return ValidationResult.Success!;
+        return string.IsNullOrWhiteSpace(dto.Description)
+                   ? new ValidationResult("Filament colour description is required", [nameof(dto.Description)])
+                   : ValidationResult.Success!;
     }
 
-    private static ValidationResult ValidateFilamentTypeDto(FilamentTypeDto dto)
+    static ValidationResult ValidateFilamentTypeDto(FilamentTypeDto dto)
     {
         if (dto is null)
         {
             return new ValidationResult("Filament type DTO is required");
         }
 
-        if (string.IsNullOrWhiteSpace(dto.Description))
-        {
-            return new ValidationResult("Filament type description is required", new[] {nameof(dto.Description)});
-        }
-
-        return ValidationResult.Success!;
+        return string.IsNullOrWhiteSpace(dto.Description)
+                   ? new ValidationResult("Filament type description is required", [nameof(dto.Description)])
+                   : ValidationResult.Success!;
     }
 
-    private static ValidationResult ValidateModelDesignDto(ModelDesignDto dto)
+    static ValidationResult ValidateModelDesignDto(ModelDesignDto dto)
     {
         if (dto is null)
         {
@@ -702,18 +891,13 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
 
         if (string.IsNullOrWhiteSpace(dto.Description))
         {
-            return new ValidationResult("ModelDesign description is required", new[] {nameof(dto.Description)});
+            return new ValidationResult("ModelDesign description is required", [nameof(dto.Description)]);
         }
 
-        if (dto.Length < 0)
-        {
-            return new ValidationResult("ModelDesign length must be non-negative", new[] {nameof(dto.Length)});
-        }
-
-        return ValidationResult.Success!;
+        return dto.Length < 0 ? new ValidationResult("ModelDesign length must be non-negative", [nameof(dto.Length)]) : ValidationResult.Success!;
     }
 
-    private static ValidationResult ValidateFilamentDto(FilamentDto dto)
+    static ValidationResult ValidateFilamentDto(FilamentDto dto)
     {
         if (dto is null)
         {
@@ -723,33 +907,28 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
         var errors = new List<ValidationResult>();
         if (dto.CostPerWeight < 0)
         {
-            errors.Add(new ValidationResult("Filament cost must be non-negative", new[] {nameof(dto.CostPerWeight)}));
+            errors.Add(new ValidationResult("Filament cost must be non-negative", [nameof(dto.CostPerWeight)]));
         }
 
         if (dto.Manufacturer is null)
         {
-            errors.Add(new ValidationResult("Filament manufacturer is required", new[] {nameof(dto.Manufacturer)}));
+            errors.Add(new ValidationResult("Filament manufacturer is required", [nameof(dto.Manufacturer)]));
         }
 
         if (dto.FilamentColour is null)
         {
-            errors.Add(new ValidationResult("Filament colour is required", new[] {nameof(dto.FilamentColour)}));
+            errors.Add(new ValidationResult("Filament colour is required", [nameof(dto.FilamentColour)]));
         }
 
         if (dto.FilamentType is null)
         {
-            errors.Add(new ValidationResult("Filament type is required", new[] {nameof(dto.FilamentType)}));
+            errors.Add(new ValidationResult("Filament type is required", [nameof(dto.FilamentType)]));
         }
 
-        if (errors.Count > 0)
-        {
-            return new ValidationResult(string.Join("; ", errors.Select(e => e.ErrorMessage)));
-        }
-
-        return ValidationResult.Success!;
+        return errors.Count > 0 ? new ValidationResult(string.Join("; ", errors.Select(e => e.ErrorMessage))) : ValidationResult.Success!;
     }
 
-    private static ValidationResult ValidatePrintingProjectDto(PrintingProjectDto dto)
+    static ValidationResult ValidatePrintingProjectDto(PrintingProjectDto dto)
     {
         if (dto is null)
         {
@@ -759,25 +938,20 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
         var errors = new List<ValidationResult>();
         if (dto.Cost < 0)
         {
-            errors.Add(new ValidationResult("Printing project cost must be non-negative", new[] {nameof(dto.Cost)}));
+            errors.Add(new ValidationResult("Printing project cost must be non-negative", [nameof(dto.Cost)]));
         }
 
         if (dto.Customer is null)
         {
-            errors.Add(new ValidationResult("Printing project must have a customer", new[] {nameof(dto.Customer)}));
+            errors.Add(new ValidationResult("Printing project must have a customer", [nameof(dto.Customer)]));
         }
 
         if (dto.ModelDesign is null)
         {
-            errors.Add(new ValidationResult("Printing project must have a model design", new[] {nameof(dto.ModelDesign)}));
+            errors.Add(new ValidationResult("Printing project must have a model design", [nameof(dto.ModelDesign)]));
         }
 
-        if (errors.Count > 0)
-        {
-            return new ValidationResult(string.Join("; ", errors.Select(e => e.ErrorMessage)));
-        }
-
-        return ValidationResult.Success!;
+        return errors.Count > 0 ? new ValidationResult(string.Join("; ", errors.Select(e => e.ErrorMessage))) : ValidationResult.Success!;
     }
     #endregion
 
@@ -802,6 +976,7 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
 
         _db.Customers.Remove(existing);
         await _db.SaveChangesAsync().ConfigureAwait(false);
+
         return ValidationResult.Success!;
     }
 
@@ -825,6 +1000,7 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
 
         _db.Filaments.Remove(existing);
         await _db.SaveChangesAsync().ConfigureAwait(false);
+
         return ValidationResult.Success!;
     }
 
@@ -856,6 +1032,7 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
 
         _db.FilamentColours.Remove(existing);
         await _db.SaveChangesAsync().ConfigureAwait(false);
+
         return ValidationResult.Success;
     }
 
@@ -887,6 +1064,7 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
 
         _db.FilamentTypes.Remove(existing);
         await _db.SaveChangesAsync().ConfigureAwait(false);
+
         return ValidationResult.Success;
     }
 
@@ -918,6 +1096,7 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
 
         _db.Manufacturers.Remove(existing);
         await _db.SaveChangesAsync().ConfigureAwait(false);
+
         return ValidationResult.Success;
     }
 
@@ -949,6 +1128,7 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
 
         _db.ModelDesigns.Remove(existing);
         await _db.SaveChangesAsync().ConfigureAwait(false);
+
         return ValidationResult.Success;
     }
 
@@ -972,12 +1152,13 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
 
         _db.PrintingProjects.Remove(existing);
         await _db.SaveChangesAsync().ConfigureAwait(false);
+
         return ValidationResult.Success!;
     }
     #endregion
 
     #region Helper lookups
-    private async Task<Manufacturer> GetOrCreateManufacturerAsync(ManufacturerDto dto)
+    async Task<Manufacturer> GetOrCreateManufacturerAsync(ManufacturerDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
         Manufacturer? existing = null;
@@ -994,6 +1175,7 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
         }
 
         var created = dto.ToEntity();
+
         // ensure new entity doesn't carry an explicit Id
         created.Id = 0;
         await _db.Manufacturers.AddAsync(created).ConfigureAwait(false);
@@ -1002,7 +1184,7 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
         return created;
     }
 
-    private async Task<FilamentColour> GetOrCreateFilamentColourAsync(FilamentColourDto dto)
+    async Task<FilamentColour> GetOrCreateFilamentColourAsync(FilamentColourDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
         FilamentColour? existing = null;
@@ -1012,25 +1194,38 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
         }
 
         // case-insensitive lookup using DB collation (SQLite NOCASE)
-        existing ??= await _db.FilamentColours.FirstOrDefaultAsync(fc => EF.Functions.Collate(fc.Description, "NOCASE") == dto.Description).ConfigureAwait(false);
+        existing ??=
+            await _db.FilamentColours.FirstOrDefaultAsync(fc => EF.Functions.Collate(fc.Description, "NOCASE") == dto.Description).ConfigureAwait(false);
         if (existing != null)
         {
             return existing;
         }
 
+        if (ValidateFilamentColourDto(dto) != ValidationResult.Success)
+        {
+            throw new ValidationException($"Filament colour {dto.Id} ({(string.IsNullOrWhiteSpace(dto.Description) ? "[null]" : dto.Description)}) is invalid");
+        }
+
         var created = dto.ToEntity();
         created.Id = 0;
         await _db.FilamentColours.AddAsync(created).ConfigureAwait(false);
+
         return created;
     }
 
-    private async Task<FilamentType> GetOrCreateFilamentTypeAsync(FilamentTypeDto dto)
+    async Task<FilamentType> GetOrCreateFilamentTypeAsync(FilamentTypeDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
         FilamentType? existing = null;
         if (dto.Id != 0)
         {
             existing = await _db.FilamentTypes.FindAsync(dto.Id).ConfigureAwait(false);
+
+            // Check that the Description matches if Id is provided
+            if (!existing?.Description.Equals(dto.Description, StringComparison.OrdinalIgnoreCase) ?? false)
+            {
+                existing = null;
+            }
         }
 
         // case-insensitive lookup using DB collation (SQLite NOCASE)
@@ -1043,10 +1238,11 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
         var created = dto.ToEntity();
         created.Id = 0;
         await _db.FilamentTypes.AddAsync(created).ConfigureAwait(false);
+
         return created;
     }
 
-    private async Task<Customer> GetOrCreateCustomerAsync(CustomerDto dto)
+    async Task<Customer> GetOrCreateCustomerAsync(CustomerDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
         Customer? existing = null;
@@ -1064,10 +1260,11 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
         var created = dto.ToEntity();
         created.Id = 0;
         await _db.Customers.AddAsync(created).ConfigureAwait(false);
+
         return created;
     }
 
-    private async Task<ModelDesign> GetOrCreateModelDesignAsync(ModelDesignDto dto)
+    async Task<ModelDesign> GetOrCreateModelDesignAsync(ModelDesignDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
         ModelDesign? existing = null;
@@ -1085,6 +1282,7 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
         var created = dto.ToEntity();
         created.Id = 0;
         await _db.ModelDesigns.AddAsync(created).ConfigureAwait(false);
+
         return created;
     }
     #endregion

@@ -1,6 +1,6 @@
 ﻿# 🧾 gCode Journal
 
-An application to record the projects that I've 3D printed, along with the material used, the cost (both raw and 'sell' price), and links to the designs (if located on the internet) and/or photos of the finished product.
+An application to record the projects that I've 3D printed, along with the material used, the cost (both raw and 'sell' price), links to the designs (if located on the internet) and/or photos of the finished product.
 
 Apart from being functional, this is a project that I'm using to learn new technologies :man_student:.
 
@@ -34,6 +34,12 @@ dotnet tool install --global dotnet-ef
 dotnet ef migrations add AddSomeChange --project src/gCodeJournal.Model --startup-project src/gCodeJournal.Model
 # apply migration
 dotnet ef database update --project src/gCodeJournal.Model --startup-project src/gCodeJournal.Model
+```
+
+- If you prefer to use the Nuget Package Manager Console in Visual Studio, use:
+```
+# Apply migrations
+Update-Database -StartupProject gCodeJournal.Model -Project gCodeJournal.Model
 ```
 
 - Programmatically apply migrations at app startup (recommended for apps):
