@@ -1146,6 +1146,10 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
             return existing;
         }
 
+        if (ValidateFilamentColourDto(dto)!=ValidationResult.Success)
+        {
+            throw new ValidationException($"Filament colour {dto.Id} ({(string.IsNullOrWhiteSpace(dto.Description)? "[null]" : dto.Description)}) is invalid");
+        }
         var created = dto.ToEntity();
         created.Id = 0;
         await _db.FilamentColours.AddAsync(created).ConfigureAwait(false);
