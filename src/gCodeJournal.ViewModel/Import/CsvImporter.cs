@@ -103,7 +103,6 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
         return results;
     }
 
-    // accept optional existing mappings so single-file imports in a batch can resolve earlier-created ids
     public async Task<ImportFileResult> ImportStreamAsync(
         Stream                                       stream,
         ILogger                                      appLogger,
