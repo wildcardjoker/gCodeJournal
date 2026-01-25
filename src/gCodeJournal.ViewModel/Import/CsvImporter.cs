@@ -1,3 +1,5 @@
+// gCodeJournal.ViewModel
+
 #pragma warning disable CA2208
 #pragma warning disable CA1860
 namespace gCodeJournal.ViewModel.Import;
@@ -9,16 +11,16 @@ using System.Text;
 using CsvHelper;
 using CsvHelper.Configuration;
 using DTOs;
+using Maps;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Model;
-using Maps;
 #endregion
 
 public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
 {
     #region ImportEntity Enum
-    private enum ImportEntity
+    enum ImportEntity
     {
         Unknown,
         Customers,
@@ -44,22 +46,24 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
             await using var fs      = File.OpenRead(path);
             var             fileRes = await ImportStreamAsync(fs, appLogger, Path.GetFileName(path), updateExisting, delimiter, ct).ConfigureAwait(false);
             results.Add(fileRes);
+
             return results;
         }
 
         if (Directory.Exists(path))
         {
             // process known file names in directory in dependency order
-            var ordered = new[]
-            {
-                ImportEntity.Customers,
-                ImportEntity.Manufacturers,
-                ImportEntity.FilamentColours,
-                ImportEntity.FilamentTypes,
-                ImportEntity.Filaments,
-                ImportEntity.ModelDesigns,
-                ImportEntity.PrintingProjects
-            };
+            var ordered =
+                new[]
+                {
+                    ImportEntity.Customers,
+                    ImportEntity.Manufacturers,
+                    ImportEntity.FilamentColours,
+                    ImportEntity.FilamentTypes,
+                    ImportEntity.Filaments,
+                    ImportEntity.ModelDesigns,
+                    ImportEntity.PrintingProjects
+                };
 
             // mergedMap carries mappings between files so later files can resolve references
             var mergedMap = new Dictionary<string, Dictionary<string, int>>(StringComparer.OrdinalIgnoreCase);
@@ -67,7 +71,7 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
             foreach (var file in ordered.Select(EntityFileName).Select(fileName => Path.Combine(path, fileName)).Where(File.Exists))
             {
                 await using var fs = File.OpenRead(file);
-                var             r  = await ImportStreamAsync(fs, appLogger, Path.GetFileName(file), updateExisting, delimiter, ct, mergedMap).ConfigureAwait(false);
+                var r = await ImportStreamAsync(fs, appLogger, Path.GetFileName(file), updateExisting, delimiter, ct, mergedMap).ConfigureAwait(false);
 
                 // add unmerged per-file result
                 results.Add(r);
@@ -95,6 +99,7 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
         notFound.Errors.Add($"Path '{path}' does not exist");
         notFound.Failed++;
         results.Add(new ImportFileResult(string.Empty, notFound));
+
         return results;
     }
 
@@ -112,12 +117,14 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
         using var sr     = new StreamReader(stream, Encoding.UTF8, true, 8192, true);
 
         // Configure header normalization so headers like 'ID' match 'Id'/'id'
-        var csvConfig = new CsvConfiguration(CultureInfo.InvariantCulture)
-        {
-            Delimiter = delimiter.ToString(), PrepareHeaderForMatch = args => args.Header?.Trim().ToLowerInvariant()
-        };
+        var csvConfig =
+            new CsvConfiguration(CultureInfo.InvariantCulture)
+            {
+                Delimiter = delimiter.ToString(), PrepareHeaderForMatch = args => args.Header?.Trim().ToLowerInvariant()
+            };
 
         using var csv = new CsvReader(sr, csvConfig);
+
         // Register CSV class maps for DTOs that require custom mapping
         csv.Context.RegisterClassMap<FilamentMap>();
         csv.Context.RegisterClassMap<PrintingProjectMap>();
@@ -128,7 +135,7 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
         await using var tx = await db.Database.BeginTransactionAsync(ct).ConfigureAwait(false);
         try
         {
-                if (entity == ImportEntity.Unknown)
+            if (entity == ImportEntity.Unknown)
             {
                 appLogger.LogWarning("Unknown entity detected: {FileName}", fileName);
             }
@@ -143,12 +150,13 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                         {
                             appLogger.LogDebug("Processing Customer DTO: {@Dto}", c);
                             var sourceId = c.Id != 0 ? c.Id.ToString() : null;
-                            var r = await vm.AddCustomerAsync(c).ConfigureAwait(false);
+                            var r        = await vm.AddCustomerAsync(c).ConfigureAwait(false);
                             switch (r)
                             {
                                 case (var v, AddRecordResult.Added) when v == ValidationResult.Success:
                                     // added
                                     result.Created++;
+
                                     break;
 
                                 case (var v, AddRecordResult.Exists) when v == ValidationResult.Success:
@@ -158,12 +166,14 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                                     {
                                         result.Errors.Add($"Customer with ID {c.Id} not found");
                                         result.Failed++;
+
                                         break;
                                     }
 
-                                    if (customer.Name.Equals(c.Name,StringComparison.OrdinalIgnoreCase))
+                                    if (customer.Name.Equals(c.Name, StringComparison.OrdinalIgnoreCase))
                                     {
                                         result.Skipped++;
+
                                         break;
                                     }
 
@@ -172,11 +182,13 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                                     customer.Name = c.Name;
                                     await vm.EditCustomerAsync(customer).ConfigureAwait(false);
                                     result.Updated++;
+
                                     break;
 
                                 case var (v, _) when v != ValidationResult.Success:
                                     // validation error
                                     result.Errors.Add(v.ErrorMessage ?? $"{nameof(vm.AddCustomerAsync)} failed");
+
                                     break;
                             }
                         }
@@ -189,12 +201,13 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                         {
                             appLogger.LogDebug("Processing Manufacturer DTO: {@Dto}", m);
                             var sourceId = m.Id != 0 ? m.Id.ToString() : null;
-                            var r = await vm.AddManufacturerAsync(m).ConfigureAwait(false);
+                            var r        = await vm.AddManufacturerAsync(m).ConfigureAwait(false);
                             switch (r)
                             {
                                 case (var v, AddRecordResult.Added) when v == ValidationResult.Success:
                                     // added
                                     result.Created++;
+
                                     break;
 
                                 case (var v, AddRecordResult.Exists) when v == ValidationResult.Success:
@@ -204,24 +217,29 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                                     {
                                         result.Errors.Add($"Manufacturer with ID {m.Id} not found");
                                         result.Failed++;
+
                                         break;
                                     }
 
                                     if (manufacturer.Name.Equals(m.Name, StringComparison.OrdinalIgnoreCase))
                                     {
                                         result.Skipped++;
+
                                         break;
                                     }
+
                                     // Modify existing manufacturer
                                     appLogger.LogDebug("Modifying existing manufacturer {@Manufacturer}; updating to {@NewName}", manufacturer, m.Name);
                                     manufacturer.Name = m.Name;
                                     await vm.EditManufacturerAsync(manufacturer).ConfigureAwait(false);
                                     result.Updated++;
+
                                     break;
 
                                 case var (v, _) when v != ValidationResult.Success:
                                     // validation error
                                     result.Errors.Add(v.ErrorMessage ?? $"{nameof(vm.AddManufacturerAsync)} failed");
+
                                     break;
                             }
                         }
@@ -234,12 +252,13 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                         {
                             appLogger.LogDebug("Processing FilamentColour DTO: {@Dto}", c);
                             var sourceId = c.Id != 0 ? c.Id.ToString() : null;
-                            var r = await vm.AddFilamentColourAsync(c).ConfigureAwait(false);
+                            var r        = await vm.AddFilamentColourAsync(c).ConfigureAwait(false);
                             switch (r)
                             {
                                 case (var v, AddRecordResult.Added) when v == ValidationResult.Success:
                                     // added
                                     result.Created++;
+
                                     break;
 
                                 case (var v, AddRecordResult.Exists) when v == ValidationResult.Success:
@@ -249,24 +268,32 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                                     {
                                         result.Errors.Add($"Filament colour with ID {c.Id} not found");
                                         result.Failed++;
+
                                         break;
                                     }
 
                                     if (filamentColour.Description.Equals(c.Description, StringComparison.OrdinalIgnoreCase))
                                     {
                                         result.Skipped++;
+
                                         break;
                                     }
+
                                     // Modify existing record
-                                    appLogger.LogDebug("Modifying existing filament colour {@FilamentColour}; updating to {@NewDescription}", filamentColour, c.Description);
+                                    appLogger.LogDebug(
+                                        "Modifying existing filament colour {@FilamentColour}; updating to {@NewDescription}",
+                                        filamentColour,
+                                        c.Description);
                                     filamentColour.Description = c.Description;
                                     await vm.EditFilamentColourAsync(filamentColour).ConfigureAwait(false);
                                     result.Updated++;
+
                                     break;
 
                                 case var (v, _) when v != ValidationResult.Success:
                                     // validation error
                                     result.Errors.Add(v.ErrorMessage ?? $"{nameof(vm.AddFilamentColourAsync)} failed");
+
                                     break;
                             }
                         }
@@ -279,12 +306,13 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                         {
                             appLogger.LogDebug("Processing FilamentType DTO: {@Dto}", t);
                             var sourceId = t.Id != 0 ? t.Id.ToString() : null;
-                            var r = await vm.AddFilamentTypeAsync(t).ConfigureAwait(false);
+                            var r        = await vm.AddFilamentTypeAsync(t).ConfigureAwait(false);
                             switch (r)
                             {
                                 case (var v, AddRecordResult.Added) when v == ValidationResult.Success:
                                     // added
                                     result.Created++;
+
                                     break;
 
                                 case (var v, AddRecordResult.Exists) when v == ValidationResult.Success:
@@ -294,24 +322,32 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                                     {
                                         result.Errors.Add($"Filament type with ID {t.Id} not found");
                                         result.Failed++;
+
                                         break;
                                     }
 
                                     if (filamentType.Description.Equals(t.Description, StringComparison.OrdinalIgnoreCase))
                                     {
                                         result.Skipped++;
+
                                         break;
                                     }
+
                                     // Modify existing filament type
-                                    appLogger.LogDebug("Modifying existing filament type {@FilamentType}; updating to {@NewDescription}", filamentType, t.Description);
+                                    appLogger.LogDebug(
+                                        "Modifying existing filament type {@FilamentType}; updating to {@NewDescription}",
+                                        filamentType,
+                                        t.Description);
                                     filamentType.Description = t.Description;
                                     await vm.EditFilamentTypeAsync(filamentType).ConfigureAwait(false);
                                     result.Updated++;
+
                                     break;
 
                                 case var (v, _) when v != ValidationResult.Success:
                                     // validation error
                                     result.Errors.Add(v.ErrorMessage ?? $"{nameof(vm.AddFilamentTypeAsync)} failed");
+
                                     break;
                             }
                         }
@@ -329,6 +365,7 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                                 case (var v, AddRecordResult.Added) when v == ValidationResult.Success:
                                     // added
                                     result.Created++;
+
                                     break;
 
                                 case (var v, AddRecordResult.Exists) when v == ValidationResult.Success:
@@ -338,6 +375,7 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                                     {
                                         result.Errors.Add($"Filament with ID {f.Id} not found");
                                         result.Failed++;
+
                                         break;
                                     }
 
@@ -345,50 +383,59 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                                     if (comparisonResult.IsMatch)
                                     {
                                         result.Skipped++;
+
                                         break;
                                     }
 
                                     // Modify existing filament
                                     appLogger.LogDebug("Modifying existing filament {@Filament}", filamentDto);
-                                    appLogger.LogDebug("Properties to be updated: {@Properties}", string.Join(',',comparisonResult.MismatchedProperties));
+                                    appLogger.LogDebug("Properties to be updated: {@Properties}", string.Join(',', comparisonResult.MismatchedProperties));
                                     filamentDto.CostPerWeight = f.CostPerWeight;
-                                    filamentDto.ProductId= f.ProductId;
-                                    filamentDto.ReorderLink = f.ReorderLink;
+                                    filamentDto.ProductId     = f.ProductId;
+                                    filamentDto.ReorderLink   = f.ReorderLink;
+
                                     // Get DTOs for related entities
                                     var filamentColour = await vm.GetFilamentColourAsync(f.FilamentColour.Id).ConfigureAwait(false);
                                     if (filamentColour is null)
                                     {
                                         result.Errors.Add($"FilamentColour with ID {f.FilamentColour.Id} not found");
                                         result.Failed++;
+
                                         break;
                                     }
+
                                     filamentDto.FilamentColour = filamentColour;
-                                    var filamentType= await vm.GetFilamentTypeAsync(f.FilamentType.Id).ConfigureAwait(false);
+                                    var filamentType = await vm.GetFilamentTypeAsync(f.FilamentType.Id).ConfigureAwait(false);
                                     if (filamentType is null)
                                     {
                                         result.Errors.Add($"FilamentType with ID {f.FilamentType.Id} not found");
                                         result.Failed++;
+
                                         break;
                                     }
+
                                     filamentDto.FilamentType = filamentType;
-                                    var manufacturer= await vm.GetManufacturerAsync(f.Manufacturer.Id).ConfigureAwait(false);
+                                    var manufacturer = await vm.GetManufacturerAsync(f.Manufacturer.Id).ConfigureAwait(false);
                                     if (manufacturer is null)
                                     {
                                         result.Errors.Add($"Manufacturer with ID {f.Manufacturer.Id} not found");
                                         result.Failed++;
+
                                         break;
                                     }
+
                                     filamentDto.Manufacturer = manufacturer;
                                     await vm.EditFilamentAsync(filamentDto).ConfigureAwait(false);
                                     result.Updated++;
+
                                     break;
 
                                 case var (v, _) when v != ValidationResult.Success:
                                     // validation error
                                     result.Errors.Add(v.ErrorMessage ?? $"{nameof(vm.AddFilamentTypeAsync)} failed");
+
                                     break;
                             }
-
                         }
 
                         break;
@@ -399,12 +446,13 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                         {
                             appLogger.LogDebug("Processing ModelDesign DTO: {@Dto}", m);
                             var sourceId = m.Id != 0 ? m.Id.ToString() : null;
-                            var r = await vm.AddModelDesignAsync(m).ConfigureAwait(false);
+                            var r        = await vm.AddModelDesignAsync(m).ConfigureAwait(false);
                             switch (r)
                             {
                                 case (var v, AddRecordResult.Added) when v == ValidationResult.Success:
                                     // added
                                     result.Created++;
+
                                     break;
 
                                 case (var v, AddRecordResult.Exists) when v == ValidationResult.Success:
@@ -414,6 +462,7 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                                     {
                                         result.Errors.Add($"Model with ID {m.Id} not found");
                                         result.Failed++;
+
                                         break;
                                     }
 
@@ -421,26 +470,28 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                                     if (comparisonResult.IsMatch)
                                     {
                                         result.Skipped++;
+
                                         break;
                                     }
 
                                     // Modify existing model
-                                    appLogger.LogDebug("Modifying existing model {@Model}", modelDto);
+                                    appLogger.LogDebug("Modifying existing model {@Model}",       modelDto);
                                     appLogger.LogDebug("Properties to be updated: {@Properties}", string.Join(',', comparisonResult.MismatchedProperties));
                                     modelDto.Description = m.Description;
-                                    modelDto.Length = m.Length;
-                                    modelDto.Summary = m.Summary;
-                                    modelDto.Url = m.Url;
+                                    modelDto.Length      = m.Length;
+                                    modelDto.Summary     = m.Summary;
+                                    modelDto.Url         = m.Url;
                                     await vm.EditModelDesignAsync(modelDto).ConfigureAwait(false);
                                     result.Updated++;
+
                                     break;
 
                                 case var (v, _) when v != ValidationResult.Success:
                                     // validation error
                                     result.Errors.Add(v.ErrorMessage ?? $"{nameof(vm.AddModelDesignAsync)} failed");
+
                                     break;
                             }
-
                         }
 
                         break;
@@ -458,6 +509,7 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                                 case (var v, AddRecordResult.Added) when v == ValidationResult.Success:
                                     // added
                                     result.Created++;
+
                                     break;
 
                                 case (var v, AddRecordResult.Exists) when v == ValidationResult.Success:
@@ -467,6 +519,7 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                                     {
                                         result.Errors.Add($"Printing project with ID {p.Id} not found");
                                         result.Failed++;
+
                                         break;
                                     }
 
@@ -474,30 +527,39 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                                     if (comparisonResult.IsMatch)
                                     {
                                         result.Skipped++;
+
                                         break;
                                     }
 
                                     // Modify existing project
-                                    appLogger.LogDebug("Modifying existing project {@Project}", printingProjectDto);
+                                    appLogger.LogDebug("Modifying existing project {@Project}",   printingProjectDto);
                                     appLogger.LogDebug("Properties to be updated: {@Properties}", string.Join(',', comparisonResult.MismatchedProperties));
                                     printingProjectDto.Submitted = p.Submitted;
                                     printingProjectDto.Completed = p.Completed;
-                                    printingProjectDto.Cost = p.Cost; // To be calculated based on length/mass of filament(s) used
+                                    printingProjectDto.Cost      = p.Cost; // To be calculated based on length/mass of filament(s) used
 
                                     // Validate required related entities
                                     if (p.Customer?.Id is null)
                                     {
-                                        result.Errors.Add($"No customer ID specified for project"); result.Failed++;
+                                        result.Errors.Add("No customer ID specified for project");
+                                        result.Failed++;
+
                                         break;
                                     }
+
                                     if (p.ModelDesign?.Id is null)
                                     {
-                                        result.Errors.Add($"No model design ID specified for project"); result.Failed++;
+                                        result.Errors.Add("No model design ID specified for project");
+                                        result.Failed++;
+
                                         break;
                                     }
-                                    if (p.Filaments.Count==0)
+
+                                    if (p.Filaments.Count == 0)
                                     {
-                                        result.Errors.Add("No filaments specified for project"); result.Failed++;
+                                        result.Errors.Add("No filaments specified for project");
+                                        result.Failed++;
+
                                         break;
                                     }
 
@@ -507,6 +569,7 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                                     {
                                         result.Errors.Add($"Customer with ID {p.Customer.Id} not found");
                                         result.Failed++;
+
                                         break;
                                     }
 
@@ -518,8 +581,10 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                                     {
                                         result.Errors.Add($"Model with ID {p.ModelDesign.Id} not found");
                                         result.Failed++;
+
                                         break;
                                     }
+
                                     printingProjectDto.ModelDesign = modelDto;
 
                                     // Get Filaments from list of IDs
@@ -530,9 +595,11 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                                         if (filament is null)
                                         {
                                             result.Errors.Add($"Filament with ID {pFilament.Id} not found");
+
                                             //result.Failed++;
                                             break;
                                         }
+
                                         filaments.Add(filament);
                                     }
 
@@ -541,15 +608,19 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                                     {
                                         result.Errors.Add("No filaments found for project");
                                         result.Failed++;
+
                                         break;
                                     }
+
                                     await vm.EditPrintingProjectAsync(printingProjectDto).ConfigureAwait(false);
                                     result.Updated++;
+
                                     break;
 
                                 case var (v, _) when v != ValidationResult.Success:
                                     // validation error
                                     result.Errors.Add(v.ErrorMessage ?? $"{nameof(vm.AddFilamentTypeAsync)} failed");
+
                                     break;
                             }
                         }
@@ -573,7 +644,7 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
         return new ImportFileResult(fileName ?? string.Empty, result);
     }
 
-    private static ImportEntity DetectEntityFromFileName(string? fileName)
+    static ImportEntity DetectEntityFromFileName(string? fileName)
     {
         if (string.IsNullOrWhiteSpace(fileName))
         {
@@ -614,7 +685,7 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
         return name.Contains("printing_projects", StringComparison.OrdinalIgnoreCase) ? ImportEntity.PrintingProjects : ImportEntity.Unknown;
     }
 
-    private static string EntityFileName(ImportEntity entity) => entity switch
+    static string EntityFileName(ImportEntity entity) => entity switch
     {
         ImportEntity.Customers        => "customers.csv",
         ImportEntity.Manufacturers    => "manufacturers.csv",
@@ -626,9 +697,8 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
         _                             => string.Empty
     };
 
-    private static ImportEntity ParseEntityName(string name)
-    {
-        return name.ToLowerInvariant() switch
+    static ImportEntity ParseEntityName(string name) =>
+        name.ToLowerInvariant() switch
         {
             "customers" or "customer"                               => ImportEntity.Customers,
             "manufacturers" or "manufacturer"                       => ImportEntity.Manufacturers,
@@ -639,9 +709,8 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
             "printing_projects" or "printingprojects" or "projects" => ImportEntity.PrintingProjects,
             _                                                       => ImportEntity.Unknown
         };
-    }
 
-    private async Task<ImportFileResult> ImportFileAsync(
+    async Task<ImportFileResult> ImportFileAsync(
         string                                       filePath,
         ILogger                                      appLogger,
         ImportEntity                                 entity,
@@ -651,17 +720,18 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
         Dictionary<string, Dictionary<string, int>>? existingMap = null)
     {
         await using var fs = File.OpenRead(filePath);
+
         return await ImportStreamAsync(fs, appLogger, Path.GetFileName(filePath), updateExisting, delimiter, ct, existingMap).ConfigureAwait(false);
     }
 
-    private async Task ProcessRowAsync(
+    async Task ProcessRowAsync(
         ImportEntity                                 entity,
         IDictionary<string, object>                  dict,
         ImportResult                                 result,
         bool                                         updateExisting,
         CancellationToken                            ct,
         Dictionary<string, Dictionary<string, int>>? existingMappings = null,
-        ILogger?                                     appLogger = null)
+        ILogger?                                     appLogger        = null)
     {
         try
         {
@@ -676,6 +746,7 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                     {
                         result.Errors.Add("Customer: Name is required");
                         result.Failed++;
+
                         return;
                     }
 
@@ -701,7 +772,8 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                             result.Created++;
                             if (id != 0)
                             {
-                                var dbEntity = await db.Customers.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Name, "NOCASE") == name, ct).ConfigureAwait(false);
+                                var dbEntity =
+                                    await db.Customers.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Name, "NOCASE") == name, ct).ConfigureAwait(false);
                                 if (dbEntity != null)
                                 {
                                     result.RecordMapping("customers", id.ToString(), dbEntity.Id);
@@ -726,6 +798,7 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                     {
                         result.Errors.Add("Manufacturer: Name is required");
                         result.Failed++;
+
                         return;
                     }
 
@@ -751,7 +824,8 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                             result.Created++;
                             if (id != 0)
                             {
-                                var dbEntity = await db.Manufacturers.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Name, "NOCASE") == name, ct).ConfigureAwait(false);
+                                var dbEntity =
+                                    await db.Manufacturers.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Name, "NOCASE") == name, ct).ConfigureAwait(false);
                                 if (dbEntity != null)
                                 {
                                     result.RecordMapping("manufacturers", id.ToString(), dbEntity.Id);
@@ -776,6 +850,7 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                     {
                         result.Errors.Add("FilamentColour: Description is required");
                         result.Failed++;
+
                         return;
                     }
 
@@ -801,8 +876,10 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                             result.Created++;
                             if (id != 0)
                             {
-                                var dbEntity = await db.FilamentColours.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Description, "NOCASE") == desc, ct)
-                                                       .ConfigureAwait(false);
+                                var dbEntity =
+                                    await db
+                                          .FilamentColours.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Description, "NOCASE") == desc, ct)
+                                          .ConfigureAwait(false);
                                 if (dbEntity != null)
                                 {
                                     result.RecordMapping("filament_colours", id.ToString(), dbEntity.Id);
@@ -827,6 +904,7 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                     {
                         result.Errors.Add("FilamentType: Description is required");
                         result.Failed++;
+
                         return;
                     }
 
@@ -852,8 +930,10 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                             result.Created++;
                             if (id != 0)
                             {
-                                var dbEntity = await db.FilamentTypes.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Description, "NOCASE") == desc, ct)
-                                                       .ConfigureAwait(false);
+                                var dbEntity =
+                                    await db
+                                          .FilamentTypes.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Description, "NOCASE") == desc, ct)
+                                          .ConfigureAwait(false);
                                 if (dbEntity != null)
                                 {
                                     result.RecordMapping("filament_types", id.ToString(), dbEntity.Id);
@@ -884,9 +964,10 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                     var typeDto   = new FilamentTypeDto(typeId, string.Empty);
                     var manDto    = new ManufacturerDto(manId, string.Empty);
 
-                    var dto = id != 0
-                                  ? new FilamentDto(id,   cost,      productId, reorder,   colourDto, typeDto, manDto)
-                                  : new FilamentDto(cost, productId, reorder,   colourDto, typeDto,   manDto);
+                    var dto =
+                        id != 0
+                            ? new FilamentDto(id,   cost,      productId, reorder,   colourDto, typeDto, manDto)
+                            : new FilamentDto(cost, productId, reorder,   colourDto, typeDto,   manDto);
 
                     if (id != 0 && updateExisting)
                     {
@@ -907,10 +988,12 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                         // ManufacturerId, FilamentTypeId and FilamentColourId already exists to avoid duplicates.
                         if (manId != 0 && typeId != 0 && colourId != 0)
                         {
-                            var existingFilament = await db.Filaments.FirstOrDefaultAsync(
-                                                               x => x.ManufacturerId == manId && x.FilamentTypeId == typeId && x.FilamentColourId == colourId,
-                                                               ct)
-                                                           .ConfigureAwait(false);
+                            var existingFilament =
+                                await db
+                                      .Filaments.FirstOrDefaultAsync(
+                                          x => x.ManufacturerId == manId && x.FilamentTypeId == typeId && x.FilamentColourId == colourId,
+                                          ct)
+                                      .ConfigureAwait(false);
                             if (existingFilament is not null)
                             {
                                 // Considered already existing; skip creation.
@@ -932,10 +1015,12 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                                     dbEntity = await db.Filaments.FirstOrDefaultAsync(x => x.ProductId == productId, ct).ConfigureAwait(false);
                                 }
 
-                                dbEntity ??= await db.Filaments.FirstOrDefaultAsync(
-                                                         x => x.ManufacturerId == manId && x.FilamentTypeId == typeId && x.FilamentColourId == colourId,
-                                                         ct)
-                                                     .ConfigureAwait(false);
+                                dbEntity ??=
+                                    await db
+                                          .Filaments.FirstOrDefaultAsync(
+                                              x => x.ManufacturerId == manId && x.FilamentTypeId == typeId && x.FilamentColourId == colourId,
+                                              ct)
+                                          .ConfigureAwait(false);
 
                                 if (dbEntity != null)
                                 {
@@ -965,10 +1050,14 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                     {
                         result.Errors.Add("ModelDesign: Description is required");
                         result.Failed++;
+
                         return;
                     }
 
-                    var dto = id != 0 ? new ModelDesignDto(id, desc, length, summary ?? string.Empty, url) : new ModelDesignDto(desc, length, summary ?? string.Empty, url);
+                    var dto =
+                        id != 0
+                            ? new ModelDesignDto(id,   desc,   length, summary ?? string.Empty, url)
+                            : new ModelDesignDto(desc, length, summary         ?? string.Empty, url);
                     if (id != 0 && updateExisting)
                     {
                         var r = await vm.EditModelDesignAsync(dto).ConfigureAwait(false);
@@ -990,8 +1079,10 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                             result.Created++;
                             if (id != 0)
                             {
-                                var dbEntity = await db.ModelDesigns.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Description, "NOCASE") == desc, ct)
-                                                       .ConfigureAwait(false);
+                                var dbEntity =
+                                    await db
+                                          .ModelDesigns.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Description, "NOCASE") == desc, ct)
+                                          .ConfigureAwait(false);
                                 if (dbEntity != null)
                                 {
                                     result.RecordMapping("model_designs", id.ToString(), dbEntity.Id);
@@ -1043,34 +1134,36 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                             }
 
                             // create minimal filament DTO with id only; AddPrintingProjectAsync will resolve existing entity
-                            var placeholder = new FilamentDto(
-                                fid,
-                                0m,
-                                null,
-                                null,
-                                new FilamentColourDto(0, string.Empty),
-                                new FilamentTypeDto(0, string.Empty),
-                                new ManufacturerDto(0, string.Empty));
+                            var placeholder =
+                                new FilamentDto(
+                                    fid,
+                                    0m,
+                                    null,
+                                    null,
+                                    new FilamentColourDto(0, string.Empty),
+                                    new FilamentTypeDto(0, string.Empty),
+                                    new ManufacturerDto(0, string.Empty));
                             filamentDtos.Add(placeholder);
                         }
                     }
 
-                    var projDto = id != 0
-                                      ? new PrintingProjectDto(
-                                          id,
-                                          cost,
-                                          submitted == DateOnly.MinValue ? DateOnly.FromDateTime(DateTime.Now) : submitted,
-                                          completed == DateOnly.MinValue ? null : completed,
-                                          customerDto,
-                                          modelDto,
-                                          filamentDtos)
-                                      : new PrintingProjectDto(
-                                          cost,
-                                          submitted == DateOnly.MinValue ? DateOnly.FromDateTime(DateTime.Now) : submitted,
-                                          completed == DateOnly.MinValue ? null : completed,
-                                          customerDto,
-                                          modelDto,
-                                          filamentDtos);
+                    var projDto =
+                        id != 0
+                            ? new PrintingProjectDto(
+                                id,
+                                cost,
+                                submitted == DateOnly.MinValue ? DateOnly.FromDateTime(DateTime.Now) : submitted,
+                                completed == DateOnly.MinValue ? null : completed,
+                                customerDto,
+                                modelDto,
+                                filamentDtos)
+                            : new PrintingProjectDto(
+                                cost,
+                                submitted == DateOnly.MinValue ? DateOnly.FromDateTime(DateTime.Now) : submitted,
+                                completed == DateOnly.MinValue ? null : completed,
+                                customerDto,
+                                modelDto,
+                                filamentDtos);
 
                     if (id != 0 && updateExisting)
                     {
@@ -1095,10 +1188,12 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                             {
                                 var projectCustomerId = projDto.Customer?.Id    ?? 0;
                                 var mdlId             = projDto.ModelDesign?.Id ?? 0;
-                                var dbEntity = await db.PrintingProjects.FirstOrDefaultAsync(
-                                                           x => x.Cost == projDto.Cost && x.CustomerId == projectCustomerId && x.ModelDesignId == mdlId,
-                                                           ct)
-                                                       .ConfigureAwait(false);
+                                var dbEntity =
+                                    await db
+                                          .PrintingProjects.FirstOrDefaultAsync(
+                                              x => x.Cost == projDto.Cost && x.CustomerId == projectCustomerId && x.ModelDesignId == mdlId,
+                                              ct)
+                                          .ConfigureAwait(false);
                                 if (dbEntity != null)
                                 {
                                     result.RecordMapping("printing_projects", id.ToString(), dbEntity.Id);
@@ -1118,6 +1213,7 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                 default:
                     result.Errors.Add($"Unknown entity '{entity}'");
                     result.Failed++;
+
                     break;
             }
         }
@@ -1151,7 +1247,5 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
 
             return DateTime.TryParse(s, CultureInfo.InvariantCulture, DateTimeStyles.None, out var dt) ? DateOnly.FromDateTime(dt) : DateOnly.MinValue;
         }
-
-
     }
 }
