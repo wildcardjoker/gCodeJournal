@@ -130,22 +130,7 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
         {
                 if (entity == ImportEntity.Unknown)
             {
-                // assume one-row-per-file contains Entity column
-                var records = csv.GetRecords<dynamic>();
-                foreach (var dict in records.Select(rec => (IDictionary<string, object>) rec))
-                {
-                        appLogger.LogDebug("Processing dynamic record for unknown-entity CSV: {@Record}", dict);
-                    if (!dict.TryGetValue("Entity", out var en))
-                    {
-                        result.Errors.Add("No Entity column found in CSV and filename did not match a known entity");
-                        result.Failed++;
-                        continue;
-                    }
-
-                    var entityName = en?.ToString() ?? string.Empty;
-                    var ent        = ParseEntityName(entityName);
-                    await ProcessRowAsync(ent, dict, result, updateExisting, ct, existingMappings, appLogger).ConfigureAwait(false);
-                }
+                appLogger.LogWarning("Unknown entity detected: {FileName}", fileName);
             }
             else
             {
@@ -512,7 +497,7 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                                     }
                                     if (p.Filaments.Count==0)
                                     {
-                                        result.Errors.Add($"No filaments specified for project"); result.Failed++;
+                                        result.Errors.Add("No filaments specified for project"); result.Failed++;
                                         break;
                                     }
 
@@ -536,7 +521,7 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                                         break;
                                     }
                                     printingProjectDto.ModelDesign = modelDto;
-                                    
+
                                     // Get Filaments from list of IDs
                                     var filaments = new List<FilamentDto>();
                                     foreach (var pFilament in p.Filaments)
@@ -545,14 +530,19 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                                         if (filament is null)
                                         {
                                             result.Errors.Add($"Filament with ID {pFilament.Id} not found");
-                                            result.Failed++;
+                                            //result.Failed++;
                                             break;
                                         }
                                         filaments.Add(filament);
                                     }
 
                                     p.Filaments = filaments;
-                                    
+                                    if (!p.Filaments.Any())
+                                    {
+                                        result.Errors.Add("No filaments found for project");
+                                        result.Failed++;
+                                        break;
+                                    }
                                     await vm.EditPrintingProjectAsync(printingProjectDto).ConfigureAwait(false);
                                     result.Updated++;
                                     break;
