@@ -1158,7 +1158,7 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
     #endregion
 
     #region Helper lookups
-    async Task<Manufacturer> GetOrCreateManufacturerAsync(ManufacturerDto dto)
+    public async Task<Manufacturer> GetOrCreateManufacturerAsync(ManufacturerDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
         Manufacturer? existing = null;
@@ -1184,7 +1184,7 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
         return created;
     }
 
-    async Task<FilamentColour> GetOrCreateFilamentColourAsync(FilamentColourDto dto)
+    public async Task<FilamentColour> GetOrCreateFilamentColourAsync(FilamentColourDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
         FilamentColour? existing = null;
@@ -1213,7 +1213,7 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
         return created;
     }
 
-    async Task<FilamentType> GetOrCreateFilamentTypeAsync(FilamentTypeDto dto)
+    public async Task<FilamentType> GetOrCreateFilamentTypeAsync(FilamentTypeDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
         FilamentType? existing = null;

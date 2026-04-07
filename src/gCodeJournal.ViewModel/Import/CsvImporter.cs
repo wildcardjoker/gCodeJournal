@@ -6,6 +6,7 @@ namespace gCodeJournal.ViewModel.Import;
 
 #region Using Directives
 using System.ComponentModel.DataAnnotations;
+using System.Linq;
 using System.Globalization;
 using System.Text;
 using CsvHelper;
@@ -358,6 +359,41 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                         foreach (var f in filamentRecords)
                         {
                             appLogger.LogDebug("Processing Filament DTO: {@DtoId} ({@DtoProductId})", f.Id, f.ProductId);
+
+                            // If related lookups are provided as names (Id == 0), ensure they exist by creating or resolving them
+                            if (f.Manufacturer != null && f.Manufacturer.Id == 0 && !string.IsNullOrWhiteSpace(f.Manufacturer.Name))
+                            {
+                                await vm.AddManufacturerAsync(new ManufacturerDto(0, f.Manufacturer.Name)).ConfigureAwait(false);
+                                var all = await vm.GetAllManufacturersAsync().ConfigureAwait(false);
+                                var matched = all.FirstOrDefault(m => string.Equals(m.Name, f.Manufacturer.Name, StringComparison.OrdinalIgnoreCase));
+                                if (matched != null)
+                                {
+                                    f.Manufacturer = new ManufacturerDto(matched.Id, matched.Name);
+                                }
+                            }
+
+                            if (f.FilamentType != null && f.FilamentType.Id == 0 && !string.IsNullOrWhiteSpace(f.FilamentType.Description))
+                            {
+                                await vm.AddFilamentTypeAsync(new FilamentTypeDto(0, f.FilamentType.Description)).ConfigureAwait(false);
+                                var all = await vm.GetAllFilamentTypesAsync().ConfigureAwait(false);
+                                var matched = all.FirstOrDefault(t => string.Equals(t.Description, f.FilamentType.Description, StringComparison.OrdinalIgnoreCase));
+                                if (matched != null)
+                                {
+                                    f.FilamentType = new FilamentTypeDto(matched.Id, matched.Description);
+                                }
+                            }
+
+                            if (f.FilamentColour != null && f.FilamentColour.Id == 0 && !string.IsNullOrWhiteSpace(f.FilamentColour.Description))
+                            {
+                                await vm.AddFilamentColourAsync(new FilamentColourDto(0, f.FilamentColour.Description)).ConfigureAwait(false);
+                                var all = await vm.GetAllFilamentColoursAsync().ConfigureAwait(false);
+                                var matched = all.FirstOrDefault(c => string.Equals(c.Description, f.FilamentColour.Description, StringComparison.OrdinalIgnoreCase));
+                                if (matched != null)
+                                {
+                                    f.FilamentColour = new FilamentColourDto(matched.Id, matched.Description);
+                                }
+                            }
+
                             var r = await vm.AddFilamentAsync(f).ConfigureAwait(false);
                             switch (r)
                             {
@@ -955,9 +991,41 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                     var cost      = ParseDecimalOrZero(GetString(dict, "CostPerWeight") ?? GetString(dict, "Cost"));
                     var productId = GetString(dict, "ProductId");
                     var reorder   = GetString(dict, "ReorderLink") ?? GetString(dict, "ReorderUrl") ?? GetString(dict, "Url");
-                    var colourId  = ParseIntOrZero(GetString(dict, "FilamentColourId") ?? GetString(dict, "FilamentColour") ?? GetString(dict, "ColourId"));
-                    var typeId    = ParseIntOrZero(GetString(dict, "FilamentTypeId")   ?? GetString(dict, "FilamentType")   ?? GetString(dict, "TypeId"));
-                    var manId     = ParseIntOrZero(GetString(dict, "ManufacturerId")   ?? GetString(dict, "Manufacturer")   ?? GetString(dict, "MakerId"));
+
+                    // Read raw fields (may be numeric IDs or string names)
+                    var colourField = GetString(dict, "FilamentColourId") ?? GetString(dict, "FilamentColour") ?? GetString(dict, "ColourId");
+                    var typeField   = GetString(dict, "FilamentTypeId")   ?? GetString(dict, "FilamentType")   ?? GetString(dict, "TypeId");
+                    var manField    = GetString(dict, "ManufacturerId")   ?? GetString(dict, "Manufacturer")   ?? GetString(dict, "MakerId");
+
+                    var colourId = ParseIntOrZero(colourField);
+                    var typeId   = ParseIntOrZero(typeField);
+                    var manId    = ParseIntOrZero(manField);
+
+                    // If name values were supplied instead of numeric IDs, try to create/resolve them via the ViewModel
+                    if (colourId == 0 && !string.IsNullOrWhiteSpace(colourField))
+                    {
+                        // attempt to create or resolve filament colour
+                        await vm.AddFilamentColourAsync(new FilamentColourDto(0, colourField)).ConfigureAwait(false);
+                        var allCols = await vm.GetAllFilamentColoursAsync().ConfigureAwait(false);
+                        var matched = allCols.FirstOrDefault(c => string.Equals(c.Description, colourField, StringComparison.OrdinalIgnoreCase));
+                        if (matched != null) colourId = matched.Id;
+                    }
+
+                    if (typeId == 0 && !string.IsNullOrWhiteSpace(typeField))
+                    {
+                        await vm.AddFilamentTypeAsync(new FilamentTypeDto(0, typeField)).ConfigureAwait(false);
+                        var allTypes = await vm.GetAllFilamentTypesAsync().ConfigureAwait(false);
+                        var matched = allTypes.FirstOrDefault(t => string.Equals(t.Description, typeField, StringComparison.OrdinalIgnoreCase));
+                        if (matched != null) typeId = matched.Id;
+                    }
+
+                    if (manId == 0 && !string.IsNullOrWhiteSpace(manField))
+                    {
+                        await vm.AddManufacturerAsync(new ManufacturerDto(0, manField)).ConfigureAwait(false);
+                        var allMans = await vm.GetAllManufacturersAsync().ConfigureAwait(false);
+                        var matched = allMans.FirstOrDefault(m => string.Equals(m.Name, manField, StringComparison.OrdinalIgnoreCase));
+                        if (matched != null) manId = matched.Id;
+                    }
 
                     var colourDto = new FilamentColourDto(colourId, string.Empty);
                     var typeDto   = new FilamentTypeDto(typeId, string.Empty);
