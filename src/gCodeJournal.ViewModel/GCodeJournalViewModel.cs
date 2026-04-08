@@ -1273,7 +1273,7 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
             existing = await _db.ModelDesigns.FindAsync(dto.Id).ConfigureAwait(false);
         }
 
-        existing ??= await _db.ModelDesigns.FirstOrDefaultAsync(md => EF.Functions.Collate(md.Description, "NOCASE") == dto.Description).ConfigureAwait(false);
+        existing ??= await _db.ModelDesigns.FirstOrDefaultAsync(md => EF.Functions.Collate(md.Summary, "NOCASE") == dto.Summary).ConfigureAwait(false);
         if (existing != null)
         {
             return existing;
