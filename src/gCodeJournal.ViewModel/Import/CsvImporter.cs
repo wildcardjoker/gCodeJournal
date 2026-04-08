@@ -611,31 +611,79 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                                     printingProjectDto.Customer = customer;
 
                                     // Get Model Design DTO
-                                    var modelDto = await vm.GetModelDesignAsync(p.ModelDesign.Id).ConfigureAwait(false);
-                                    if (modelDto is null)
-                                    {
-                                        result.Errors.Add($"Model with ID {p.ModelDesign.Id} not found");
-                                        result.Failed++;
+                    ModelDesignDto? modelDto = null;
+                    // If provided as id
+                    if (p.ModelDesign?.Id is not null && p.ModelDesign.Id != 0)
+                    {
+                        modelDto = await vm.GetModelDesignAsync(p.ModelDesign.Id).ConfigureAwait(false);
+                        if (modelDto is null)
+                        {
+                            result.Errors.Add($"Model with ID {p.ModelDesign.Id} not found");
+                            result.Failed++;
+                            break;
+                        }
 
-                                        break;
-                                    }
+                        printingProjectDto.ModelDesign = modelDto;
+                    }
+                    else if (p.ModelDesign != null && !string.IsNullOrWhiteSpace(p.ModelDesign.Summary))
+                    {
+                        // Try to match by Summary
+                        var all = await vm.GetAllModelDesignsAsync().ConfigureAwait(false);
+                        modelDto = all.FirstOrDefault(m => string.Equals(m.Summary, p.ModelDesign.Summary, StringComparison.OrdinalIgnoreCase));
+                        if (modelDto is null)
+                        {
+                            // log a warning and continue (per requirements)
+                            appLogger.LogWarning("Model design not found for summary: {Summary}", p.ModelDesign.Summary);
+                        }
+                        else
+                        {
+                            printingProjectDto.ModelDesign = modelDto;
+                        }
+                    }
 
-                                    printingProjectDto.ModelDesign = modelDto;
-
-                                    // Get Filaments from list of IDs
+                                    // Get Filaments from list (either IDs or sets Manufacturer|Type|Colour)
                                     var filaments = new List<FilamentDto>();
+                                    var allFilaments = await vm.GetAllFilamentsAsync().ConfigureAwait(false);
                                     foreach (var pFilament in p.Filaments)
                                     {
-                                        var filament = await vm.GetFilamentAsync(pFilament.Id).ConfigureAwait(false);
-                                        if (filament is null)
+                                        FilamentDto? filament = null;
+                                        if (pFilament.Id != 0)
                                         {
-                                            result.Errors.Add($"Filament with ID {pFilament.Id} not found");
+                                            filament = await vm.GetFilamentAsync(pFilament.Id).ConfigureAwait(false);
+                                            if (filament is null)
+                                            {
+                                                appLogger.LogWarning("Filament with ID {Id} not found", pFilament.Id);
+                                                continue;
+                                            }
 
-                                            //result.Failed++;
-                                            break;
+                                            filaments.Add(filament);
+                                            continue;
                                         }
 
-                                        filaments.Add(filament);
+                                        // Match by Manufacturer, Type and Colour if provided as names
+                                        var manName = pFilament.Manufacturer?.Name ?? string.Empty;
+                                        var typeDesc = pFilament.FilamentType?.Description ?? string.Empty;
+                                        var colDesc = pFilament.FilamentColour?.Description ?? string.Empty;
+
+                                        if (!string.IsNullOrWhiteSpace(manName) && !string.IsNullOrWhiteSpace(typeDesc) && !string.IsNullOrWhiteSpace(colDesc))
+                                        {
+                                            filament = allFilaments.FirstOrDefault(f =>
+                                                string.Equals(f.Manufacturer.Name, manName, StringComparison.OrdinalIgnoreCase)
+                                                && string.Equals(f.FilamentType.Description, typeDesc, StringComparison.OrdinalIgnoreCase)
+                                                && string.Equals(f.FilamentColour.Description, colDesc, StringComparison.OrdinalIgnoreCase));
+
+                                            if (filament is null)
+                                            {
+                                                appLogger.LogWarning("Filament not found for Manufacturer={Manufacturer}, Type={Type}, Colour={Colour}", manName, typeDesc, colDesc);
+                                                continue;
+                                            }
+
+                                            filaments.Add(filament);
+                                            continue;
+                                        }
+
+                                        // could not resolve filament
+                                        appLogger.LogWarning("Unable to resolve filament entry: {@Entry}", pFilament);
                                     }
 
                                     p.Filaments = filaments;
