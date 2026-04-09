@@ -130,6 +130,7 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
         csv.Context.RegisterClassMap<FilamentColourMap>();
         csv.Context.RegisterClassMap<FilamentTypeMap>();
         csv.Context.RegisterClassMap<ManufacturerMap>();
+        csv.Context.RegisterClassMap<ModelDesignMap>();
         csv.Context.RegisterClassMap<PrintingProjectMap>();
 
         // Try to detect entity from filename
