@@ -1,3 +1,5 @@
+// gCodeJournal.ViewModel
+
 namespace gCodeJournal.ViewModel.DTOs;
 
 /// <summary>
@@ -6,6 +8,8 @@ namespace gCodeJournal.ViewModel.DTOs;
 public class FilamentColourDto(int id, string description)
 {
     #region Constructors
+    public FilamentColourDto() : this(0, "") {}
+
     /// <inheritdoc />
     public FilamentColourDto(string description) : this(0, description) {}
     #endregion

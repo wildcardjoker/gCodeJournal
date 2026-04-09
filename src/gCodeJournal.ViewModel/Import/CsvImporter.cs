@@ -125,9 +125,10 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
         using var csv = new CsvReader(sr, csvConfig);
 
         // Register CSV class maps for DTOs that require custom mapping
-        csv.Context.RegisterClassMap<FilamentMap>();
-        csv.Context.RegisterClassMap<PrintingProjectMap>();
         csv.Context.RegisterClassMap<CustomerMap>();
+        csv.Context.RegisterClassMap<FilamentMap>();
+        csv.Context.RegisterClassMap<FilamentColourMap>();
+        csv.Context.RegisterClassMap<PrintingProjectMap>();
 
         // Try to detect entity from filename
         var entity = DetectEntityFromFileName(fileName);
@@ -251,6 +252,31 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                         foreach (var c in cols)
                         {
                             appLogger.LogDebug("Processing FilamentColour DTO: {@Dto}", c);
+
+                            // Prefer matching by Description (case-insensitive) to avoid creating duplicates when CSV
+                            // contains Description only (no Id) or when Description matches an existing record.
+                            var desc = c.Description?.Trim();
+                            if (!string.IsNullOrWhiteSpace(desc))
+                            {
+                                var existing =
+                                    await db
+                                          .FilamentColours.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Description, "NOCASE") == desc, ct)
+                                          .ConfigureAwait(false);
+
+                                if (existing is not null)
+                                {
+                                    // Found existing by description - prefer this match.
+                                    if (c.Id != 0)
+                                    {
+                                        result.RecordMapping("filament_colours", c.Id.ToString(), existing.Id);
+                                    }
+
+                                    result.Skipped++;
+
+                                    continue;
+                                }
+                            }
+
                             var sourceId = c.Id != 0 ? c.Id.ToString() : null;
                             var r        = await vm.AddFilamentColourAsync(c).ConfigureAwait(false);
                             switch (r)
@@ -956,42 +982,63 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                         return;
                     }
 
-                    var dto = id != 0 ? new FilamentColourDto(id, desc) : new FilamentColourDto(desc);
-                    if (id != 0 && updateExisting)
+                    // Prefer to match existing records by description (case-insensitive). If a matching
+                    // description exists, map the source id (if provided) to the existing id and skip
+                    // creating a duplicate. If no description match exists, allow updating by ID when
+                    // updateExisting is true, otherwise create a new record.
+                    var existingByDesc =
+                        await db.FilamentColours.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Description, "NOCASE") == desc, ct).ConfigureAwait(false);
+
+                    if (existingByDesc is not null)
                     {
-                        var r = await vm.EditFilamentColourAsync(dto).ConfigureAwait(false);
-                        if (r == ValidationResult.Success)
+                        // Map source id to existing id if provided
+                        if (id != 0)
                         {
-                            result.Updated++;
+                            result.RecordMapping("filament_colours", id.ToString(), existingByDesc.Id);
                         }
-                        else
-                        {
-                            result.Errors.Add(r.ErrorMessage ?? "EditFilamentColour failed");
-                            result.Failed++;
-                        }
+
+                        // Nothing to update because description matches; consider as skipped
+                        result.Skipped++;
                     }
                     else
                     {
-                        var r = await vm.AddFilamentColourAsync(dto).ConfigureAwait(false);
-                        if (r.ValidationResult == ValidationResult.Success)
+                        var dto = id != 0 ? new FilamentColourDto(id, desc) : new FilamentColourDto(desc);
+                        if (id != 0 && updateExisting)
                         {
-                            result.Created++;
-                            if (id != 0)
+                            var r = await vm.EditFilamentColourAsync(dto).ConfigureAwait(false);
+                            if (r == ValidationResult.Success)
                             {
-                                var dbEntity =
-                                    await db
-                                          .FilamentColours.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Description, "NOCASE") == desc, ct)
-                                          .ConfigureAwait(false);
-                                if (dbEntity != null)
-                                {
-                                    result.RecordMapping("filament_colours", id.ToString(), dbEntity.Id);
-                                }
+                                result.Updated++;
+                            }
+                            else
+                            {
+                                result.Errors.Add(r.ErrorMessage ?? "EditFilamentColour failed");
+                                result.Failed++;
                             }
                         }
                         else
                         {
-                            result.Errors.Add(r.ValidationResult.ErrorMessage ?? "AddFilamentColour failed");
-                            result.Failed++;
+                            var r = await vm.AddFilamentColourAsync(dto).ConfigureAwait(false);
+                            if (r.ValidationResult == ValidationResult.Success)
+                            {
+                                result.Created++;
+                                if (id != 0)
+                                {
+                                    var dbEntity =
+                                        await db
+                                              .FilamentColours.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Description, "NOCASE") == desc, ct)
+                                              .ConfigureAwait(false);
+                                    if (dbEntity != null)
+                                    {
+                                        result.RecordMapping("filament_colours", id.ToString(), dbEntity.Id);
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                result.Errors.Add(r.ValidationResult.ErrorMessage ?? "AddFilamentColour failed");
+                                result.Failed++;
+                            }
                         }
                     }
 
