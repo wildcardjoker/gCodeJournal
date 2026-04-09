@@ -1245,23 +1245,37 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
     async Task<Customer> GetOrCreateCustomerAsync(CustomerDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
-        Customer? existing = null;
+        // Prefer matching by name. If a name is supplied, use case-insensitive lookup
+        // and return existing customer or create a new one with that name.
+        if (!string.IsNullOrWhiteSpace(dto.Name))
+        {
+            var existingByName = await _db.Customers.FirstOrDefaultAsync(c => EF.Functions.Collate(c.Name, "NOCASE") == dto.Name).ConfigureAwait(false);
+            if (existingByName != null)
+            {
+                return existingByName;
+            }
+
+            var created = dto.ToEntity();
+            created.Id = 0;
+            await _db.Customers.AddAsync(created).ConfigureAwait(false);
+            return created;
+        }
+
+        // If no name was provided, fall back to Id lookup if available
         if (dto.Id != 0)
         {
-            existing = await _db.Customers.FindAsync(dto.Id).ConfigureAwait(false);
+            var existingById = await _db.Customers.FindAsync(dto.Id).ConfigureAwait(false);
+            if (existingById != null)
+            {
+                return existingById;
+            }
         }
 
-        existing ??= await _db.Customers.FirstOrDefaultAsync(c => EF.Functions.Collate(c.Name, "NOCASE") == dto.Name).ConfigureAwait(false);
-        if (existing != null)
-        {
-            return existing;
-        }
-
-        var created = dto.ToEntity();
-        created.Id = 0;
-        await _db.Customers.AddAsync(created).ConfigureAwait(false);
-
-        return created;
+        // As a last resort create from dto (will likely fail validation elsewhere if name missing)
+        var fallback = dto.ToEntity();
+        fallback.Id = 0;
+        await _db.Customers.AddAsync(fallback).ConfigureAwait(false);
+        return fallback;
     }
 
     async Task<ModelDesign> GetOrCreateModelDesignAsync(ModelDesignDto dto)

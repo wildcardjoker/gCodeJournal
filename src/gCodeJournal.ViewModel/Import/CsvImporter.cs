@@ -6,7 +6,6 @@ namespace gCodeJournal.ViewModel.Import;
 
 #region Using Directives
 using System.ComponentModel.DataAnnotations;
-using System.Linq;
 using System.Globalization;
 using System.Text;
 using CsvHelper;
@@ -128,6 +127,7 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
         // Register CSV class maps for DTOs that require custom mapping
         csv.Context.RegisterClassMap<FilamentMap>();
         csv.Context.RegisterClassMap<PrintingProjectMap>();
+        csv.Context.RegisterClassMap<CustomerMap>();
 
         // Try to detect entity from filename
         var entity = DetectEntityFromFileName(fileName);
@@ -364,7 +364,7 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                             if (f.Manufacturer != null && f.Manufacturer.Id == 0 && !string.IsNullOrWhiteSpace(f.Manufacturer.Name))
                             {
                                 await vm.AddManufacturerAsync(new ManufacturerDto(0, f.Manufacturer.Name)).ConfigureAwait(false);
-                                var all = await vm.GetAllManufacturersAsync().ConfigureAwait(false);
+                                var all     = await vm.GetAllManufacturersAsync().ConfigureAwait(false);
                                 var matched = all.FirstOrDefault(m => string.Equals(m.Name, f.Manufacturer.Name, StringComparison.OrdinalIgnoreCase));
                                 if (matched != null)
                                 {
@@ -376,7 +376,8 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                             {
                                 await vm.AddFilamentTypeAsync(new FilamentTypeDto(0, f.FilamentType.Description)).ConfigureAwait(false);
                                 var all = await vm.GetAllFilamentTypesAsync().ConfigureAwait(false);
-                                var matched = all.FirstOrDefault(t => string.Equals(t.Description, f.FilamentType.Description, StringComparison.OrdinalIgnoreCase));
+                                var matched =
+                                    all.FirstOrDefault(t => string.Equals(t.Description, f.FilamentType.Description, StringComparison.OrdinalIgnoreCase));
                                 if (matched != null)
                                 {
                                     f.FilamentType = new FilamentTypeDto(matched.Id, matched.Description);
@@ -387,7 +388,8 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                             {
                                 await vm.AddFilamentColourAsync(new FilamentColourDto(0, f.FilamentColour.Description)).ConfigureAwait(false);
                                 var all = await vm.GetAllFilamentColoursAsync().ConfigureAwait(false);
-                                var matched = all.FirstOrDefault(c => string.Equals(c.Description, f.FilamentColour.Description, StringComparison.OrdinalIgnoreCase));
+                                var matched =
+                                    all.FirstOrDefault(c => string.Equals(c.Description, f.FilamentColour.Description, StringComparison.OrdinalIgnoreCase));
                                 if (matched != null)
                                 {
                                     f.FilamentColour = new FilamentColourDto(matched.Id, matched.Description);
@@ -611,38 +613,40 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                                     printingProjectDto.Customer = customer;
 
                                     // Get Model Design DTO
-                    ModelDesignDto? modelDto = null;
-                    // If provided as id
-                    if (p.ModelDesign?.Id is not null && p.ModelDesign.Id != 0)
-                    {
-                        modelDto = await vm.GetModelDesignAsync(p.ModelDesign.Id).ConfigureAwait(false);
-                        if (modelDto is null)
-                        {
-                            result.Errors.Add($"Model with ID {p.ModelDesign.Id} not found");
-                            result.Failed++;
-                            break;
-                        }
+                                    ModelDesignDto? modelDto = null;
 
-                        printingProjectDto.ModelDesign = modelDto;
-                    }
-                    else if (p.ModelDesign != null && !string.IsNullOrWhiteSpace(p.ModelDesign.Summary))
-                    {
-                        // Try to match by Summary
-                        var all = await vm.GetAllModelDesignsAsync().ConfigureAwait(false);
-                        modelDto = all.FirstOrDefault(m => string.Equals(m.Summary, p.ModelDesign.Summary, StringComparison.OrdinalIgnoreCase));
-                        if (modelDto is null)
-                        {
-                            // log a warning and continue (per requirements)
-                            appLogger.LogWarning("Model design not found for summary: {Summary}", p.ModelDesign.Summary);
-                        }
-                        else
-                        {
-                            printingProjectDto.ModelDesign = modelDto;
-                        }
-                    }
+                                    // If provided as id
+                                    if (p.ModelDesign?.Id is not null && p.ModelDesign.Id != 0)
+                                    {
+                                        modelDto = await vm.GetModelDesignAsync(p.ModelDesign.Id).ConfigureAwait(false);
+                                        if (modelDto is null)
+                                        {
+                                            result.Errors.Add($"Model with ID {p.ModelDesign.Id} not found");
+                                            result.Failed++;
+
+                                            break;
+                                        }
+
+                                        printingProjectDto.ModelDesign = modelDto;
+                                    }
+                                    else if (p.ModelDesign != null && !string.IsNullOrWhiteSpace(p.ModelDesign.Summary))
+                                    {
+                                        // Try to match by Summary
+                                        var all = await vm.GetAllModelDesignsAsync().ConfigureAwait(false);
+                                        modelDto = all.FirstOrDefault(m => string.Equals(m.Summary, p.ModelDesign.Summary, StringComparison.OrdinalIgnoreCase));
+                                        if (modelDto is null)
+                                        {
+                                            // log a warning and continue (per requirements)
+                                            appLogger.LogWarning("Model design not found for summary: {Summary}", p.ModelDesign.Summary);
+                                        }
+                                        else
+                                        {
+                                            printingProjectDto.ModelDesign = modelDto;
+                                        }
+                                    }
 
                                     // Get Filaments from list (either IDs or sets Manufacturer|Type|Colour)
-                                    var filaments = new List<FilamentDto>();
+                                    var filaments    = new List<FilamentDto>();
                                     var allFilaments = await vm.GetAllFilamentsAsync().ConfigureAwait(false);
                                     foreach (var pFilament in p.Filaments)
                                     {
@@ -653,32 +657,47 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                                             if (filament is null)
                                             {
                                                 appLogger.LogWarning("Filament with ID {Id} not found", pFilament.Id);
+
                                                 continue;
                                             }
 
                                             filaments.Add(filament);
+
                                             continue;
                                         }
 
                                         // Match by Manufacturer, Type and Colour if provided as names
-                                        var manName = pFilament.Manufacturer?.Name ?? string.Empty;
-                                        var typeDesc = pFilament.FilamentType?.Description ?? string.Empty;
-                                        var colDesc = pFilament.FilamentColour?.Description ?? string.Empty;
+                                        var manName  = pFilament.Manufacturer?.Name          ?? string.Empty;
+                                        var typeDesc = pFilament.FilamentType?.Description   ?? string.Empty;
+                                        var colDesc  = pFilament.FilamentColour?.Description ?? string.Empty;
 
                                         if (!string.IsNullOrWhiteSpace(manName) && !string.IsNullOrWhiteSpace(typeDesc) && !string.IsNullOrWhiteSpace(colDesc))
                                         {
-                                            filament = allFilaments.FirstOrDefault(f =>
-                                                string.Equals(f.Manufacturer.Name, manName, StringComparison.OrdinalIgnoreCase)
-                                                && string.Equals(f.FilamentType.Description, typeDesc, StringComparison.OrdinalIgnoreCase)
-                                                && string.Equals(f.FilamentColour.Description, colDesc, StringComparison.OrdinalIgnoreCase));
+                                            filament =
+                                                allFilaments.FirstOrDefault(f =>
+                                                                                string.Equals(f.Manufacturer.Name, manName, StringComparison.OrdinalIgnoreCase)
+                                                                                && string.Equals(
+                                                                                    f.FilamentType.Description,
+                                                                                    typeDesc,
+                                                                                    StringComparison.OrdinalIgnoreCase)
+                                                                                && string.Equals(
+                                                                                    f.FilamentColour.Description,
+                                                                                    colDesc,
+                                                                                    StringComparison.OrdinalIgnoreCase));
 
                                             if (filament is null)
                                             {
-                                                appLogger.LogWarning("Filament not found for Manufacturer={Manufacturer}, Type={Type}, Colour={Colour}", manName, typeDesc, colDesc);
+                                                appLogger.LogWarning(
+                                                    "Filament not found for Manufacturer={Manufacturer}, Type={Type}, Colour={Colour}",
+                                                    manName,
+                                                    typeDesc,
+                                                    colDesc);
+
                                                 continue;
                                             }
 
                                             filaments.Add(filament);
+
                                             continue;
                                         }
 
@@ -1056,15 +1075,21 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                         await vm.AddFilamentColourAsync(new FilamentColourDto(0, colourField)).ConfigureAwait(false);
                         var allCols = await vm.GetAllFilamentColoursAsync().ConfigureAwait(false);
                         var matched = allCols.FirstOrDefault(c => string.Equals(c.Description, colourField, StringComparison.OrdinalIgnoreCase));
-                        if (matched != null) colourId = matched.Id;
+                        if (matched != null)
+                        {
+                            colourId = matched.Id;
+                        }
                     }
 
                     if (typeId == 0 && !string.IsNullOrWhiteSpace(typeField))
                     {
                         await vm.AddFilamentTypeAsync(new FilamentTypeDto(0, typeField)).ConfigureAwait(false);
                         var allTypes = await vm.GetAllFilamentTypesAsync().ConfigureAwait(false);
-                        var matched = allTypes.FirstOrDefault(t => string.Equals(t.Description, typeField, StringComparison.OrdinalIgnoreCase));
-                        if (matched != null) typeId = matched.Id;
+                        var matched  = allTypes.FirstOrDefault(t => string.Equals(t.Description, typeField, StringComparison.OrdinalIgnoreCase));
+                        if (matched != null)
+                        {
+                            typeId = matched.Id;
+                        }
                     }
 
                     if (manId == 0 && !string.IsNullOrWhiteSpace(manField))
@@ -1072,7 +1097,10 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                         await vm.AddManufacturerAsync(new ManufacturerDto(0, manField)).ConfigureAwait(false);
                         var allMans = await vm.GetAllManufacturersAsync().ConfigureAwait(false);
                         var matched = allMans.FirstOrDefault(m => string.Equals(m.Name, manField, StringComparison.OrdinalIgnoreCase));
-                        if (matched != null) manId = matched.Id;
+                        if (matched != null)
+                        {
+                            manId = matched.Id;
+                        }
                     }
 
                     var colourDto = new FilamentColourDto(colourId, string.Empty);
