@@ -19,7 +19,7 @@ public sealed class PrintingProjectMap : ClassMap<PrintingProjectDto>
     #region Constructors
     public PrintingProjectMap()
     {
-        Map(m => m.Id).Name("Id");
+        Map(m => m.Id).Name("Id").Optional();
 
         // Ignore Cost in CSV — cost will be calculated or provided elsewhere, do not map from CSV
         Map(m => m.Cost).Ignore();
