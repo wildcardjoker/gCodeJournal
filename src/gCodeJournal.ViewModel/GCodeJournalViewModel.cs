@@ -293,30 +293,60 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
 
                 if (fEntity == null)
                 {
-                    // create filament entity, but attach related lookups (may be newly created and tracked)
-                    fEntity = new Filament {CostPerWeight = fDto.CostPerWeight, ProductId = fDto.ProductId, ReorderLink = fDto.ReorderLink};
-
-                    if (fDto.Manufacturer != null)
+                    // If Manufacturer, Type and Colour are all specified, try to locate an existing
+                    // filament matching those lookups to avoid creating duplicates. Resolve the
+                    // related lookup entities (they will be created if missing) and then search by Ids.
+                    if (fDto.Manufacturer != null && fDto.FilamentType != null && fDto.FilamentColour != null)
                     {
                         var man = await GetOrCreateManufacturerAsync(fDto.Manufacturer).ConfigureAwait(false);
-
-                        // prefer navigation property to ensure correct relationship when 'man' is newly added
-                        fEntity.Manufacturer = man;
-                    }
-
-                    if (fDto.FilamentColour != null)
-                    {
-                        var col = await GetOrCreateFilamentColourAsync(fDto.FilamentColour).ConfigureAwait(false);
-                        fEntity.Colour = col;
-                    }
-
-                    if (fDto.FilamentType != null)
-                    {
                         var typ = await GetOrCreateFilamentTypeAsync(fDto.FilamentType).ConfigureAwait(false);
-                        fEntity.Type = typ;
-                    }
+                        var col = await GetOrCreateFilamentColourAsync(fDto.FilamentColour).ConfigureAwait(false);
 
-                    await _db.Filaments.AddAsync(fEntity).ConfigureAwait(false);
+                        var existingFilament = await _db.Filaments.FirstOrDefaultAsync(
+                                x => x.ManufacturerId == man.Id && x.FilamentTypeId == typ.Id && x.FilamentColourId == col.Id)
+                            .ConfigureAwait(false);
+
+                        if (existingFilament != null)
+                        {
+                            fEntity = existingFilament;
+                        }
+                        else
+                        {
+                            // Not found - create new filament and attach resolved lookups
+                            fEntity = new Filament {CostPerWeight = fDto.CostPerWeight, ProductId = fDto.ProductId, ReorderLink = fDto.ReorderLink};
+                            fEntity.Manufacturer = man;
+                            fEntity.Colour = col;
+                            fEntity.Type = typ;
+                            await _db.Filaments.AddAsync(fEntity).ConfigureAwait(false);
+                        }
+                    }
+                    else
+                    {
+                        // create filament entity, but attach related lookups (may be newly created and tracked)
+                        fEntity = new Filament {CostPerWeight = fDto.CostPerWeight, ProductId = fDto.ProductId, ReorderLink = fDto.ReorderLink};
+
+                        if (fDto.Manufacturer != null)
+                        {
+                            var man = await GetOrCreateManufacturerAsync(fDto.Manufacturer).ConfigureAwait(false);
+
+                            // prefer navigation property to ensure correct relationship when 'man' is newly added
+                            fEntity.Manufacturer = man;
+                        }
+
+                        if (fDto.FilamentColour != null)
+                        {
+                            var col = await GetOrCreateFilamentColourAsync(fDto.FilamentColour).ConfigureAwait(false);
+                            fEntity.Colour = col;
+                        }
+
+                        if (fDto.FilamentType != null)
+                        {
+                            var typ = await GetOrCreateFilamentTypeAsync(fDto.FilamentType).ConfigureAwait(false);
+                            fEntity.Type = typ;
+                        }
+
+                        await _db.Filaments.AddAsync(fEntity).ConfigureAwait(false);
+                    }
                 }
 
                 filaments.Add(fEntity);
@@ -1158,7 +1188,7 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
     #endregion
 
     #region Helper lookups
-    async Task<Manufacturer> GetOrCreateManufacturerAsync(ManufacturerDto dto)
+    public async Task<Manufacturer> GetOrCreateManufacturerAsync(ManufacturerDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
         Manufacturer? existing = null;
@@ -1184,7 +1214,7 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
         return created;
     }
 
-    async Task<FilamentColour> GetOrCreateFilamentColourAsync(FilamentColourDto dto)
+    public async Task<FilamentColour> GetOrCreateFilamentColourAsync(FilamentColourDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
         FilamentColour? existing = null;
@@ -1213,7 +1243,7 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
         return created;
     }
 
-    async Task<FilamentType> GetOrCreateFilamentTypeAsync(FilamentTypeDto dto)
+    public async Task<FilamentType> GetOrCreateFilamentTypeAsync(FilamentTypeDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
         FilamentType? existing = null;
@@ -1245,23 +1275,37 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
     async Task<Customer> GetOrCreateCustomerAsync(CustomerDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
-        Customer? existing = null;
+        // Prefer matching by name. If a name is supplied, use case-insensitive lookup
+        // and return existing customer or create a new one with that name.
+        if (!string.IsNullOrWhiteSpace(dto.Name))
+        {
+            var existingByName = await _db.Customers.FirstOrDefaultAsync(c => EF.Functions.Collate(c.Name, "NOCASE") == dto.Name).ConfigureAwait(false);
+            if (existingByName != null)
+            {
+                return existingByName;
+            }
+
+            var created = dto.ToEntity();
+            created.Id = 0;
+            await _db.Customers.AddAsync(created).ConfigureAwait(false);
+            return created;
+        }
+
+        // If no name was provided, fall back to Id lookup if available
         if (dto.Id != 0)
         {
-            existing = await _db.Customers.FindAsync(dto.Id).ConfigureAwait(false);
+            var existingById = await _db.Customers.FindAsync(dto.Id).ConfigureAwait(false);
+            if (existingById != null)
+            {
+                return existingById;
+            }
         }
 
-        existing ??= await _db.Customers.FirstOrDefaultAsync(c => EF.Functions.Collate(c.Name, "NOCASE") == dto.Name).ConfigureAwait(false);
-        if (existing != null)
-        {
-            return existing;
-        }
-
-        var created = dto.ToEntity();
-        created.Id = 0;
-        await _db.Customers.AddAsync(created).ConfigureAwait(false);
-
-        return created;
+        // As a last resort create from dto (will likely fail validation elsewhere if name missing)
+        var fallback = dto.ToEntity();
+        fallback.Id = 0;
+        await _db.Customers.AddAsync(fallback).ConfigureAwait(false);
+        return fallback;
     }
 
     async Task<ModelDesign> GetOrCreateModelDesignAsync(ModelDesignDto dto)
@@ -1273,7 +1317,7 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
             existing = await _db.ModelDesigns.FindAsync(dto.Id).ConfigureAwait(false);
         }
 
-        existing ??= await _db.ModelDesigns.FirstOrDefaultAsync(md => EF.Functions.Collate(md.Description, "NOCASE") == dto.Description).ConfigureAwait(false);
+        existing ??= await _db.ModelDesigns.FirstOrDefaultAsync(md => EF.Functions.Collate(md.Summary, "NOCASE") == dto.Summary).ConfigureAwait(false);
         if (existing != null)
         {
             return existing;

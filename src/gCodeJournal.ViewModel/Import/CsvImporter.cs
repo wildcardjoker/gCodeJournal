@@ -125,7 +125,12 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
         using var csv = new CsvReader(sr, csvConfig);
 
         // Register CSV class maps for DTOs that require custom mapping
+        csv.Context.RegisterClassMap<CustomerMap>();
         csv.Context.RegisterClassMap<FilamentMap>();
+        csv.Context.RegisterClassMap<FilamentColourMap>();
+        csv.Context.RegisterClassMap<FilamentTypeMap>();
+        csv.Context.RegisterClassMap<ManufacturerMap>();
+        csv.Context.RegisterClassMap<ModelDesignMap>();
         csv.Context.RegisterClassMap<PrintingProjectMap>();
 
         // Try to detect entity from filename
@@ -250,6 +255,31 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                         foreach (var c in cols)
                         {
                             appLogger.LogDebug("Processing FilamentColour DTO: {@Dto}", c);
+
+                            // Prefer matching by Description (case-insensitive) to avoid creating duplicates when CSV
+                            // contains Description only (no Id) or when Description matches an existing record.
+                            var desc = c.Description?.Trim();
+                            if (!string.IsNullOrWhiteSpace(desc))
+                            {
+                                var existing =
+                                    await db
+                                          .FilamentColours.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Description, "NOCASE") == desc, ct)
+                                          .ConfigureAwait(false);
+
+                                if (existing is not null)
+                                {
+                                    // Found existing by description - prefer this match.
+                                    if (c.Id != 0)
+                                    {
+                                        result.RecordMapping("filament_colours", c.Id.ToString(), existing.Id);
+                                    }
+
+                                    result.Skipped++;
+
+                                    continue;
+                                }
+                            }
+
                             var sourceId = c.Id != 0 ? c.Id.ToString() : null;
                             var r        = await vm.AddFilamentColourAsync(c).ConfigureAwait(false);
                             switch (r)
@@ -304,6 +334,30 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                         foreach (var t in types)
                         {
                             appLogger.LogDebug("Processing FilamentType DTO: {@Dto}", t);
+
+                            // Prefer matching by Description (case-insensitive). This lets CSVs containing
+                            // Description only (no Id) correctly resolve to existing records.
+                            var desc = t.Description?.Trim();
+                            if (!string.IsNullOrWhiteSpace(desc))
+                            {
+                                var existing =
+                                    await db
+                                          .FilamentTypes.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Description, "NOCASE") == desc, ct)
+                                          .ConfigureAwait(false);
+
+                                if (existing is not null)
+                                {
+                                    if (t.Id != 0)
+                                    {
+                                        result.RecordMapping("filament_types", t.Id.ToString(), existing.Id);
+                                    }
+
+                                    result.Skipped++;
+
+                                    continue;
+                                }
+                            }
+
                             var sourceId = t.Id != 0 ? t.Id.ToString() : null;
                             var r        = await vm.AddFilamentTypeAsync(t).ConfigureAwait(false);
                             switch (r)
@@ -354,10 +408,47 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                         break;
 
                     case ImportEntity.Filaments:
-                        var filamentRecords = csv.GetRecords<FilamentDto>();
+                        var filamentRecords = csv.GetRecords<FilamentDto>().ToList();
                         foreach (var f in filamentRecords)
                         {
                             appLogger.LogDebug("Processing Filament DTO: {@DtoId} ({@DtoProductId})", f.Id, f.ProductId);
+
+                            // If related lookups are provided as names (Id == 0), ensure they exist by creating or resolving them
+                            if (f.Manufacturer != null && f.Manufacturer.Id == 0 && !string.IsNullOrWhiteSpace(f.Manufacturer.Name))
+                            {
+                                await vm.AddManufacturerAsync(new ManufacturerDto(0, f.Manufacturer.Name)).ConfigureAwait(false);
+                                var all     = await vm.GetAllManufacturersAsync().ConfigureAwait(false);
+                                var matched = all.FirstOrDefault(m => string.Equals(m.Name, f.Manufacturer.Name, StringComparison.OrdinalIgnoreCase));
+                                if (matched != null)
+                                {
+                                    f.Manufacturer = new ManufacturerDto(matched.Id, matched.Name);
+                                }
+                            }
+
+                            if (f.FilamentType != null && f.FilamentType.Id == 0 && !string.IsNullOrWhiteSpace(f.FilamentType.Description))
+                            {
+                                await vm.AddFilamentTypeAsync(new FilamentTypeDto(0, f.FilamentType.Description)).ConfigureAwait(false);
+                                var all = await vm.GetAllFilamentTypesAsync().ConfigureAwait(false);
+                                var matched =
+                                    all.FirstOrDefault(t => string.Equals(t.Description, f.FilamentType.Description, StringComparison.OrdinalIgnoreCase));
+                                if (matched != null)
+                                {
+                                    f.FilamentType = new FilamentTypeDto(matched.Id, matched.Description);
+                                }
+                            }
+
+                            if (f.FilamentColour != null && f.FilamentColour.Id == 0 && !string.IsNullOrWhiteSpace(f.FilamentColour.Description))
+                            {
+                                await vm.AddFilamentColourAsync(new FilamentColourDto(0, f.FilamentColour.Description)).ConfigureAwait(false);
+                                var all = await vm.GetAllFilamentColoursAsync().ConfigureAwait(false);
+                                var matched =
+                                    all.FirstOrDefault(c => string.Equals(c.Description, f.FilamentColour.Description, StringComparison.OrdinalIgnoreCase));
+                                if (matched != null)
+                                {
+                                    f.FilamentColour = new FilamentColourDto(matched.Id, matched.Description);
+                                }
+                            }
+
                             var r = await vm.AddFilamentAsync(f).ConfigureAwait(false);
                             switch (r)
                             {
@@ -575,31 +666,96 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                                     printingProjectDto.Customer = customer;
 
                                     // Get Model Design DTO
-                                    var modelDto = await vm.GetModelDesignAsync(p.ModelDesign.Id).ConfigureAwait(false);
-                                    if (modelDto is null)
+                                    ModelDesignDto? modelDto = null;
+
+                                    // If provided as id
+                                    if (p.ModelDesign?.Id is not null && p.ModelDesign.Id != 0)
                                     {
-                                        result.Errors.Add($"Model with ID {p.ModelDesign.Id} not found");
-                                        result.Failed++;
-
-                                        break;
-                                    }
-
-                                    printingProjectDto.ModelDesign = modelDto;
-
-                                    // Get Filaments from list of IDs
-                                    var filaments = new List<FilamentDto>();
-                                    foreach (var pFilament in p.Filaments)
-                                    {
-                                        var filament = await vm.GetFilamentAsync(pFilament.Id).ConfigureAwait(false);
-                                        if (filament is null)
+                                        modelDto = await vm.GetModelDesignAsync(p.ModelDesign.Id).ConfigureAwait(false);
+                                        if (modelDto is null)
                                         {
-                                            result.Errors.Add($"Filament with ID {pFilament.Id} not found");
+                                            result.Errors.Add($"Model with ID {p.ModelDesign.Id} not found");
+                                            result.Failed++;
 
-                                            //result.Failed++;
                                             break;
                                         }
 
-                                        filaments.Add(filament);
+                                        printingProjectDto.ModelDesign = modelDto;
+                                    }
+                                    else if (p.ModelDesign != null && !string.IsNullOrWhiteSpace(p.ModelDesign.Summary))
+                                    {
+                                        // Try to match by Summary
+                                        var all = await vm.GetAllModelDesignsAsync().ConfigureAwait(false);
+                                        modelDto = all.FirstOrDefault(m => string.Equals(m.Summary, p.ModelDesign.Summary, StringComparison.OrdinalIgnoreCase));
+                                        if (modelDto is null)
+                                        {
+                                            // log a warning and continue (per requirements)
+                                            appLogger.LogWarning("Model design not found for summary: {Summary}", p.ModelDesign.Summary);
+                                        }
+                                        else
+                                        {
+                                            printingProjectDto.ModelDesign = modelDto;
+                                        }
+                                    }
+
+                                    // Get Filaments from list (either IDs or sets Manufacturer|Type|Colour)
+                                    var filaments    = new List<FilamentDto>();
+                                    var allFilaments = await vm.GetAllFilamentsAsync().ConfigureAwait(false);
+                                    foreach (var pFilament in p.Filaments)
+                                    {
+                                        FilamentDto? filament = null;
+                                        if (pFilament.Id != 0)
+                                        {
+                                            filament = await vm.GetFilamentAsync(pFilament.Id).ConfigureAwait(false);
+                                            if (filament is null)
+                                            {
+                                                appLogger.LogWarning("Filament with ID {Id} not found", pFilament.Id);
+
+                                                continue;
+                                            }
+
+                                            filaments.Add(filament);
+
+                                            continue;
+                                        }
+
+                                        // Match by Manufacturer, Type and Colour if provided as names
+                                        var manName  = pFilament.Manufacturer?.Name          ?? string.Empty;
+                                        var typeDesc = pFilament.FilamentType?.Description   ?? string.Empty;
+                                        var colDesc  = pFilament.FilamentColour?.Description ?? string.Empty;
+
+                                        if (!string.IsNullOrWhiteSpace(manName) && !string.IsNullOrWhiteSpace(typeDesc) && !string.IsNullOrWhiteSpace(colDesc))
+                                        {
+                                            filament =
+                                                allFilaments.FirstOrDefault(f =>
+                                                                                string.Equals(f.Manufacturer.Name, manName, StringComparison.OrdinalIgnoreCase)
+                                                                                && string.Equals(
+                                                                                    f.FilamentType.Description,
+                                                                                    typeDesc,
+                                                                                    StringComparison.OrdinalIgnoreCase)
+                                                                                && string.Equals(
+                                                                                    f.FilamentColour.Description,
+                                                                                    colDesc,
+                                                                                    StringComparison.OrdinalIgnoreCase));
+
+                                            if (filament is null)
+                                            {
+                                                appLogger.LogWarning(
+                                                    "Filament not found for Manufacturer={Manufacturer}, Type={Type}, Colour={Colour}",
+                                                    manName,
+                                                    typeDesc,
+                                                    colDesc);
+
+                                                continue;
+                                            }
+
+                                            filaments.Add(filament);
+
+                                            continue;
+                                        }
+
+                                        // could not resolve filament
+                                        appLogger.LogWarning("Unable to resolve filament entry: {@Entry}", pFilament);
                                     }
 
                                     p.Filaments = filaments;
@@ -853,42 +1009,63 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                         return;
                     }
 
-                    var dto = id != 0 ? new FilamentColourDto(id, desc) : new FilamentColourDto(desc);
-                    if (id != 0 && updateExisting)
+                    // Prefer to match existing records by description (case-insensitive). If a matching
+                    // description exists, map the source id (if provided) to the existing id and skip
+                    // creating a duplicate. If no description match exists, allow updating by ID when
+                    // updateExisting is true, otherwise create a new record.
+                    var existingByDesc =
+                        await db.FilamentColours.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Description, "NOCASE") == desc, ct).ConfigureAwait(false);
+
+                    if (existingByDesc is not null)
                     {
-                        var r = await vm.EditFilamentColourAsync(dto).ConfigureAwait(false);
-                        if (r == ValidationResult.Success)
+                        // Map source id to existing id if provided
+                        if (id != 0)
                         {
-                            result.Updated++;
+                            result.RecordMapping("filament_colours", id.ToString(), existingByDesc.Id);
                         }
-                        else
-                        {
-                            result.Errors.Add(r.ErrorMessage ?? "EditFilamentColour failed");
-                            result.Failed++;
-                        }
+
+                        // Nothing to update because description matches; consider as skipped
+                        result.Skipped++;
                     }
                     else
                     {
-                        var r = await vm.AddFilamentColourAsync(dto).ConfigureAwait(false);
-                        if (r.ValidationResult == ValidationResult.Success)
+                        var dto = id != 0 ? new FilamentColourDto(id, desc) : new FilamentColourDto(desc);
+                        if (id != 0 && updateExisting)
                         {
-                            result.Created++;
-                            if (id != 0)
+                            var r = await vm.EditFilamentColourAsync(dto).ConfigureAwait(false);
+                            if (r == ValidationResult.Success)
                             {
-                                var dbEntity =
-                                    await db
-                                          .FilamentColours.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Description, "NOCASE") == desc, ct)
-                                          .ConfigureAwait(false);
-                                if (dbEntity != null)
-                                {
-                                    result.RecordMapping("filament_colours", id.ToString(), dbEntity.Id);
-                                }
+                                result.Updated++;
+                            }
+                            else
+                            {
+                                result.Errors.Add(r.ErrorMessage ?? "EditFilamentColour failed");
+                                result.Failed++;
                             }
                         }
                         else
                         {
-                            result.Errors.Add(r.ValidationResult.ErrorMessage ?? "AddFilamentColour failed");
-                            result.Failed++;
+                            var r = await vm.AddFilamentColourAsync(dto).ConfigureAwait(false);
+                            if (r.ValidationResult == ValidationResult.Success)
+                            {
+                                result.Created++;
+                                if (id != 0)
+                                {
+                                    var dbEntity =
+                                        await db
+                                              .FilamentColours.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Description, "NOCASE") == desc, ct)
+                                              .ConfigureAwait(false);
+                                    if (dbEntity != null)
+                                    {
+                                        result.RecordMapping("filament_colours", id.ToString(), dbEntity.Id);
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                result.Errors.Add(r.ValidationResult.ErrorMessage ?? "AddFilamentColour failed");
+                                result.Failed++;
+                            }
                         }
                     }
 
@@ -907,42 +1084,60 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                         return;
                     }
 
-                    var dto = id != 0 ? new FilamentTypeDto(id, desc) : new FilamentTypeDto(desc);
-                    if (id != 0 && updateExisting)
+                    // Prefer matching existing records by description (case-insensitive). If found,
+                    // map source id to existing id and skip creation. Otherwise allow update by ID
+                    // when updateExisting is true, or add a new record.
+                    var existingByDesc =
+                        await db.FilamentTypes.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Description, "NOCASE") == desc, ct).ConfigureAwait(false);
+
+                    if (existingByDesc is not null)
                     {
-                        var r = await vm.EditFilamentTypeAsync(dto).ConfigureAwait(false);
-                        if (r == ValidationResult.Success)
+                        if (id != 0)
                         {
-                            result.Updated++;
+                            result.RecordMapping("filament_types", id.ToString(), existingByDesc.Id);
                         }
-                        else
-                        {
-                            result.Errors.Add(r.ErrorMessage ?? "EditFilamentType failed");
-                            result.Failed++;
-                        }
+
+                        result.Skipped++;
                     }
                     else
                     {
-                        var r = await vm.AddFilamentTypeAsync(dto).ConfigureAwait(false);
-                        if (r.ValidationResult == ValidationResult.Success)
+                        var dto = id != 0 ? new FilamentTypeDto(id, desc) : new FilamentTypeDto(desc);
+                        if (id != 0 && updateExisting)
                         {
-                            result.Created++;
-                            if (id != 0)
+                            var r = await vm.EditFilamentTypeAsync(dto).ConfigureAwait(false);
+                            if (r == ValidationResult.Success)
                             {
-                                var dbEntity =
-                                    await db
-                                          .FilamentTypes.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Description, "NOCASE") == desc, ct)
-                                          .ConfigureAwait(false);
-                                if (dbEntity != null)
-                                {
-                                    result.RecordMapping("filament_types", id.ToString(), dbEntity.Id);
-                                }
+                                result.Updated++;
+                            }
+                            else
+                            {
+                                result.Errors.Add(r.ErrorMessage ?? "EditFilamentType failed");
+                                result.Failed++;
                             }
                         }
                         else
                         {
-                            result.Errors.Add(r.ValidationResult.ErrorMessage ?? "AddFilamentType failed");
-                            result.Failed++;
+                            var r = await vm.AddFilamentTypeAsync(dto).ConfigureAwait(false);
+                            if (r.ValidationResult == ValidationResult.Success)
+                            {
+                                result.Created++;
+                                if (id != 0)
+                                {
+                                    var dbEntity =
+                                        await db
+                                              .FilamentTypes.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Description, "NOCASE") == desc, ct)
+                                              .ConfigureAwait(false);
+                                    if (dbEntity != null)
+                                    {
+                                        result.RecordMapping("filament_types", id.ToString(), dbEntity.Id);
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                result.Errors.Add(r.ValidationResult.ErrorMessage ?? "AddFilamentType failed");
+                                result.Failed++;
+                            }
                         }
                     }
 
@@ -955,9 +1150,50 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                     var cost      = ParseDecimalOrZero(GetString(dict, "CostPerWeight") ?? GetString(dict, "Cost"));
                     var productId = GetString(dict, "ProductId");
                     var reorder   = GetString(dict, "ReorderLink") ?? GetString(dict, "ReorderUrl") ?? GetString(dict, "Url");
-                    var colourId  = ParseIntOrZero(GetString(dict, "FilamentColourId") ?? GetString(dict, "FilamentColour") ?? GetString(dict, "ColourId"));
-                    var typeId    = ParseIntOrZero(GetString(dict, "FilamentTypeId")   ?? GetString(dict, "FilamentType")   ?? GetString(dict, "TypeId"));
-                    var manId     = ParseIntOrZero(GetString(dict, "ManufacturerId")   ?? GetString(dict, "Manufacturer")   ?? GetString(dict, "MakerId"));
+
+                    // Read raw fields (may be numeric IDs or string names)
+                    var colourField = GetString(dict, "FilamentColourId") ?? GetString(dict, "FilamentColour") ?? GetString(dict, "ColourId");
+                    var typeField   = GetString(dict, "FilamentTypeId")   ?? GetString(dict, "FilamentType")   ?? GetString(dict, "TypeId");
+                    var manField    = GetString(dict, "ManufacturerId")   ?? GetString(dict, "Manufacturer")   ?? GetString(dict, "MakerId");
+
+                    var colourId = ParseIntOrZero(colourField);
+                    var typeId   = ParseIntOrZero(typeField);
+                    var manId    = ParseIntOrZero(manField);
+
+                    // If name values were supplied instead of numeric IDs, try to create/resolve them via the ViewModel
+                    if (colourId == 0 && !string.IsNullOrWhiteSpace(colourField))
+                    {
+                        // attempt to create or resolve filament colour
+                        await vm.AddFilamentColourAsync(new FilamentColourDto(0, colourField)).ConfigureAwait(false);
+                        var allCols = await vm.GetAllFilamentColoursAsync().ConfigureAwait(false);
+                        var matched = allCols.FirstOrDefault(c => string.Equals(c.Description, colourField, StringComparison.OrdinalIgnoreCase));
+                        if (matched != null)
+                        {
+                            colourId = matched.Id;
+                        }
+                    }
+
+                    if (typeId == 0 && !string.IsNullOrWhiteSpace(typeField))
+                    {
+                        await vm.AddFilamentTypeAsync(new FilamentTypeDto(0, typeField)).ConfigureAwait(false);
+                        var allTypes = await vm.GetAllFilamentTypesAsync().ConfigureAwait(false);
+                        var matched  = allTypes.FirstOrDefault(t => string.Equals(t.Description, typeField, StringComparison.OrdinalIgnoreCase));
+                        if (matched != null)
+                        {
+                            typeId = matched.Id;
+                        }
+                    }
+
+                    if (manId == 0 && !string.IsNullOrWhiteSpace(manField))
+                    {
+                        await vm.AddManufacturerAsync(new ManufacturerDto(0, manField)).ConfigureAwait(false);
+                        var allMans = await vm.GetAllManufacturersAsync().ConfigureAwait(false);
+                        var matched = allMans.FirstOrDefault(m => string.Equals(m.Name, manField, StringComparison.OrdinalIgnoreCase));
+                        if (matched != null)
+                        {
+                            manId = matched.Id;
+                        }
+                    }
 
                     var colourDto = new FilamentColourDto(colourId, string.Empty);
                     var typeDto   = new FilamentTypeDto(typeId, string.Empty);

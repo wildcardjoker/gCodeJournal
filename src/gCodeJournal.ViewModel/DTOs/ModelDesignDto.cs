@@ -1,3 +1,5 @@
+// gCodeJournal.ViewModel
+
 namespace gCodeJournal.ViewModel.DTOs;
 
 /// <summary>
@@ -6,6 +8,8 @@ namespace gCodeJournal.ViewModel.DTOs;
 public class ModelDesignDto(int id, string description, decimal length, string summary, string? url)
 {
     #region Constructors
+    public ModelDesignDto() : this(string.Empty, 0m, string.Empty, null) {}
+
     /// <inheritdoc />
     public ModelDesignDto(string description, decimal length, string summary, string? url) : this(0, description, length, summary, url) {}
     #endregion

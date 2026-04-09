@@ -10,6 +10,8 @@ namespace gCodeJournal.ViewModel.DTOs;
 public class CustomerDto(int id, string name)
 {
     #region Constructors
+    public CustomerDto() : this(0, string.Empty) {}
+
     /// <inheritdoc />
     public CustomerDto(string name) : this(0, name) {}
     #endregion
