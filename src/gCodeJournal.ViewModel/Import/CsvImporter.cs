@@ -128,6 +128,7 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
         csv.Context.RegisterClassMap<CustomerMap>();
         csv.Context.RegisterClassMap<FilamentMap>();
         csv.Context.RegisterClassMap<FilamentColourMap>();
+        csv.Context.RegisterClassMap<FilamentTypeMap>();
         csv.Context.RegisterClassMap<PrintingProjectMap>();
 
         // Try to detect entity from filename
@@ -331,6 +332,30 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                         foreach (var t in types)
                         {
                             appLogger.LogDebug("Processing FilamentType DTO: {@Dto}", t);
+
+                            // Prefer matching by Description (case-insensitive). This lets CSVs containing
+                            // Description only (no Id) correctly resolve to existing records.
+                            var desc = t.Description?.Trim();
+                            if (!string.IsNullOrWhiteSpace(desc))
+                            {
+                                var existing =
+                                    await db
+                                          .FilamentTypes.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Description, "NOCASE") == desc, ct)
+                                          .ConfigureAwait(false);
+
+                                if (existing is not null)
+                                {
+                                    if (t.Id != 0)
+                                    {
+                                        result.RecordMapping("filament_types", t.Id.ToString(), existing.Id);
+                                    }
+
+                                    result.Skipped++;
+
+                                    continue;
+                                }
+                            }
+
                             var sourceId = t.Id != 0 ? t.Id.ToString() : null;
                             var r        = await vm.AddFilamentTypeAsync(t).ConfigureAwait(false);
                             switch (r)
@@ -1057,42 +1082,61 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                         return;
                     }
 
-                    var dto = id != 0 ? new FilamentTypeDto(id, desc) : new FilamentTypeDto(desc);
-                    if (id != 0 && updateExisting)
+                    // Prefer matching existing records by description (case-insensitive). If found,
+                    // map source id to existing id and skip creation. Otherwise allow update by ID
+                    // when updateExisting is true, or add a new record.
+                    var existingByDesc =
+                        await db.FilamentTypes.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Description, "NOCASE") == desc, ct)
+                              .ConfigureAwait(false);
+
+                    if (existingByDesc is not null)
                     {
-                        var r = await vm.EditFilamentTypeAsync(dto).ConfigureAwait(false);
-                        if (r == ValidationResult.Success)
+                        if (id != 0)
                         {
-                            result.Updated++;
+                            result.RecordMapping("filament_types", id.ToString(), existingByDesc.Id);
                         }
-                        else
-                        {
-                            result.Errors.Add(r.ErrorMessage ?? "EditFilamentType failed");
-                            result.Failed++;
-                        }
+
+                        result.Skipped++;
                     }
                     else
                     {
-                        var r = await vm.AddFilamentTypeAsync(dto).ConfigureAwait(false);
-                        if (r.ValidationResult == ValidationResult.Success)
+                        var dto = id != 0 ? new FilamentTypeDto(id, desc) : new FilamentTypeDto(desc);
+                        if (id != 0 && updateExisting)
                         {
-                            result.Created++;
-                            if (id != 0)
+                            var r = await vm.EditFilamentTypeAsync(dto).ConfigureAwait(false);
+                            if (r == ValidationResult.Success)
                             {
-                                var dbEntity =
-                                    await db
-                                          .FilamentTypes.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Description, "NOCASE") == desc, ct)
-                                          .ConfigureAwait(false);
-                                if (dbEntity != null)
-                                {
-                                    result.RecordMapping("filament_types", id.ToString(), dbEntity.Id);
-                                }
+                                result.Updated++;
+                            }
+                            else
+                            {
+                                result.Errors.Add(r.ErrorMessage ?? "EditFilamentType failed");
+                                result.Failed++;
                             }
                         }
                         else
                         {
-                            result.Errors.Add(r.ValidationResult.ErrorMessage ?? "AddFilamentType failed");
-                            result.Failed++;
+                            var r = await vm.AddFilamentTypeAsync(dto).ConfigureAwait(false);
+                            if (r.ValidationResult == ValidationResult.Success)
+                            {
+                                result.Created++;
+                                if (id != 0)
+                                {
+                                    var dbEntity =
+                                        await db
+                                              .FilamentTypes.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Description, "NOCASE") == desc, ct)
+                                              .ConfigureAwait(false);
+                                    if (dbEntity != null)
+                                    {
+                                        result.RecordMapping("filament_types", id.ToString(), dbEntity.Id);
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                result.Errors.Add(r.ValidationResult.ErrorMessage ?? "AddFilamentType failed");
+                                result.Failed++;
+                            }
                         }
                     }
 
