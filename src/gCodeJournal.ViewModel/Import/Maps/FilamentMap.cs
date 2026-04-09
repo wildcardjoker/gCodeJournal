@@ -20,7 +20,7 @@ public sealed class FilamentMap : ClassMap<FilamentDto>
     {
         // No explicit ConstructUsing - rely on parameterless ctor on FilamentDto and property mappings
 
-        Map(m => m.Id).Name("Id");
+        Map(m => m.Id).Name("Id").Optional();
         Map(m => m.CostPerWeight).Name("CostPerWeight");
         Map(m => m.ProductId).Name("ProductId");
         Map(m => m.ReorderLink).Name("ReorderLink");

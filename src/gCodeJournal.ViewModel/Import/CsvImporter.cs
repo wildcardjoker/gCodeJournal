@@ -406,7 +406,7 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                         break;
 
                     case ImportEntity.Filaments:
-                        var filamentRecords = csv.GetRecords<FilamentDto>();
+                        var filamentRecords = csv.GetRecords<FilamentDto>().ToList();
                         foreach (var f in filamentRecords)
                         {
                             appLogger.LogDebug("Processing Filament DTO: {@DtoId} ({@DtoProductId})", f.Id, f.ProductId);
@@ -1086,8 +1086,7 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                     // map source id to existing id and skip creation. Otherwise allow update by ID
                     // when updateExisting is true, or add a new record.
                     var existingByDesc =
-                        await db.FilamentTypes.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Description, "NOCASE") == desc, ct)
-                              .ConfigureAwait(false);
+                        await db.FilamentTypes.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Description, "NOCASE") == desc, ct).ConfigureAwait(false);
 
                     if (existingByDesc is not null)
                     {
