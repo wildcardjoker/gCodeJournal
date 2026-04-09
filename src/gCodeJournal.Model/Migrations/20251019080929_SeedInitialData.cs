@@ -63,14 +63,6 @@ namespace gCodeJournal.Model.Migrations
                     { 7, "Creality" }
                 });
 
-            migrationBuilder.InsertData(
-                table: "Filaments",
-                columns: new[] { "Id", "CostPerWeight", "FilamentColourId", "FilamentTypeId", "ManufacturerId", "PrintingProjectId", "ProductId", "ReorderLink" },
-                values: new object[,]
-                {
-                    { 1, 19.95m, 2, 1, 1, null, null, null },
-                    { 2, 19.95m, 1, 1, 1, null, null, null }
-                });
         }
 
         /// <inheritdoc />
