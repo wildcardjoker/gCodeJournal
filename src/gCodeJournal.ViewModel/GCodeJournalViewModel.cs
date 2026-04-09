@@ -293,30 +293,60 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
 
                 if (fEntity == null)
                 {
-                    // create filament entity, but attach related lookups (may be newly created and tracked)
-                    fEntity = new Filament {CostPerWeight = fDto.CostPerWeight, ProductId = fDto.ProductId, ReorderLink = fDto.ReorderLink};
-
-                    if (fDto.Manufacturer != null)
+                    // If Manufacturer, Type and Colour are all specified, try to locate an existing
+                    // filament matching those lookups to avoid creating duplicates. Resolve the
+                    // related lookup entities (they will be created if missing) and then search by Ids.
+                    if (fDto.Manufacturer != null && fDto.FilamentType != null && fDto.FilamentColour != null)
                     {
                         var man = await GetOrCreateManufacturerAsync(fDto.Manufacturer).ConfigureAwait(false);
-
-                        // prefer navigation property to ensure correct relationship when 'man' is newly added
-                        fEntity.Manufacturer = man;
-                    }
-
-                    if (fDto.FilamentColour != null)
-                    {
-                        var col = await GetOrCreateFilamentColourAsync(fDto.FilamentColour).ConfigureAwait(false);
-                        fEntity.Colour = col;
-                    }
-
-                    if (fDto.FilamentType != null)
-                    {
                         var typ = await GetOrCreateFilamentTypeAsync(fDto.FilamentType).ConfigureAwait(false);
-                        fEntity.Type = typ;
-                    }
+                        var col = await GetOrCreateFilamentColourAsync(fDto.FilamentColour).ConfigureAwait(false);
 
-                    await _db.Filaments.AddAsync(fEntity).ConfigureAwait(false);
+                        var existingFilament = await _db.Filaments.FirstOrDefaultAsync(
+                                x => x.ManufacturerId == man.Id && x.FilamentTypeId == typ.Id && x.FilamentColourId == col.Id)
+                            .ConfigureAwait(false);
+
+                        if (existingFilament != null)
+                        {
+                            fEntity = existingFilament;
+                        }
+                        else
+                        {
+                            // Not found - create new filament and attach resolved lookups
+                            fEntity = new Filament {CostPerWeight = fDto.CostPerWeight, ProductId = fDto.ProductId, ReorderLink = fDto.ReorderLink};
+                            fEntity.Manufacturer = man;
+                            fEntity.Colour = col;
+                            fEntity.Type = typ;
+                            await _db.Filaments.AddAsync(fEntity).ConfigureAwait(false);
+                        }
+                    }
+                    else
+                    {
+                        // create filament entity, but attach related lookups (may be newly created and tracked)
+                        fEntity = new Filament {CostPerWeight = fDto.CostPerWeight, ProductId = fDto.ProductId, ReorderLink = fDto.ReorderLink};
+
+                        if (fDto.Manufacturer != null)
+                        {
+                            var man = await GetOrCreateManufacturerAsync(fDto.Manufacturer).ConfigureAwait(false);
+
+                            // prefer navigation property to ensure correct relationship when 'man' is newly added
+                            fEntity.Manufacturer = man;
+                        }
+
+                        if (fDto.FilamentColour != null)
+                        {
+                            var col = await GetOrCreateFilamentColourAsync(fDto.FilamentColour).ConfigureAwait(false);
+                            fEntity.Colour = col;
+                        }
+
+                        if (fDto.FilamentType != null)
+                        {
+                            var typ = await GetOrCreateFilamentTypeAsync(fDto.FilamentType).ConfigureAwait(false);
+                            fEntity.Type = typ;
+                        }
+
+                        await _db.Filaments.AddAsync(fEntity).ConfigureAwait(false);
+                    }
                 }
 
                 filaments.Add(fEntity);
