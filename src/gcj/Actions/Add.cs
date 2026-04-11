@@ -144,6 +144,38 @@ public static partial class Program
         appLogger.LogInformation(Emoji.Known.CheckMarkButton + " Added model design {Summary}", summary);
     }
 
+    static async Task AddPrinterAsync(IGCodeJournalViewModel vm, ILogger appLogger)
+    {
+        var manufacturer = await vm.SelectManufacturer().ConfigureAwait(false);
+        if (manufacturer is null)
+        {
+            appLogger.LogReturnToMenu();
+
+            return;
+        }
+
+        var model = await string.Empty.GetPrinterModel().ConfigureAwait(false);
+
+        if (string.IsNullOrWhiteSpace(model))
+        {
+            appLogger.LogError(Emoji.Known.Warning + "  Model cannot be empty");
+
+            return;
+        }
+
+        var costPerHour = await 0m.GetPrinterCostPerHour().ConfigureAwait(false);
+        if (costPerHour <= 0)
+        {
+            appLogger.LogError(Emoji.Known.Warning + "  Cost per hour cannot be zero or negative");
+
+            return;
+        }
+
+        var printerDto = new PrinterDto(manufacturer, model, costPerHour);
+        await vm.AddPrinterAsync(printerDto).ConfigureAwait(false);
+        appLogger.LogInformation(Emoji.Known.CheckMarkButton + " Added Printer {Model}", printerDto);
+    }
+
     static async Task AddPrintingProjectAsync(IGCodeJournalViewModel vm, ILogger appLogger)
     {
         var customers = await vm.GetAllCustomersAsync().ConfigureAwait(false);

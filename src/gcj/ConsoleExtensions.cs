@@ -128,6 +128,12 @@ internal static class ConsoleExtensions
                         });
     }
 
+    public static async Task<decimal> GetPrinterCostPerHour(this decimal defaultValue) =>
+        await "printer cost per hour".GetInputFromConsoleAsync(defaultValue).ConfigureAwait(false);
+
+    public static async Task<string> GetPrinterModel(this string defaultValue) =>
+        await "printer model".GetInputFromConsoleAsync(defaultValue).ConfigureAwait(false) ?? string.Empty;
+
     public static async Task<string?> GetUriAsync(this string promptMessage, string? defaultValue = null)
     {
         var uri = await promptMessage.GetInputFromConsoleAsync(defaultValue).ConfigureAwait(false);

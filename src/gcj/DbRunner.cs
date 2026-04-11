@@ -221,6 +221,10 @@ public static partial class Program
                         await AddModelDesignAsync(vm, appLogger).ConfigureAwait(false);
 
                         return;
+                    case var _ when target.Equals("Printer", StringComparison.OrdinalIgnoreCase):
+                        await AddPrinterAsync(vm, appLogger).ConfigureAwait(false);
+
+                        return;
                     case var _ when target.Equals("PrintingProject", StringComparison.OrdinalIgnoreCase):
                         await AddPrintingProjectAsync(vm, appLogger).ConfigureAwait(false);
 
