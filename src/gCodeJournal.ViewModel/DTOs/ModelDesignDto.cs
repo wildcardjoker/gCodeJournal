@@ -2,6 +2,10 @@
 
 namespace gCodeJournal.ViewModel.DTOs;
 
+#region Using Directives
+using Model;
+#endregion
+
 /// <summary>
 ///     Represents a model design with properties such as description, length, summary, and URL.
 /// </summary>
@@ -12,6 +16,9 @@ public class ModelDesignDto(int id, string description, decimal length, string s
 
     /// <inheritdoc />
     public ModelDesignDto(string description, decimal length, string summary, string? url) : this(0, description, length, summary, url) {}
+
+    /// <inheritdoc />
+    public ModelDesignDto(ModelDesign modelDesign) : this(modelDesign.Id, modelDesign.Description, modelDesign.Length, modelDesign.Summary, modelDesign.Url) {}
     #endregion
 
     #region Properties

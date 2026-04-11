@@ -2,6 +2,10 @@
 
 namespace gCodeJournal.ViewModel.DTOs;
 
+#region Using Directives
+using Model;
+#endregion
+
 /// <summary>
 ///     Represents a printing project with various properties such as cost, submission and completion dates, customer,
 ///     model design, and filaments used.
@@ -21,6 +25,18 @@ public class PrintingProjectDto(
     ///     Parameterless constructor to support serializers and CsvHelper when a factory is not provided.
     /// </summary>
     public PrintingProjectDto() : this(0, 0m, DateOnly.FromDateTime(DateTime.Now), null, null, null, null, new List<FilamentDto>()) {}
+
+    public PrintingProjectDto(PrintingProject printingProject) : this()
+    {
+        Id          = printingProject.Id;
+        Cost        = printingProject.Cost;
+        Submitted   = DateOnly.FromDateTime(printingProject.Submitted);
+        Completed   = printingProject.Completed.HasValue ? DateOnly.FromDateTime(printingProject.Completed.Value) : null;
+        Customer    = new CustomerDto(printingProject.Customer);
+        ModelDesign = new ModelDesignDto(printingProject.Model);
+        Printer     = new PrinterDto(printingProject.Printer);
+        Filaments   = printingProject.Filaments.Select(f => new FilamentDto(f)).ToList();
+    }
 
     public PrintingProjectDto(
         decimal           cost,

@@ -2,6 +2,10 @@
 
 namespace gCodeJournal.ViewModel.DTOs;
 
+#region Using Directives
+using Model;
+#endregion
+
 /// <summary>
 ///     Represents a filament type with an ID and a description.
 /// </summary>
@@ -12,6 +16,9 @@ public class FilamentTypeDto(int id, string description)
 
     /// <inheritdoc />
     public FilamentTypeDto(string description) : this(0, description) {}
+
+    /// <inheritdoc />
+    public FilamentTypeDto(FilamentType filamentType) : this(filamentType.Id, filamentType.Description) {}
     #endregion
 
     #region Properties

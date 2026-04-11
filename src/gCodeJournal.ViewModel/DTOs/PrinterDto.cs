@@ -12,12 +12,17 @@ using Model;
 public class PrinterDto(int id, ManufacturerDto? manufacturer, string model, decimal costPerHour)
 {
     #region Constructors
+    /// <inheritdoc />
     public PrinterDto() : this(0, null, string.Empty, 0m) {}
 
+    /// <inheritdoc />
     public PrinterDto(int id, string model) : this(id, null, model, 0m) {}
 
+    /// <inheritdoc />
     public PrinterDto(ManufacturerDto manufacturer, string model, decimal costPerHour) : this(0, manufacturer, model, costPerHour) {}
-    public PrinterDto(Printer         printer) : this(printer.Id, new ManufacturerDto(printer.Manufacturer), printer.Model, printer.CostPerHour) {}
+
+    /// <inheritdoc />
+    public PrinterDto(Printer printer) : this(printer.Id, new ManufacturerDto(printer.Manufacturer), printer.Model, printer.CostPerHour) {}
     #endregion
 
     #region Properties
