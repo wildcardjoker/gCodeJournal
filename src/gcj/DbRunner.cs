@@ -263,6 +263,10 @@ public static partial class Program
                         await EditModelDesignAsync(vm, appLogger).ConfigureAwait(false);
 
                         return;
+                    case var _ when target.Equals("Printer", StringComparison.OrdinalIgnoreCase):
+                        await EditPrinterAsync(vm, appLogger).ConfigureAwait(false);
+
+                        return;
                     case var _ when target.Equals("PrintingProject", StringComparison.OrdinalIgnoreCase):
                         await EditPrintingProjectAsync(vm, appLogger).ConfigureAwait(false);
 
@@ -299,6 +303,10 @@ public static partial class Program
                         return;
                     case var _ when target.Equals("ModelDesign", StringComparison.OrdinalIgnoreCase):
                         await DeleteModelDesignAsync(vm, appLogger).ConfigureAwait(false);
+
+                        return;
+                    case var _ when target.Equals("Printer", StringComparison.OrdinalIgnoreCase):
+                        await DeletePrinterAsync(vm, appLogger).ConfigureAwait(false);
 
                         return;
                     case var _ when target.Equals("PrintingProject", StringComparison.OrdinalIgnoreCase):

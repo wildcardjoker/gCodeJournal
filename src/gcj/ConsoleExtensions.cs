@@ -18,8 +18,9 @@ internal static class ConsoleExtensions
 
     public static async Task<bool> ConfirmDeleteAsync<T>(this T objectType) where T : class
     {
-        var confirmationPrompt = new ConfirmationPrompt($"Are you sure you want to delete the {typeof(T)} ({objectType})?") {DefaultValue = false};
-        var result             = await AnsiConsole.PromptAsync(confirmationPrompt).ConfigureAwait(false);
+        var confirmationPrompt =
+            new ConfirmationPrompt($"Are you sure you want to delete the {typeof(T).Name.HumanizeDtoName()} '{objectType}'y?") {DefaultValue = false};
+        var result = await AnsiConsole.PromptAsync(confirmationPrompt).ConfigureAwait(false);
 
         return result;
     }

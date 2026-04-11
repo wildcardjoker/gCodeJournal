@@ -241,6 +241,51 @@ public static partial class Program
         }
     }
 
+    static async Task EditPrinterAsync(IGCodeJournalViewModel vm, ILogger appLogger)
+    {
+        var printers        = await vm.GetAllPrintersAsync().ConfigureAwait(false);
+        var selectedPrinter = await printers.GetEntitySelectionAsync().ConfigureAwait(false);
+        if (selectedPrinter is null)
+        {
+            appLogger.LogReturnToMenu();
+
+            return;
+        }
+
+        var manufacturer = await vm.SelectManufacturer().ConfigureAwait(false) ?? selectedPrinter.Manufacturer;
+
+        var model = await selectedPrinter.Model.GetPrinterModel().ConfigureAwait(false);
+
+        if (string.IsNullOrWhiteSpace(model))
+        {
+            appLogger.LogError(Emoji.Known.Warning + "  Model cannot be empty");
+
+            return;
+        }
+
+        var costPerHour = await selectedPrinter.CostPerHour.GetPrinterCostPerHour().ConfigureAwait(false);
+        if (costPerHour <= 0)
+        {
+            appLogger.LogError(Emoji.Known.Warning + "  Cost per hour cannot be zero or negative");
+
+            return;
+        }
+
+        selectedPrinter.Manufacturer = manufacturer ?? selectedPrinter.Manufacturer;
+        selectedPrinter.Model        = model;
+        selectedPrinter.CostPerHour  = costPerHour;
+
+        var result = await vm.EditPrinterAsync(selectedPrinter).ConfigureAwait(false);
+        if (result == ValidationResult.Success)
+        {
+            appLogger.LogInformation(Emoji.Known.CheckMarkButton + "  Updated Printer {Printer}", selectedPrinter);
+        }
+        else
+        {
+            appLogger.LogSaveFailure(result);
+        }
+    }
+
     static async Task EditPrintingProjectAsync(IGCodeJournalViewModel vm, ILogger appLogger)
     {
         var allCustomers = await vm.GetAllCustomersAsync().ConfigureAwait(false);

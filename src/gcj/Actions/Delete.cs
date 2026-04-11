@@ -189,6 +189,35 @@ public static partial class Program
         }
     }
 
+    static async Task DeletePrinterAsync(IGCodeJournalViewModel vm, ILogger appLogger)
+    {
+        var printers        = await vm.GetAllPrintersAsync().ConfigureAwait(false);
+        var selectedPrinter = await printers.GetEntitySelectionAsync().ConfigureAwait(false);
+        if (selectedPrinter is null)
+        {
+            appLogger.LogReturnToMenu();
+
+            return;
+        }
+
+        if (await selectedPrinter.ConfirmDeleteAsync().ConfigureAwait(false))
+        {
+            var result = await vm.DeletePrinterAsync(selectedPrinter).ConfigureAwait(false);
+            if (result == ValidationResult.Success)
+            {
+                appLogger.DisplayDeleteConfirmedMessage<Printer>(selectedPrinter.ToString());
+            }
+            else
+            {
+                appLogger.LogSaveFailure(result);
+            }
+        }
+        else
+        {
+            appLogger.DisplayCancelDeleteMessage<ModelDesign>();
+        }
+    }
+
     static async Task DeletePrintingProjectAsync(IGCodeJournalViewModel vm, ILogger appLogger)
     {
         var allProjects = await vm.GetAllPrintingProjectsAsync().ConfigureAwait(false);
