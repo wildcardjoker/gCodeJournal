@@ -2,6 +2,10 @@
 
 namespace gCodeJournal.ViewModel.DTOs;
 
+#region Using Directives
+using Model;
+#endregion
+
 /// <summary>
 ///     Represents a customer with an ID and a name.
 /// </summary>
@@ -14,6 +18,9 @@ public class CustomerDto(int id, string name)
 
     /// <inheritdoc />
     public CustomerDto(string name) : this(0, name) {}
+
+    /// <inheritdoc />
+    public CustomerDto(Customer customer) : this(customer.Id, customer.Name) {}
     #endregion
 
     #region Properties

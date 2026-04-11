@@ -3,7 +3,7 @@
 namespace gCodeJournal.Model;
 
 #region Using Directives
-using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations.Schema;
 using JetBrains.Annotations;
 #endregion
 
@@ -36,6 +36,7 @@ public class PrintingProject
     ///     A <see cref="decimal" /> value representing the monetary cost. Uses <see cref="decimal" />
     ///     to preserve precision for currency amounts.
     /// </value>
+    [Column(TypeName = "money")]
     public decimal Cost {get; set;}
 
     /// <summary>
@@ -82,6 +83,15 @@ public class PrintingProject
     /// </summary>
     /// <value>An integer representing the model design's primary key.</value>
     public int ModelDesignId {get; set;}
+
+    /// <summary>
+    ///     Gets or sets the <see cref="Printer" /> associated with this printing project.
+    /// </summary>
+    /// <remarks>
+    ///     This property represents the specific 3D printer used to fulfill the printing project.
+    ///     It provides details about the printer, including its manufacturer and model information.
+    /// </remarks>
+    public virtual Printer Printer {get; set;} = null!;
 
     /// <summary>
     ///     Gets or sets the date and time when the project was submitted.

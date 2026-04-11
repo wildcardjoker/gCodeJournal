@@ -100,6 +100,11 @@ public class GCodeJournalDbContext : DbContext
     ///     is used to track submission/completion timestamps, cost and associated filaments and customer.
     /// </remarks>
     public DbSet<PrintingProject> PrintingProjects {get; set;} = null!;
+
+    /// <summary>
+    ///     Gets or sets the collection of <see cref="Printer" /> entities.
+    /// </summary>
+    public DbSet<Printer> Printers { get; set; } = null!;
     #endregion
 
     internal static string GetDefaultDbPath()
@@ -209,6 +214,27 @@ public class GCodeJournalDbContext : DbContext
 
         // Call the base method
         base.OnModelCreating(modelBuilder);
+        modelBuilder.Entity<Printer>(b =>
+        {
+            b.Property<int>("Id")
+                .ValueGeneratedOnAdd()
+                .HasColumnType("INTEGER");
+
+            b.Property<int>("ManufacturerId")
+                .HasColumnType("INTEGER");
+
+            b.Property<string>("Model")
+                .IsRequired()
+                .HasMaxLength(50)
+                .HasColumnType("TEXT");
+
+            b.HasKey("Id");
+
+            b.HasIndex("ManufacturerId");
+
+            // Use plural table name to match project conventions and existing DbSet
+            b.ToTable("Printers");
+        });
     }
     #endregion
 }

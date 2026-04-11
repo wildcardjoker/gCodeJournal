@@ -1,4 +1,10 @@
+// gCodeJournal.ViewModel
+
 namespace gCodeJournal.ViewModel.DTOs;
+
+#region Using Directives
+using Model;
+#endregion
 
 /// <summary>
 ///     Represents a filament with various properties such as cost, product ID, reorder link, color, type, and
@@ -14,12 +20,16 @@ public class FilamentDto(
     ManufacturerDto   manufacturer)
 {
     #region Constructors
-    /// <summary>
-    /// Parameterless constructor required by some serializers and CsvHelper when no factory is provided.
-    /// Creates a minimal instance with default nested DTOs.
-    /// </summary>
-    public FilamentDto()
-        : this(0, 0m, null, null, new FilamentColourDto(0, string.Empty), new FilamentTypeDto(0, string.Empty), new ManufacturerDto(0, string.Empty)) { }
+    /// <inheritdoc />
+    public FilamentDto() : this(
+        0,
+        0m,
+        null,
+        null,
+        new FilamentColourDto(0, string.Empty),
+        new FilamentTypeDto(0, string.Empty),
+        new ManufacturerDto(0, string.Empty)) {}
+
     /// <inheritdoc />
     public FilamentDto(
         decimal           costPerWeight,
@@ -28,6 +38,15 @@ public class FilamentDto(
         FilamentColourDto filamentColour,
         FilamentTypeDto   filamentType,
         ManufacturerDto   manufacturer) : this(0, costPerWeight, productId, reorderLink, filamentColour, filamentType, manufacturer) {}
+
+    public FilamentDto(Filament filament) : this(
+        filament.Id,
+        filament.CostPerWeight,
+        filament.ProductId,
+        filament.ReorderLink,
+        new FilamentColourDto(filament.Colour),
+        new FilamentTypeDto(filament.Type),
+        new ManufacturerDto(filament.Manufacturer)) {}
     #endregion
 
     #region Properties

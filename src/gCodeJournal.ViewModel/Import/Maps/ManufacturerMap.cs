@@ -13,6 +13,8 @@ public sealed class ManufacturerMap : ClassMap<ManufacturerDto>
     public ManufacturerMap()
     {
         Map(m => m.Id).Optional();
+        Map(m => m.IsFilamentManufacturer).Optional();
+        Map(m => m.IsPrinterManufacturer).Optional();
         Map(m => m.Name);
     }
     #endregion

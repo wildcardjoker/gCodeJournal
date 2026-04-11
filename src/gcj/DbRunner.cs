@@ -1,3 +1,5 @@
+// gcj
+
 namespace gcj;
 
 #region Using Directives
@@ -11,7 +13,7 @@ using Spectre.Console;
 
 public static partial class Program
 {
-    private static async Task LogCustomerDetailsAsync(IGCodeJournalViewModel vm, ILogger logger)
+    static async Task LogCustomerDetailsAsync(IGCodeJournalViewModel vm, ILogger logger)
     {
         // Extract data from the database before writing to the console; this will log any warnings if we're logging sensitive data
         var customers = await vm.GetAllCustomersAsync().ConfigureAwait(false);
@@ -22,7 +24,7 @@ public static partial class Program
         }
     }
 
-    private static async Task LogFilamentColourDetailsAsync(IGCodeJournalViewModel vm, ILogger logger)
+    static async Task LogFilamentColourDetailsAsync(IGCodeJournalViewModel vm, ILogger logger)
     {
         logger.LogInformation("Filament Colours:");
         var colours = await vm.GetAllFilamentColoursAsync().ConfigureAwait(false);
@@ -32,7 +34,7 @@ public static partial class Program
         }
     }
 
-    private static async Task LogFilamentDetailsAsync(IGCodeJournalViewModel vm, ILogger logger)
+    static async Task LogFilamentDetailsAsync(IGCodeJournalViewModel vm, ILogger logger)
     {
         logger.LogInformation("Filaments:");
         var filaments = await vm.GetAllFilamentsAsync().ConfigureAwait(false);
@@ -42,7 +44,7 @@ public static partial class Program
         }
     }
 
-    private static async Task LogFilamentTypeDetailsAsync(IGCodeJournalViewModel vm, ILogger logger)
+    static async Task LogFilamentTypeDetailsAsync(IGCodeJournalViewModel vm, ILogger logger)
     {
         logger.LogInformation("Filament Types:");
         var types = await vm.GetAllFilamentTypesAsync().ConfigureAwait(false);
@@ -52,7 +54,7 @@ public static partial class Program
         }
     }
 
-    private static async Task LogManufacturerDetailsAsync(IGCodeJournalViewModel vm, ILogger logger)
+    static async Task LogManufacturerDetailsAsync(IGCodeJournalViewModel vm, ILogger logger)
     {
         // Get and log Manufacturers and Filaments
         var manufacturers = await vm.GetAllManufacturersAsync().ConfigureAwait(false);
@@ -63,7 +65,7 @@ public static partial class Program
         }
     }
 
-    private static async Task LogModelDesignDetailsAsync(IGCodeJournalViewModel vm, ILogger logger)
+    static async Task LogModelDesignDetailsAsync(IGCodeJournalViewModel vm, ILogger logger)
     {
         logger.LogInformation("Model Designs:");
         var models = await vm.GetAllModelDesignsAsync().ConfigureAwait(false);
@@ -73,7 +75,17 @@ public static partial class Program
         }
     }
 
-    private static async Task LogPrintingProjectDetailsAsync(IGCodeJournalViewModel vm, ILogger logger)
+    static async Task LogPrinterDetailsAsync(IGCodeJournalViewModel vm, ILogger logger)
+    {
+        logger.LogInformation("Printers:");
+        var printers = await vm.GetAllPrintersAsync().ConfigureAwait(false);
+        foreach (var printer in printers)
+        {
+            logger.LogInformation(" {PrinterId}: {Printer}", printer.Id, printer);
+        }
+    }
+
+    static async Task LogPrintingProjectDetailsAsync(IGCodeJournalViewModel vm, ILogger logger)
     {
         logger.LogInformation("Printing Projects:");
         var projects = await vm.GetAllPrintingProjectsAsync().ConfigureAwait(false);
@@ -83,7 +95,7 @@ public static partial class Program
         }
     }
 
-    private static async Task ProcessDatabaseActionAsync(string commandRequested, ServiceProvider provider, ILogger appLogger)
+    static async Task ProcessDatabaseActionAsync(string commandRequested, ServiceProvider provider, ILogger appLogger)
     {
         using var scope = provider.CreateScope();
         var       vm    = scope.ServiceProvider.GetRequiredService<IGCodeJournalViewModel>();
@@ -108,6 +120,7 @@ public static partial class Program
                 if (action.Equals("customers", StringComparison.OrdinalIgnoreCase) || target.Equals("customers", StringComparison.OrdinalIgnoreCase))
                 {
                     await LogCustomerDetailsAsync(vm, appLogger).ConfigureAwait(false);
+
                     return;
                 }
 
@@ -118,12 +131,14 @@ public static partial class Program
                     || target.Equals("filamentColors", StringComparison.OrdinalIgnoreCase))
                 {
                     await LogFilamentColourDetailsAsync(vm, appLogger).ConfigureAwait(false);
+
                     return;
                 }
 
                 if (action.Equals("filaments", StringComparison.OrdinalIgnoreCase) || target.Equals("filaments", StringComparison.OrdinalIgnoreCase))
                 {
                     await LogFilamentDetailsAsync(vm, appLogger).ConfigureAwait(false);
+
                     return;
                 }
 
@@ -131,12 +146,14 @@ public static partial class Program
                 if (action.Equals("filamentTypes", StringComparison.OrdinalIgnoreCase) || target.Equals("filamentTypes", StringComparison.OrdinalIgnoreCase))
                 {
                     await LogFilamentTypeDetailsAsync(vm, appLogger).ConfigureAwait(false);
+
                     return;
                 }
 
                 if (action.Equals("manufacturers", StringComparison.OrdinalIgnoreCase) || target.Equals("manufacturers", StringComparison.OrdinalIgnoreCase))
                 {
                     await LogManufacturerDetailsAsync(vm, appLogger).ConfigureAwait(false);
+
                     return;
                 }
 
@@ -146,6 +163,17 @@ public static partial class Program
                     || target.Equals("modelDesign",  StringComparison.OrdinalIgnoreCase))
                 {
                     await LogModelDesignDetailsAsync(vm, appLogger).ConfigureAwait(false);
+
+                    return;
+                }
+
+                // Handle printers
+                if (action.Equals("printers", StringComparison.OrdinalIgnoreCase)
+                    || target.Equals("printers", StringComparison.OrdinalIgnoreCase)
+                    || target.Equals("printer",  StringComparison.OrdinalIgnoreCase))
+                {
+                    await LogPrinterDetailsAsync(vm, appLogger).ConfigureAwait(false);
+
                     return;
                 }
 
@@ -156,6 +184,7 @@ public static partial class Program
                     || target.Equals("projects", StringComparison.OrdinalIgnoreCase))
                 {
                     await LogPrintingProjectDetailsAsync(vm, appLogger).ConfigureAwait(false);
+
                     return;
                 }
 
@@ -169,25 +198,36 @@ public static partial class Program
                 {
                     case var _ when target.Equals("Customer", StringComparison.OrdinalIgnoreCase):
                         await AddCustomerAsync(vm, appLogger).ConfigureAwait(false);
+
                         return;
                     case var _ when target.Equals("Filament", StringComparison.OrdinalIgnoreCase):
                         await AddFilamentAsync(vm, appLogger).ConfigureAwait(false);
+
                         return;
                     case var _ when target.Equals("FilamentColour",   StringComparison.OrdinalIgnoreCase)
                                     || target.Equals("FilamentColor", StringComparison.OrdinalIgnoreCase):
                         await AddFilamentColourAsync(vm, appLogger).ConfigureAwait(false);
+
                         return;
                     case var _ when target.Equals("FilamentType", StringComparison.OrdinalIgnoreCase):
                         await AddFilamentTypeAsync(vm, appLogger).ConfigureAwait(false);
+
                         return;
                     case var _ when target.Equals("Manufacturer", StringComparison.OrdinalIgnoreCase):
                         await AddManufacturerAsync(vm, appLogger).ConfigureAwait(false);
+
                         return;
                     case var _ when target.Equals("ModelDesign", StringComparison.OrdinalIgnoreCase):
                         await AddModelDesignAsync(vm, appLogger).ConfigureAwait(false);
+
+                        return;
+                    case var _ when target.Equals("Printer", StringComparison.OrdinalIgnoreCase):
+                        await AddPrinterAsync(vm, appLogger).ConfigureAwait(false);
+
                         return;
                     case var _ when target.Equals("PrintingProject", StringComparison.OrdinalIgnoreCase):
                         await AddPrintingProjectAsync(vm, appLogger).ConfigureAwait(false);
+
                         return;
                 }
 
@@ -200,25 +240,36 @@ public static partial class Program
                 {
                     case var _ when target.Equals("Customer", StringComparison.OrdinalIgnoreCase):
                         await EditCustomerAsync(vm, appLogger).ConfigureAwait(false);
+
                         return;
                     case var _ when target.Equals("Filament", StringComparison.OrdinalIgnoreCase):
                         await EditFilamentAsync(vm, appLogger).ConfigureAwait(false);
+
                         return;
                     case var _ when target.Equals("FilamentColour",   StringComparison.OrdinalIgnoreCase)
                                     || target.Equals("FilamentColor", StringComparison.OrdinalIgnoreCase):
                         await EditFilamentColourAsync(vm, appLogger).ConfigureAwait(false);
+
                         return;
                     case var _ when target.Equals("FilamentType", StringComparison.OrdinalIgnoreCase):
                         await EditFilamentTypeAsync(vm, appLogger).ConfigureAwait(false);
+
                         return;
                     case var _ when target.Equals("Manufacturer", StringComparison.OrdinalIgnoreCase):
                         await EditManufacturerAsync(vm, appLogger).ConfigureAwait(false);
+
                         return;
                     case var _ when target.Equals("ModelDesign", StringComparison.OrdinalIgnoreCase):
                         await EditModelDesignAsync(vm, appLogger).ConfigureAwait(false);
+
+                        return;
+                    case var _ when target.Equals("Printer", StringComparison.OrdinalIgnoreCase):
+                        await EditPrinterAsync(vm, appLogger).ConfigureAwait(false);
+
                         return;
                     case var _ when target.Equals("PrintingProject", StringComparison.OrdinalIgnoreCase):
                         await EditPrintingProjectAsync(vm, appLogger).ConfigureAwait(false);
+
                         return;
                 }
 
@@ -231,25 +282,36 @@ public static partial class Program
                 {
                     case var _ when target.Equals("Customer", StringComparison.OrdinalIgnoreCase):
                         await DeleteCustomerAsync(vm, appLogger).ConfigureAwait(false);
+
                         return;
                     case var _ when target.Equals("Filament", StringComparison.OrdinalIgnoreCase):
                         await DeleteFilamentAsync(vm, appLogger).ConfigureAwait(false);
+
                         return;
                     case var _ when target.Equals("FilamentColour",   StringComparison.OrdinalIgnoreCase)
                                     || target.Equals("FilamentColor", StringComparison.OrdinalIgnoreCase):
                         await DeleteFilamentColourAsync(vm, appLogger).ConfigureAwait(false);
+
                         return;
                     case var _ when target.Equals("FilamentType", StringComparison.OrdinalIgnoreCase):
                         await DeleteFilamentTypeAsync(vm, appLogger).ConfigureAwait(false);
+
                         return;
                     case var _ when target.Equals("Manufacturer", StringComparison.OrdinalIgnoreCase):
                         await DeleteManufacturerAsync(vm, appLogger).ConfigureAwait(false);
+
                         return;
                     case var _ when target.Equals("ModelDesign", StringComparison.OrdinalIgnoreCase):
                         await DeleteModelDesignAsync(vm, appLogger).ConfigureAwait(false);
+
+                        return;
+                    case var _ when target.Equals("Printer", StringComparison.OrdinalIgnoreCase):
+                        await DeletePrinterAsync(vm, appLogger).ConfigureAwait(false);
+
                         return;
                     case var _ when target.Equals("PrintingProject", StringComparison.OrdinalIgnoreCase):
                         await DeletePrintingProjectAsync(vm, appLogger).ConfigureAwait(false);
+
                         return;
                 }
 
@@ -265,15 +327,19 @@ public static partial class Program
         {
             case "Customers":
                 await LogCustomerDetailsAsync(vm, appLogger).ConfigureAwait(false);
+
                 break;
             case "Manufacturers":
                 await LogManufacturerDetailsAsync(vm, appLogger).ConfigureAwait(false);
+
                 break;
             case "Filaments":
                 await LogFilamentDetailsAsync(vm, appLogger).ConfigureAwait(false);
+
                 break;
             default:
                 appLogger.LogWarning(Emoji.Known.Warning + "  Unhandled section '{Action}' / action '{Command}'", action, commandRequested);
+
                 break;
         }
     }
@@ -284,7 +350,7 @@ public static partial class Program
     ///     - remainder: the remainder of the action after the matched SubMenu entry
     ///     If no SubMenu value matches the start, returns (first token, remainder).
     /// </summary>
-    private static (string FirstPart, string Remainder) SplitActionIntoSubmenuAndRemainder(string action)
+    static (string FirstPart, string Remainder) SplitActionIntoSubmenuAndRemainder(string action)
     {
         if (string.IsNullOrWhiteSpace(action))
         {
@@ -303,6 +369,7 @@ public static partial class Program
             }
 
             var remainder = trimmed[sub.Length..].Trim().Dehumanize();
+
             return (sub, remainder);
         }
 
@@ -327,6 +394,7 @@ public static partial class Program
 
         // Fallback: split on the first whitespace token
         var firstSpace = trimmed.IndexOf(' ');
+
         return firstSpace < 0 ? (trimmed, string.Empty) : (trimmed[..firstSpace], trimmed[(firstSpace + 1)..].Trim());
     }
 }

@@ -243,6 +243,28 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
     }
 
     /// <inheritdoc />
+    public async Task<DbUpdateResult> AddPrinterAsync(PrinterDto printerDto)
+    {
+        var validation = ValidatePrinterDto(printerDto);
+        if (validation != ValidationResult.Success)
+        {
+            return new DbUpdateResult(validation, AddRecordResult.Failed);
+        }
+
+        var printer = await GetOrCreatePrinterAsync(printerDto).ConfigureAwait(false);
+
+        // Assume printer already exists
+        var result = AddRecordResult.Exists;
+        if (printer.Id == 0)
+        {
+            await _db.SaveChangesAsync().ConfigureAwait(false);
+            result = AddRecordResult.Added;
+        }
+
+        return new DbUpdateResult(ValidationResult.Success, result);
+    }
+
+    /// <inheritdoc />
     public async Task AddPrintingProjectAsync(PrintingProject project)
     {
         ArgumentNullException.ThrowIfNull(project);
@@ -259,7 +281,7 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
             return new DbUpdateResult(validation, AddRecordResult.Failed);
         }
 
-        var existing = await GetPrintingProjectAsync(projectDto.Id).ConfigureAwait(false);
+        var existing = await GetPrintingProjectAsync(projectDto).ConfigureAwait(false);
         if (existing is not null)
         {
             return new DbUpdateResult(ValidationResult.Success, AddRecordResult.Exists);
@@ -278,6 +300,9 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
         {
             model = await GetOrCreateModelDesignAsync(projectDto.ModelDesign).ConfigureAwait(false);
         }
+
+        // Resolve or create Printer
+        var printer = await GetOrCreatePrinterAsync(projectDto.Printer!).ConfigureAwait(false);
 
         // Create project entity and attach resolved relations
         var filaments = new List<Filament>();
@@ -302,9 +327,10 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
                         var typ = await GetOrCreateFilamentTypeAsync(fDto.FilamentType).ConfigureAwait(false);
                         var col = await GetOrCreateFilamentColourAsync(fDto.FilamentColour).ConfigureAwait(false);
 
-                        var existingFilament = await _db.Filaments.FirstOrDefaultAsync(
-                                x => x.ManufacturerId == man.Id && x.FilamentTypeId == typ.Id && x.FilamentColourId == col.Id)
-                            .ConfigureAwait(false);
+                        var existingFilament =
+                            await _db
+                                  .Filaments.FirstOrDefaultAsync(x => x.ManufacturerId == man.Id && x.FilamentTypeId == typ.Id && x.FilamentColourId == col.Id)
+                                  .ConfigureAwait(false);
 
                         if (existingFilament != null)
                         {
@@ -361,6 +387,7 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
                 Completed = projectDto.Completed?.ToDateTime(TimeOnly.MinValue),
                 Customer  = customer!,
                 Model     = model!,
+                Printer   = printer,
                 Filaments = filaments
             };
 
@@ -548,6 +575,34 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
         return ValidationResult.Success;
     }
 
+    /// <inheritdoc />
+    public async Task<ValidationResult> EditPrinterAsync(PrinterDto printerDto)
+    {
+        var validation = ValidatePrinterDto(printerDto);
+        if (validation != ValidationResult.Success)
+        {
+            return validation;
+        }
+
+        if (printerDto.Id == 0)
+        {
+            return new ValidationResult("Printer Id is required for editing");
+        }
+
+        var existing = await _db.Printers.FindAsync(printerDto.Id).ConfigureAwait(false);
+        if (existing == null)
+        {
+            return new ValidationResult("Printer not found");
+        }
+
+        existing.Model          = printerDto.Model;
+        existing.ManufacturerId = printerDto.Manufacturer!.Id;
+        existing.CostPerHour    = printerDto.CostPerHour;
+        await _db.SaveChangesAsync().ConfigureAwait(false);
+
+        return ValidationResult.Success;
+    }
+
     public async Task<ValidationResult> EditPrintingProjectAsync(PrintingProjectDto printingProjectDto)
     {
         var validation = ValidatePrintingProjectDto(printingProjectDto);
@@ -669,7 +724,7 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
                             f.ReorderLink,
                             new FilamentColourDto(f.Colour.Id, f.Colour.Description),
                             new FilamentTypeDto(f.Type.Id, f.Type.Description),
-                            new ManufacturerDto(f.Manufacturer.Id, f.Manufacturer.Name)))
+                            new ManufacturerDto(f.Manufacturer)))
             .ToListAsync();
 
     /// <inheritdoc />
@@ -678,13 +733,17 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
 
     /// <inheritdoc />
     public Task<List<ManufacturerDto>> GetAllManufacturersAsync() =>
-        _db.Manufacturers.OrderBy(m => m.Name).Select(m => new ManufacturerDto(m.Id, m.Name)).ToListAsync();
+        _db.Manufacturers.OrderBy(m => m.Name).Select(m => new ManufacturerDto(m)).ToListAsync();
 
     /// <inheritdoc />
     public Task<List<ModelDesignDto>> GetAllModelDesignsAsync() => _db
                                                                    .ModelDesigns.OrderBy(md => md.Summary)
                                                                    .Select(md => new ModelDesignDto(md.Id, md.Description, md.Length, md.Summary, md.Url))
                                                                    .ToListAsync();
+
+    /// <inheritdoc />
+    public Task<List<PrinterDto>> GetAllPrintersAsync() =>
+        _db.Printers.Include(p => p.Manufacturer).OrderBy(p => p.Manufacturer.Name).ThenBy(p => p.Model).Select(p => new PrinterDto(p)).ToListAsync();
 
     /// <inheritdoc />
     public Task<List<PrintingProjectDto>> GetAllPrintingProjectsAsync() =>
@@ -697,6 +756,8 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
             .ThenInclude(f => f.Colour)
             .Include(p => p.Filaments)
             .ThenInclude(f => f.Type)
+            .Include(p => p.Printer)
+            .ThenInclude(p => p.Manufacturer)
             .Select(p =>
                         new PrintingProjectDto(
                             p.Id,
@@ -705,6 +766,7 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
                             p.Completed == null ? null : DateOnly.FromDateTime(p.Completed.Value),
                             p.Customer  == null ? null : new CustomerDto(p.Customer.Id, p.Customer.Name),
                             p.Model     == null ? null : new ModelDesignDto(p.Model.Id, p.Model.Description, p.Model.Length, p.Model.Summary, p.Model.Url),
+                            p.Printer   == null ? null : new PrinterDto(p.Printer),
                             p
                                 .Filaments.Select(f =>
                                                       new FilamentDto(
@@ -714,7 +776,7 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
                                                           f.ReorderLink,
                                                           new FilamentColourDto(f.Colour.Id, f.Colour.Description),
                                                           new FilamentTypeDto(f.Type.Id, f.Type.Description),
-                                                          new ManufacturerDto(f.Manufacturer.Id, f.Manufacturer.Name)))
+                                                          new ManufacturerDto(f.Manufacturer)))
                                 .ToList()))
             .ToListAsync();
 
@@ -788,6 +850,14 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
     }
 
     /// <inheritdoc />
+    public async Task<PrinterDto?> GetPrinterAsync(int id)
+    {
+        var p = await _db.Printers.FindAsync(id).ConfigureAwait(false);
+
+        return p == null ? null : new PrinterDto(p);
+    }
+
+    /// <inheritdoc />
     public async Task<PrintingProjectDto?> GetPrintingProjectAsync(int id)
     {
         var p =
@@ -828,6 +898,7 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
             p.Completed == null ? null : DateOnly.FromDateTime(p.Completed.Value),
             p.Customer  == null ? null : new CustomerDto(p.Customer.Id, p.Customer.Name),
             p.Model     == null ? null : new ModelDesignDto(p.Model.Id, p.Model.Description, p.Model.Length, p.Model.Summary, p.Model.Url),
+            p.Printer   == null ? null : new PrinterDto(p.Printer),
             filaments);
     }
 
@@ -866,6 +937,26 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
         }
     }
     #endregion
+
+    public static PrintingProjectDto? GetPrintingProjectAsync(List<PrintingProjectDto> projects, PrintingProjectDto dto) =>
+        projects.FirstOrDefault(p =>
+                                    p.Customer?.Name                 == dto.Customer?.Name
+                                    && p.ModelDesign?.Summary        == dto.ModelDesign?.Summary
+                                    && p.Printer?.Manufacturer?.Name == dto.Printer?.Manufacturer?.Name
+                                    && p.Printer?.Model              == dto.Printer?.Model
+                                    && p.Submitted                   == dto.Submitted);
+
+    public async Task<PrintingProjectDto?> GetPrintingProjectAsync(PrintingProjectDto dto) => GetPrintingProjectAsync(await GetAllPrintingProjectsAsync(), dto);
+
+    IQueryable<PrintingProject> GetPrintingProjects() => _db
+                                                         .PrintingProjects.Include(pr => pr.Customer)
+                                                         .Include(pr => pr.Model)
+                                                         .Include(pr => pr.Filaments)
+                                                         .ThenInclude(f => f.Manufacturer)
+                                                         .Include(pr => pr.Filaments)
+                                                         .ThenInclude(f => f.Colour)
+                                                         .Include(pr => pr.Filaments)
+                                                         .ThenInclude(f => f.Type);
 
     #region Validation helpers
     static ValidationResult ValidateCustomerDto(CustomerDto dto)
@@ -927,6 +1018,26 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
         return dto.Length < 0 ? new ValidationResult("ModelDesign length must be non-negative", [nameof(dto.Length)]) : ValidationResult.Success!;
     }
 
+    static ValidationResult ValidatePrinterDto(PrinterDto dto)
+    {
+        if (dto is null)
+        {
+            return new ValidationResult("Printer DTO is required");
+        }
+
+        if (string.IsNullOrWhiteSpace(dto.Model))
+        {
+            return new ValidationResult("Printer model is required", [nameof(dto.Model)]);
+        }
+
+        if (dto.Manufacturer is null)
+        {
+            return new ValidationResult("Printer manufacturer is required", [nameof(dto.Manufacturer)]);
+        }
+
+        return ValidationResult.Success!;
+    }
+
     static ValidationResult ValidateFilamentDto(FilamentDto dto)
     {
         if (dto is null)
@@ -979,6 +1090,11 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
         if (dto.ModelDesign is null)
         {
             errors.Add(new ValidationResult("Printing project must have a model design", [nameof(dto.ModelDesign)]));
+        }
+
+        if (dto.Printer is null)
+        {
+            errors.Add(new ValidationResult("Printing project must have a printer", [nameof(dto.Printer)]));
         }
 
         return errors.Count > 0 ? new ValidationResult(string.Join("; ", errors.Select(e => e.ErrorMessage))) : ValidationResult.Success!;
@@ -1162,6 +1278,39 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
         return ValidationResult.Success;
     }
 
+    /// <inheritdoc />
+    public async Task<ValidationResult> DeletePrinterAsync(PrinterDto printerDto)
+    {
+        var validation = ValidatePrinterDto(printerDto);
+        if (validation != ValidationResult.Success)
+        {
+            return validation;
+        }
+
+        if (printerDto.Id == 0)
+        {
+            return new ValidationResult("Printer Id is required for deletion");
+        }
+
+        var existing = await _db.Printers.FindAsync(printerDto.Id).ConfigureAwait(false);
+        if (existing == null)
+        {
+            return new ValidationResult("Printer not found");
+        }
+
+        // Prevent deletion if in use
+        var inUse = await _db.PrintingProjects.AnyAsync(p => p.Printer.Id == existing.Id).ConfigureAwait(false);
+        if (inUse)
+        {
+            return new ValidationResult("Printer is linked to existing projects and cannot be deleted");
+        }
+
+        _db.Printers.Remove(existing);
+        await _db.SaveChangesAsync().ConfigureAwait(false);
+
+        return ValidationResult.Success;
+    }
+
     public async Task<ValidationResult> DeletePrintingProjectAsync(PrintingProjectDto printingProjectDto)
     {
         if (printingProjectDto == null)
@@ -1275,6 +1424,7 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
     async Task<Customer> GetOrCreateCustomerAsync(CustomerDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
+
         // Prefer matching by name. If a name is supplied, use case-insensitive lookup
         // and return existing customer or create a new one with that name.
         if (!string.IsNullOrWhiteSpace(dto.Name))
@@ -1288,6 +1438,7 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
             var created = dto.ToEntity();
             created.Id = 0;
             await _db.Customers.AddAsync(created).ConfigureAwait(false);
+
             return created;
         }
 
@@ -1305,6 +1456,7 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
         var fallback = dto.ToEntity();
         fallback.Id = 0;
         await _db.Customers.AddAsync(fallback).ConfigureAwait(false);
+
         return fallback;
     }
 
@@ -1326,6 +1478,39 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
         var created = dto.ToEntity();
         created.Id = 0;
         await _db.ModelDesigns.AddAsync(created).ConfigureAwait(false);
+
+        return created;
+    }
+
+    async Task<Printer> GetOrCreatePrinterAsync(PrinterDto dto)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+        ArgumentNullException.ThrowIfNull(dto.Manufacturer);
+        ArgumentNullException.ThrowIfNullOrWhiteSpace(dto.Manufacturer.Name);
+        Printer? existing = null;
+        if (dto.Id != 0)
+        {
+            existing = await _db.Printers.FindAsync(dto.Id).ConfigureAwait(false);
+        }
+
+        existing ??=
+            await _db
+                  .Printers.FirstOrDefaultAsync(p =>
+                                                    EF.Functions.Collate(p.Model,                "NOCASE") == dto.Model
+                                                    && EF.Functions.Collate(p.Manufacturer.Name, "NOCASE") == dto.Manufacturer.Name)
+                  .ConfigureAwait(false);
+        if (existing != null)
+        {
+            return existing;
+        }
+
+        // Get or create the manufacturer first to ensure referential integrity, then create printer referencing that manufacturer
+        var manufacturer = await GetOrCreateManufacturerAsync(dto.Manufacturer).ConfigureAwait(false);
+        dto.Manufacturer = new ManufacturerDto(manufacturer);
+
+        var created = dto.ToEntity();
+        created.Id = 0;
+        await _db.Printers.AddAsync(created).ConfigureAwait(false);
 
         return created;
     }

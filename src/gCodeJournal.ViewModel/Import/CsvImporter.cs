@@ -28,6 +28,7 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
         FilamentColours,
         FilamentTypes,
         Filaments,
+        Printers,
         ModelDesigns,
         PrintingProjects
     }
@@ -62,6 +63,7 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                     ImportEntity.FilamentTypes,
                     ImportEntity.Filaments,
                     ImportEntity.ModelDesigns,
+                    ImportEntity.Printers,
                     ImportEntity.PrintingProjects
                 };
 
@@ -130,6 +132,7 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
         csv.Context.RegisterClassMap<FilamentColourMap>();
         csv.Context.RegisterClassMap<FilamentTypeMap>();
         csv.Context.RegisterClassMap<ManufacturerMap>();
+        csv.Context.RegisterClassMap<PrinterMap>();
         csv.Context.RegisterClassMap<ModelDesignMap>();
         csv.Context.RegisterClassMap<PrintingProjectMap>();
 
@@ -165,6 +168,7 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
 
                                 case (var v, AddRecordResult.Exists) when v == ValidationResult.Success:
                                     // Exists - check that properties match
+                                    // TODO: Match by name or use existing record returned by AddCustomerAsync when record exists to avoid extra DB call here. This requires changing the AddCustomerAsync API to return the existing record DTO when record exists, or at least its properties for comparison.
                                     var customer = await vm.GetCustomerAsync(c.Id).ConfigureAwait(false);
                                     if (customer is null)
                                     {
@@ -225,17 +229,20 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                                         break;
                                     }
 
-                                    if (manufacturer.Name.Equals(m.Name, StringComparison.OrdinalIgnoreCase))
+                                    // If name and flags all match, skip. Otherwise update the existing record.
+                                    if (manufacturer.Name.Equals(m.Name, StringComparison.OrdinalIgnoreCase)
+                                        && manufacturer.IsFilamentManufacturer == m.IsFilamentManufacturer
+                                        && manufacturer.IsPrinterManufacturer  == m.IsPrinterManufacturer)
                                     {
                                         result.Skipped++;
 
                                         break;
                                     }
 
-                                    // Modify existing manufacturer
-                                    appLogger.LogDebug("Modifying existing manufacturer {@Manufacturer}; updating to {@NewName}", manufacturer, m.Name);
-                                    manufacturer.Name = m.Name;
-                                    await vm.EditManufacturerAsync(manufacturer).ConfigureAwait(false);
+                                    // Modify existing manufacturer properties via ViewModel API (DTO-based)
+                                    appLogger.LogDebug("Modifying existing manufacturer {@Manufacturer}; updating to {@NewValues}", manufacturer, m);
+                                    var editDto = new ManufacturerDto(manufacturer.Id, m.Name, m.IsFilamentManufacturer, m.IsPrinterManufacturer);
+                                    await vm.EditManufacturerAsync(editDto).ConfigureAwait(false);
                                     result.Updated++;
 
                                     break;
@@ -586,6 +593,62 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
 
                         break;
 
+                    case ImportEntity.Printers:
+                        var printers = csv.GetRecords<PrinterDto>().ToList();
+                        foreach (var p in printers)
+                        {
+                            appLogger.LogDebug("Processing Printer DTO: {@Dto}", p);
+                            var sourceId = p.Id != 0 ? p.Id.ToString() : null;
+
+                            var r = await vm.AddPrinterAsync(p).ConfigureAwait(false);
+                            switch (r)
+                            {
+                                case (var v, AddRecordResult.Added) when v == ValidationResult.Success:
+                                    // added
+                                    result.Created++;
+
+                                    break;
+
+                                case (var v, AddRecordResult.Exists) when v == ValidationResult.Success:
+                                    // Exists - check that properties match
+                                    var printerDto = await vm.GetPrinterAsync(p.Id).ConfigureAwait(false);
+                                    if (printerDto is null)
+                                    {
+                                        result.Errors.Add($"Model with ID {p.Id} not found");
+                                        result.Failed++;
+
+                                        break;
+                                    }
+
+                                    var comparisonResult = printerDto.CompareTo(p);
+                                    if (comparisonResult.IsMatch)
+                                    {
+                                        result.Skipped++;
+
+                                        break;
+                                    }
+
+                                    // Modify existing printer
+                                    appLogger.LogDebug("Modifying existing printer {@Printer}",   printerDto);
+                                    appLogger.LogDebug("Properties to be updated: {@Properties}", string.Join(',', comparisonResult.MismatchedProperties));
+                                    printerDto.Model        = p.Model;
+                                    printerDto.Manufacturer = p.Manufacturer;
+                                    printerDto.CostPerHour  = p.CostPerHour;
+                                    await vm.EditPrinterAsync(printerDto).ConfigureAwait(false);
+                                    result.Updated++;
+
+                                    break;
+
+                                case var (v, _) when v != ValidationResult.Success:
+                                    // validation error
+                                    result.Errors.Add(v.ErrorMessage ?? $"{nameof(vm.AddPrinterAsync)} failed");
+
+                                    break;
+                            }
+                        }
+
+                        break;
+
                     case ImportEntity.PrintingProjects:
                         var projects = csv.GetRecords<PrintingProjectDto>().ToList();
                         foreach (var p in projects)
@@ -832,6 +895,11 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
             return ImportEntity.Filaments;
         }
 
+        if (name.Contains("printers", StringComparison.OrdinalIgnoreCase))
+        {
+            return ImportEntity.Printers;
+        }
+
         if (name.Contains("model_designs", StringComparison.OrdinalIgnoreCase))
         {
             return ImportEntity.ModelDesigns;
@@ -847,6 +915,7 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
         ImportEntity.FilamentColours  => "filament_colours.csv",
         ImportEntity.FilamentTypes    => "filament_types.csv",
         ImportEntity.Filaments        => "filaments.csv",
+        ImportEntity.Printers         => "printers.csv",
         ImportEntity.ModelDesigns     => "model_designs.csv",
         ImportEntity.PrintingProjects => "printing_projects.csv",
         _                             => string.Empty
@@ -860,6 +929,7 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
             "filament_colours" or "filamentcolours"                 => ImportEntity.FilamentColours,
             "filament_types" or "filamenttypes"                     => ImportEntity.FilamentTypes,
             "filaments" or "filament"                               => ImportEntity.Filaments,
+            "printers" or "printer"                                 => ImportEntity.Printers,
             "model_designs" or "modeldesigns" or "models"           => ImportEntity.ModelDesigns,
             "printing_projects" or "printingprojects" or "projects" => ImportEntity.PrintingProjects,
             _                                                       => ImportEntity.Unknown
@@ -949,6 +1019,12 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                 {
                     var id   = ParseIntOrZero(GetString(dict, "Id"));
                     var name = GetString(dict, "Name");
+                    var isFilament =
+                        ParseBoolOrDefault(
+                            GetString(dict, "IsFilamentManufacturer") ?? GetString(dict, "IsFilament") ?? GetString(dict, "IsFilamentManufacturer"));
+                    var isPrinter =
+                        ParseBoolOrDefault(
+                            GetString(dict, "IsPrinterManufacturer") ?? GetString(dict, "IsPrinter") ?? GetString(dict, "IsPrinterManufacturer"));
                     if (string.IsNullOrWhiteSpace(name))
                     {
                         result.Errors.Add("Manufacturer: Name is required");
@@ -957,7 +1033,8 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                         return;
                     }
 
-                    var dto = id != 0 ? new ManufacturerDto(id, name) : new ManufacturerDto(name);
+                    // Create DTO with flags. Use explicit id (0 when not supplied) so flags are preserved for new records.
+                    var dto = new ManufacturerDto(id, name, isFilament, isPrinter);
                     if (id != 0 && updateExisting)
                     {
                         var r = await vm.EditManufacturerAsync(dto).ConfigureAwait(false);
@@ -1340,6 +1417,7 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                     var cost           = ParseDecimalOrZero(GetString(dict,     "Cost"));
                     var submitted      = ParseDateOnlyOrDefault(GetString(dict, "Submitted"));
                     var completed      = ParseDateOnlyOrDefault(GetString(dict, "Completed"));
+                    var costPerHour    = ParseDecimalOrZero(GetString(dict,     "CostPerHour"));
                     var customerId     = ParseIntOrZero(GetString(dict, "CustomerId")    ?? GetString(dict, "Customer"));
                     var modelId        = ParseIntOrZero(GetString(dict, "ModelDesignId") ?? GetString(dict, "ModelDesign"));
                     var filamentIdsRaw = GetString(dict, "FilamentIds") ?? GetString(dict, "FilamentId") ?? GetString(dict, "Filaments");
@@ -1354,6 +1432,33 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                     if (modelId != 0)
                     {
                         modelDto = new ModelDesignDto(modelId, string.Empty, 0m, string.Empty, null);
+                    }
+
+                    // Parse printer information: prefer explicit id, then separate Manufacturer/Model columns, then single Printer column
+                    var         printerId  = ParseIntOrZero(GetString(dict, "PrinterId") ?? GetString(dict, "Printer"));
+                    PrinterDto? printerDto = null;
+                    if (printerId != 0)
+                    {
+                        printerDto = new PrinterDto(printerId, string.Empty);
+                    }
+                    else
+                    {
+                        var printerManufacturer = GetString(dict, "PrinterManufacturer") ?? GetString(dict, "PrinterMaker") ?? GetString(dict, "PrinterBrand");
+                        var printerModel        = GetString(dict, "PrinterModel");
+
+                        if (!string.IsNullOrWhiteSpace(printerManufacturer) || !string.IsNullOrWhiteSpace(printerModel))
+                        {
+                            if (!string.IsNullOrWhiteSpace(printerManufacturer))
+                            {
+                                var manu = new ManufacturerDto(0, printerManufacturer!.Trim());
+                                printerDto = new PrinterDto(manu, printerModel?.Trim() ?? string.Empty, costPerHour);
+                            }
+                            else
+                            {
+                                // Manufacturer missing - use model only
+                                printerDto = new PrinterDto(0, null, printerModel?.Trim() ?? string.Empty, costPerHour);
+                            }
+                        }
                     }
 
                     var filamentDtos = new List<FilamentDto>();
@@ -1391,6 +1496,7 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                                 completed == DateOnly.MinValue ? null : completed,
                                 customerDto,
                                 modelDto,
+                                printerDto,
                                 filamentDtos)
                             : new PrintingProjectDto(
                                 cost,
@@ -1398,6 +1504,7 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                                 completed == DateOnly.MinValue ? null : completed,
                                 customerDto,
                                 modelDto,
+                                printerDto,
                                 filamentDtos);
 
                     if (id != 0 && updateExisting)
@@ -1481,6 +1588,25 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
             }
 
             return DateTime.TryParse(s, CultureInfo.InvariantCulture, DateTimeStyles.None, out var dt) ? DateOnly.FromDateTime(dt) : DateOnly.MinValue;
+        }
+
+        static bool ParseBoolOrDefault(string? s)
+        {
+            if (string.IsNullOrWhiteSpace(s))
+            {
+                return false;
+            }
+
+            if (bool.TryParse(s, out var b))
+            {
+                return b;
+            }
+
+            // Accept common truthy values
+            return s.Equals("1",       StringComparison.OrdinalIgnoreCase)
+                   || s.Equals("yes",  StringComparison.OrdinalIgnoreCase)
+                   || s.Equals("y",    StringComparison.OrdinalIgnoreCase)
+                   || s.Equals("true", StringComparison.OrdinalIgnoreCase);
         }
     }
 }

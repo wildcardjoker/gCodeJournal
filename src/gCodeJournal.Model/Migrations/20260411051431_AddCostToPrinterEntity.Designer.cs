@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using gCodeJournal.Model;
 
@@ -10,9 +11,11 @@ using gCodeJournal.Model;
 namespace gCodeJournal.Model.Migrations
 {
     [DbContext(typeof(GCodeJournalDbContext))]
-    partial class GCodeJournalDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260411051431_AddCostToPrinterEntity")]
+    partial class AddCostToPrinterEntity
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -393,15 +396,12 @@ namespace gCodeJournal.Model.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<decimal>("Cost")
-                        .HasColumnType("money");
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("CustomerId")
                         .HasColumnType("INTEGER");
 
                     b.Property<int>("ModelDesignId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("PrinterId")
                         .HasColumnType("INTEGER");
 
                     b.Property<DateTime>("Submitted")
@@ -412,8 +412,6 @@ namespace gCodeJournal.Model.Migrations
                     b.HasIndex("CustomerId");
 
                     b.HasIndex("ModelDesignId");
-
-                    b.HasIndex("PrinterId");
 
                     b.ToTable("PrintingProjects");
                 });
@@ -485,17 +483,9 @@ namespace gCodeJournal.Model.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("gCodeJournal.Model.Printer", "Printer")
-                        .WithMany("PrintingProjects")
-                        .HasForeignKey("PrinterId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.Navigation("Customer");
 
                     b.Navigation("Model");
-
-                    b.Navigation("Printer");
                 });
 
             modelBuilder.Entity("gCodeJournal.Model.Customer", b =>
@@ -518,11 +508,6 @@ namespace gCodeJournal.Model.Migrations
                     b.Navigation("Filaments");
 
                     b.Navigation("Printers");
-                });
-
-            modelBuilder.Entity("gCodeJournal.Model.Printer", b =>
-                {
-                    b.Navigation("PrintingProjects");
                 });
 #pragma warning restore 612, 618
         }

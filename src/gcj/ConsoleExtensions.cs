@@ -18,8 +18,9 @@ internal static class ConsoleExtensions
 
     public static async Task<bool> ConfirmDeleteAsync<T>(this T objectType) where T : class
     {
-        var confirmationPrompt = new ConfirmationPrompt($"Are you sure you want to delete the {typeof(T)} ({objectType})?") {DefaultValue = false};
-        var result             = await AnsiConsole.PromptAsync(confirmationPrompt).ConfigureAwait(false);
+        var confirmationPrompt =
+            new ConfirmationPrompt($"Are you sure you want to delete the {typeof(T).Name.HumanizeDtoName()} '{objectType}'y?") {DefaultValue = false};
+        var result = await AnsiConsole.PromptAsync(confirmationPrompt).ConfigureAwait(false);
 
         return result;
     }
@@ -127,6 +128,12 @@ internal static class ConsoleExtensions
                             return lines.Count == 0 ? null : string.Join(Environment.NewLine, lines);
                         });
     }
+
+    public static async Task<decimal> GetPrinterCostPerHour(this decimal defaultValue) =>
+        await "printer cost per hour".GetInputFromConsoleAsync(defaultValue).ConfigureAwait(false);
+
+    public static async Task<string> GetPrinterModel(this string defaultValue) =>
+        await "printer model".GetInputFromConsoleAsync(defaultValue).ConfigureAwait(false) ?? string.Empty;
 
     public static async Task<string?> GetUriAsync(this string promptMessage, string? defaultValue = null)
     {

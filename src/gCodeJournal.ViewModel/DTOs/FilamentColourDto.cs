@@ -2,6 +2,10 @@
 
 namespace gCodeJournal.ViewModel.DTOs;
 
+#region Using Directives
+using Model;
+#endregion
+
 /// <summary>
 ///     Represents a filament color with an ID and a description.
 /// </summary>
@@ -12,6 +16,9 @@ public class FilamentColourDto(int id, string description)
 
     /// <inheritdoc />
     public FilamentColourDto(string description) : this(0, description) {}
+
+    /// <inheritdoc />
+    public FilamentColourDto(FilamentColour filamentColour) : this(filamentColour.Id, filamentColour.Description) {}
     #endregion
 
     #region Properties
