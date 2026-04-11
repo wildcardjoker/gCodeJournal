@@ -19,6 +19,15 @@ public class Printer
 {
     #region Properties
     /// <summary>
+    ///     Gets or sets the labour cost per hour for using this printer.
+    /// </summary>
+    /// <remarks>
+    ///     This value is stored as a currency/money value in the database.
+    /// </remarks>
+    [Column(TypeName = "money")]
+    public decimal CostPerHour {get; set;}
+
+    /// <summary>
     ///     Gets or sets the unique identifier for the printer.
     /// </summary>
     /// <value>
@@ -50,15 +59,6 @@ public class Printer
     public int ManufacturerId {get; set;}
 
     /// <summary>
-    ///     Gets or sets the labour cost per hour for using this printer.
-    /// </summary>
-    /// <remarks>
-    ///     This value is stored as a currency/money value in the database.
-    /// </remarks>
-    [Column(TypeName = "money")]
-    public decimal CostPerHour { get; set; } = 0m;
-
-    /// <summary>
     ///     Gets or sets the model name of the 3D printer.
     /// </summary>
     /// <remarks>
@@ -67,5 +67,7 @@ public class Printer
     /// </remarks>
     [StringLength(50)]
     public string Model {get; set;} = null!;
+
+    public virtual ICollection<PrintingProject> PrintingProjects {get; set;} = null!;
     #endregion
 }
