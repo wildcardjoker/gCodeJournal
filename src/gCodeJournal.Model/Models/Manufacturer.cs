@@ -3,10 +3,8 @@
 namespace gCodeJournal.Model;
 
 #region Using Directives
-#region Using Directives
 using System.ComponentModel.DataAnnotations;
 using JetBrains.Annotations;
-#endregion
 #endregion
 
 /// <summary>
