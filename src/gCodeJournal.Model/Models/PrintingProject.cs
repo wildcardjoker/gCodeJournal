@@ -4,6 +4,7 @@ namespace gCodeJournal.Model;
 
 #region Using Directives
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations.Schema;
 using JetBrains.Annotations;
 #endregion
 
@@ -36,7 +37,8 @@ public class PrintingProject
     ///     A <see cref="decimal" /> value representing the monetary cost. Uses <see cref="decimal" />
     ///     to preserve precision for currency amounts.
     /// </value>
-    public decimal Cost {get; set;}
+    [Column(TypeName = "money")]
+    public decimal Cost {get; set;} 
 
     /// <summary>
     ///     Navigation property: the customer who requested the printing project.
