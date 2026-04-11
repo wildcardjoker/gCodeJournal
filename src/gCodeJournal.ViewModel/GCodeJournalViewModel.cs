@@ -742,7 +742,7 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
                                                                    .ToListAsync();
 
     /// <inheritdoc />
-    public Task<List<PrinterDto>> GetAllPrintersAsync() => _db.Printers.OrderBy(p => p.ToString()).Select(p => new PrinterDto(p)).ToListAsync();
+    public Task<List<PrinterDto>> GetAllPrintersAsync() => _db.Printers.OrderBy(p => p).Select(p => new PrinterDto(p)).ToListAsync();
 
     /// <inheritdoc />
     public Task<List<PrintingProjectDto>> GetAllPrintingProjectsAsync() =>
