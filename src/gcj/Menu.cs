@@ -24,6 +24,7 @@ public static partial class Program
     const string MenuImportData        = "Import data";
     const string MenuManufacturers     = "Manufacturers";
     const string MenuModelDesigns      = "Model Designs";
+    const string MenuPrinters          = "Printers";
     const string MenuPrintingProjects  = "Printing Projects";
     const string SubMenuAddNew         = "Add New";
     const string SubMenuBackToMain     = "Back to Main Menu";
@@ -41,6 +42,7 @@ public static partial class Program
         MenuFilaments,
         MenuFilamentTypes,
         MenuModelDesigns,
+        MenuPrinters,
         MenuPrintingProjects,
         MenuImportData,
         MenuExit
