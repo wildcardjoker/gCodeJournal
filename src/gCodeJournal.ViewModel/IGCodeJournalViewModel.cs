@@ -187,6 +187,11 @@ public interface IGCodeJournalViewModel
     Task<ValidationResult> DeleteModelDesignAsync(ModelDesignDto modelDesignDto);
 
     /// <summary>
+    ///     Deletes the specified printer represented by a DTO.
+    /// </summary>
+    Task<ValidationResult> DeletePrinterAsync(PrinterDto printerDto);
+
+    /// <summary>
     ///     Deletes the specified printing project represented by a DTO.
     /// </summary>
     Task<ValidationResult> DeletePrintingProjectAsync(PrintingProjectDto printingProjectDto);

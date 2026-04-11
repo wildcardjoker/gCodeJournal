@@ -595,9 +595,9 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
             return new ValidationResult("Printer not found");
         }
 
-        existing.Model        = printerDto.Model;
-        existing.Manufacturer = printerDto.Manufacturer!.ToEntity();
-        existing.CostPerHour  = printerDto.CostPerHour;
+        existing.Model          = printerDto.Model;
+        existing.ManufacturerId = printerDto.Manufacturer!.Id;
+        existing.CostPerHour    = printerDto.CostPerHour;
         await _db.SaveChangesAsync().ConfigureAwait(false);
 
         return ValidationResult.Success;
@@ -742,7 +742,8 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
                                                                    .ToListAsync();
 
     /// <inheritdoc />
-    public Task<List<PrinterDto>> GetAllPrintersAsync() => _db.Printers.OrderBy(p => p).Select(p => new PrinterDto(p)).ToListAsync();
+    public Task<List<PrinterDto>> GetAllPrintersAsync() =>
+        _db.Printers.Include(p => p.Manufacturer).OrderBy(p => p.Manufacturer.Name).ThenBy(p => p.Model).Select(p => new PrinterDto(p)).ToListAsync();
 
     /// <inheritdoc />
     public Task<List<PrintingProjectDto>> GetAllPrintingProjectsAsync() =>
@@ -1272,6 +1273,39 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
         }
 
         _db.ModelDesigns.Remove(existing);
+        await _db.SaveChangesAsync().ConfigureAwait(false);
+
+        return ValidationResult.Success;
+    }
+
+    /// <inheritdoc />
+    public async Task<ValidationResult> DeletePrinterAsync(PrinterDto printerDto)
+    {
+        var validation = ValidatePrinterDto(printerDto);
+        if (validation != ValidationResult.Success)
+        {
+            return validation;
+        }
+
+        if (printerDto.Id == 0)
+        {
+            return new ValidationResult("Printer Id is required for deletion");
+        }
+
+        var existing = await _db.Printers.FindAsync(printerDto.Id).ConfigureAwait(false);
+        if (existing == null)
+        {
+            return new ValidationResult("Printer not found");
+        }
+
+        // Prevent deletion if in use
+        var inUse = await _db.PrintingProjects.AnyAsync(p => p.Printer.Id == existing.Id).ConfigureAwait(false);
+        if (inUse)
+        {
+            return new ValidationResult("Printer is linked to existing projects and cannot be deleted");
+        }
+
+        _db.Printers.Remove(existing);
         await _db.SaveChangesAsync().ConfigureAwait(false);
 
         return ValidationResult.Success;
