@@ -380,7 +380,7 @@ namespace gCodeJournal.Model.Migrations
 
                     b.HasIndex("ManufacturerId");
 
-                    b.ToTable("Printer");
+                    b.ToTable("Printers");
                 });
 
             modelBuilder.Entity("gCodeJournal.Model.PrintingProject", b =>

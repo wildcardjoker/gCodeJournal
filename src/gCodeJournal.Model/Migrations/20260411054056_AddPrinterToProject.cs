@@ -23,10 +23,10 @@ namespace gCodeJournal.Model.Migrations
                 column: "PrinterId");
 
             migrationBuilder.AddForeignKey(
-                name: "FK_PrintingProjects_Printer_PrinterId",
+                name: "FK_PrintingProjects_Printers_PrinterId",
                 table: "PrintingProjects",
                 column: "PrinterId",
-                principalTable: "Printer",
+                principalTable: "Printers",
                 principalColumn: "Id",
                 onDelete: ReferentialAction.Cascade);
         }
@@ -35,7 +35,7 @@ namespace gCodeJournal.Model.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropForeignKey(
-                name: "FK_PrintingProjects_Printer_PrinterId",
+                name: "FK_PrintingProjects_Printers_PrinterId",
                 table: "PrintingProjects");
 
             migrationBuilder.DropIndex(

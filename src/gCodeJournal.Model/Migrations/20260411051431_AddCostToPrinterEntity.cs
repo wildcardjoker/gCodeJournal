@@ -12,7 +12,7 @@ namespace gCodeJournal.Model.Migrations
         {
             migrationBuilder.AddColumn<decimal>(
                 name: "CostPerHour",
-                table: "Printer",
+                table: "Printers",
                 type: "money",
                 nullable: false,
                 defaultValue: 0m);
@@ -23,7 +23,7 @@ namespace gCodeJournal.Model.Migrations
         {
             migrationBuilder.DropColumn(
                 name: "CostPerHour",
-                table: "Printer");
+                table: "Printers");
         }
     }
 }

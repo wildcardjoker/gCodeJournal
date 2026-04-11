@@ -232,7 +232,8 @@ public class GCodeJournalDbContext : DbContext
 
             b.HasIndex("ManufacturerId");
 
-            b.ToTable("Printer");
+            // Use plural table name to match project conventions and existing DbSet
+            b.ToTable("Printers");
         });
     }
     #endregion

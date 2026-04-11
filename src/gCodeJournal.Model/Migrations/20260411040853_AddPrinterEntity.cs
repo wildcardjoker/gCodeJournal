@@ -25,7 +25,7 @@ namespace gCodeJournal.Model.Migrations
                 defaultValue: false);
 
             migrationBuilder.CreateTable(
-                name: "Printer",
+                name: "Printers",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
@@ -35,9 +35,9 @@ namespace gCodeJournal.Model.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Printer", x => x.Id);
+                    table.PrimaryKey("PK_Printers", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Printer_Manufacturers_ManufacturerId",
+                        name: "FK_Printers_Manufacturers_ManufacturerId",
                         column: x => x.ManufacturerId,
                         principalTable: "Manufacturers",
                         principalColumn: "Id",
@@ -94,8 +94,8 @@ namespace gCodeJournal.Model.Migrations
                 values: new object[] { true, true });
 
             migrationBuilder.CreateIndex(
-                name: "IX_Printer_ManufacturerId",
-                table: "Printer",
+                name: "IX_Printers_ManufacturerId",
+                table: "Printers",
                 column: "ManufacturerId");
         }
 
@@ -103,7 +103,7 @@ namespace gCodeJournal.Model.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
-                name: "Printer");
+                name: "Printers");
 
             migrationBuilder.DropColumn(
                 name: "IsFilamentManufacturer",
