@@ -1,3 +1,5 @@
+// gCodeJournal.ViewModel
+
 namespace gCodeJournal.ViewModel.DTOs;
 
 /// <summary>
@@ -11,16 +13,23 @@ public class PrintingProjectDto(
     DateOnly?         completed,
     CustomerDto?      customer,
     ModelDesignDto?   modelDesign,
+    PrinterDto?       printer,
     List<FilamentDto> filaments)
 {
     #region Constructors
     /// <summary>
-    /// Parameterless constructor to support serializers and CsvHelper when a factory is not provided.
+    ///     Parameterless constructor to support serializers and CsvHelper when a factory is not provided.
     /// </summary>
-    public PrintingProjectDto()
-        : this(0, 0m, DateOnly.FromDateTime(DateTime.Now), null, null, null, new List<FilamentDto>()) { }
-    public PrintingProjectDto(decimal cost, DateOnly submitted, DateOnly? completed, CustomerDto? customer, ModelDesignDto? modelDesign, List<FilamentDto> filaments) :
-        this(0, cost, submitted, completed, customer, modelDesign, filaments) {}
+    public PrintingProjectDto() : this(0, 0m, DateOnly.FromDateTime(DateTime.Now), null, null, null, null, new List<FilamentDto>()) {}
+
+    public PrintingProjectDto(
+        decimal           cost,
+        DateOnly          submitted,
+        DateOnly?         completed,
+        CustomerDto?      customer,
+        ModelDesignDto?   modelDesign,
+        PrinterDto?       printer,
+        List<FilamentDto> filaments) : this(0, cost, submitted, completed, customer, modelDesign, printer, filaments) {}
     #endregion
 
     #region Properties
@@ -55,6 +64,11 @@ public class PrintingProjectDto(
     public ModelDesignDto? ModelDesign {get; set;} = modelDesign;
 
     /// <summary>
+    ///     The printer associated with the project (optional).
+    /// </summary>
+    public PrinterDto? Printer {get; set;} = printer;
+
+    /// <summary>
     ///     The date when the project was submitted.
     /// </summary>
     public DateOnly Submitted {get; set;} = submitted;
@@ -69,9 +83,11 @@ public class PrintingProjectDto(
     /// </returns>
     public override string ToString()
     {
-        var model     = ModelDesign?.Summary ?? "<no model>";
-        var customer  = Customer?.Name       ?? "<no customer>";
-        var filaments = Filaments.OrderBy(f => f.Manufacturer.Name).ThenBy(f1 => f1.FilamentType.Description).ThenBy(f2 => f2.FilamentColour.Description).ToList();
+        var model    = ModelDesign?.Summary ?? "<no model>";
+        var customer = Customer?.Name       ?? "<no customer>";
+        var filaments =
+            Filaments.OrderBy(f => f.Manufacturer.Name).ThenBy(f1 => f1.FilamentType.Description).ThenBy(f2 => f2.FilamentColour.Description).ToList();
+
         return $"{model} for {customer} {string.Join("/", filaments)}";
     }
 }

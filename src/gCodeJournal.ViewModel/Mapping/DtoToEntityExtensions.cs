@@ -1,3 +1,5 @@
+// gCodeJournal.ViewModel
+
 namespace gCodeJournal.ViewModel.Mapping;
 
 #region Using Directives
@@ -7,30 +9,35 @@ using Model;
 
 public static class DtoToEntityExtensions
 {
-    public static Customer ToEntity(this CustomerDto dto) => new () {Id = dto.Id, Name = dto.Name};
+    public static Customer ToEntity(this CustomerDto dto) => new() {Id = dto.Id, Name = dto.Name};
 
-    public static Manufacturer ToEntity(this ManufacturerDto dto) => new () {Id = dto.Id, Name = dto.Name, IsFilamentManufacturer = dto.IsFilamentManufacturer, IsPrinterManufacturer = dto.IsPrinterManufacturer};
+    public static Manufacturer ToEntity(this ManufacturerDto dto) => new()
+    {
+        Id = dto.Id, Name = dto.Name, IsFilamentManufacturer = dto.IsFilamentManufacturer, IsPrinterManufacturer = dto.IsPrinterManufacturer
+    };
 
-    public static FilamentColour ToEntity(this FilamentColourDto dto) => new () {Id = dto.Id, Description = dto.Description};
+    public static FilamentColour ToEntity(this FilamentColourDto dto) => new() {Id = dto.Id, Description = dto.Description};
 
-    public static FilamentType ToEntity(this FilamentTypeDto dto) => new () {Id = dto.Id, Description = dto.Description};
+    public static FilamentType ToEntity(this FilamentTypeDto dto) => new() {Id = dto.Id, Description = dto.Description};
 
     public static Filament ToEntity(this FilamentDto dto)
     {
-        var filament = new Filament
-        {
-            Id               = dto.Id,
-            CostPerWeight    = dto.CostPerWeight,
-            ProductId        = dto.ProductId,
-            ReorderLink      = dto.ReorderLink,
-            ManufacturerId   = dto.Manufacturer?.Id   ?? 0,
-            FilamentColourId = dto.FilamentColour?.Id ?? 0,
-            FilamentTypeId   = dto.FilamentType?.Id   ?? 0
-        };
+        var filament =
+            new Filament
+            {
+                Id               = dto.Id,
+                CostPerWeight    = dto.CostPerWeight,
+                ProductId        = dto.ProductId,
+                ReorderLink      = dto.ReorderLink,
+                ManufacturerId   = dto.Manufacturer?.Id   ?? 0,
+                FilamentColourId = dto.FilamentColour?.Id ?? 0,
+                FilamentTypeId   = dto.FilamentType?.Id   ?? 0
+            };
+
         return filament;
     }
 
-    public static ModelDesign ToEntity(this ModelDesignDto dto) => new ()
+    public static ModelDesign ToEntity(this ModelDesignDto dto) => new()
     {
         Id          = dto.Id,
         Description = dto.Description,
@@ -39,17 +46,26 @@ public static class DtoToEntityExtensions
         Url         = dto.Url
     };
 
+    public static Printer ToEntity(this PrinterDto dto)
+    {
+        var printer = new Printer {Id = dto.Id, Model = dto.Model, ManufacturerId = dto.Manufacturer?.Id ?? 0, CostPerHour = dto.CostPerHour};
+
+        return printer;
+    }
+
     public static PrintingProject ToEntity(this PrintingProjectDto dto)
     {
-        var project = new PrintingProject
-        {
-            Id            = dto.Id,
-            Cost          = dto.Cost,
-            Submitted     = dto.Submitted.ToDateTime(TimeOnly.MinValue),
-            Completed     = dto.Completed?.ToDateTime(TimeOnly.MinValue),
-            CustomerId    = dto.Customer?.Id    ?? 0,
-            ModelDesignId = dto.ModelDesign?.Id ?? 0
-        };
+        var project =
+            new PrintingProject
+            {
+                Id            = dto.Id,
+                Cost          = dto.Cost,
+                Submitted     = dto.Submitted.ToDateTime(TimeOnly.MinValue),
+                Completed     = dto.Completed?.ToDateTime(TimeOnly.MinValue),
+                CustomerId    = dto.Customer?.Id    ?? 0,
+                ModelDesignId = dto.ModelDesign?.Id ?? 0
+            };
+
         return project;
     }
 }

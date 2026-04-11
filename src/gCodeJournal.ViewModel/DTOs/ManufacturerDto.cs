@@ -2,6 +2,10 @@
 
 namespace gCodeJournal.ViewModel.DTOs;
 
+#region Using Directives
+using Model;
+#endregion
+
 /// <summary>
 ///     Represents a manufacturer with an ID and a name.
 /// </summary>
@@ -9,11 +13,18 @@ public class ManufacturerDto(int id, string name, bool isFilamentManufacturer = 
 {
     #region Constructors
     public ManufacturerDto() : this(0, "") {}
+
     // Explicit two-argument constructor avoids optional-argument expansion in expression trees
-    public ManufacturerDto(int id, string name) : this(id, name, false, false) {}
+    public ManufacturerDto(int id, string name) : this(id, name, false) {}
 
     /// <inheritdoc />
     public ManufacturerDto(string name) : this(0, name) {}
+
+    public ManufacturerDto(Manufacturer manufacturer) : this(
+        manufacturer.Id,
+        manufacturer.Name,
+        manufacturer.IsFilamentManufacturer,
+        manufacturer.IsPrinterManufacturer) {}
     #endregion
 
     #region Properties
