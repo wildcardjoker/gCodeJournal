@@ -9,7 +9,7 @@ public static class DtoToEntityExtensions
 {
     public static Customer ToEntity(this CustomerDto dto) => new () {Id = dto.Id, Name = dto.Name};
 
-    public static Manufacturer ToEntity(this ManufacturerDto dto) => new () {Id = dto.Id, Name = dto.Name};
+    public static Manufacturer ToEntity(this ManufacturerDto dto) => new () {Id = dto.Id, Name = dto.Name, IsFilamentManufacturer = dto.IsFilamentManufacturer, IsPrinterManufacturer = dto.IsPrinterManufacturer};
 
     public static FilamentColour ToEntity(this FilamentColourDto dto) => new () {Id = dto.Id, Description = dto.Description};
 

@@ -225,17 +225,20 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                                         break;
                                     }
 
-                                    if (manufacturer.Name.Equals(m.Name, StringComparison.OrdinalIgnoreCase))
+                                    // If name and flags all match, skip. Otherwise update the existing record.
+                                    if (manufacturer.Name.Equals(m.Name, StringComparison.OrdinalIgnoreCase)
+                                        && manufacturer.IsFilamentManufacturer == m.IsFilamentManufacturer
+                                        && manufacturer.IsPrinterManufacturer == m.IsPrinterManufacturer)
                                     {
                                         result.Skipped++;
 
                                         break;
                                     }
 
-                                    // Modify existing manufacturer
-                                    appLogger.LogDebug("Modifying existing manufacturer {@Manufacturer}; updating to {@NewName}", manufacturer, m.Name);
-                                    manufacturer.Name = m.Name;
-                                    await vm.EditManufacturerAsync(manufacturer).ConfigureAwait(false);
+                                    // Modify existing manufacturer properties via ViewModel API (DTO-based)
+                                    appLogger.LogDebug("Modifying existing manufacturer {@Manufacturer}; updating to {@NewValues}", manufacturer, m);
+                                    var editDto = new ManufacturerDto(manufacturer.Id, m.Name, m.IsFilamentManufacturer, m.IsPrinterManufacturer);
+                                    await vm.EditManufacturerAsync(editDto).ConfigureAwait(false);
                                     result.Updated++;
 
                                     break;
@@ -949,6 +952,8 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                 {
                     var id   = ParseIntOrZero(GetString(dict, "Id"));
                     var name = GetString(dict, "Name");
+                    var isFilament = ParseBoolOrDefault(GetString(dict, "IsFilamentManufacturer") ?? GetString(dict, "IsFilament") ?? GetString(dict, "IsFilamentManufacturer"));
+                    var isPrinter  = ParseBoolOrDefault(GetString(dict, "IsPrinterManufacturer")  ?? GetString(dict, "IsPrinter")  ?? GetString(dict, "IsPrinterManufacturer"));
                     if (string.IsNullOrWhiteSpace(name))
                     {
                         result.Errors.Add("Manufacturer: Name is required");
@@ -957,7 +962,8 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                         return;
                     }
 
-                    var dto = id != 0 ? new ManufacturerDto(id, name) : new ManufacturerDto(name);
+                    // Create DTO with flags. Use explicit id (0 when not supplied) so flags are preserved for new records.
+                    var dto = new ManufacturerDto(id, name, isFilament, isPrinter);
                     if (id != 0 && updateExisting)
                     {
                         var r = await vm.EditManufacturerAsync(dto).ConfigureAwait(false);
@@ -1481,6 +1487,25 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
             }
 
             return DateTime.TryParse(s, CultureInfo.InvariantCulture, DateTimeStyles.None, out var dt) ? DateOnly.FromDateTime(dt) : DateOnly.MinValue;
+        }
+
+        static bool ParseBoolOrDefault(string? s)
+        {
+            if (string.IsNullOrWhiteSpace(s))
+            {
+                return false;
+            }
+
+            if (bool.TryParse(s, out var b))
+            {
+                return b;
+            }
+
+            // Accept common truthy values
+            return s.Equals("1", StringComparison.OrdinalIgnoreCase)
+                   || s.Equals("yes", StringComparison.OrdinalIgnoreCase)
+                   || s.Equals("y", StringComparison.OrdinalIgnoreCase)
+                   || s.Equals("true", StringComparison.OrdinalIgnoreCase);
         }
     }
 }

@@ -9,6 +9,8 @@ public class ManufacturerDto(int id, string name, bool isFilamentManufacturer = 
 {
     #region Constructors
     public ManufacturerDto() : this(0, "") {}
+    // Explicit two-argument constructor avoids optional-argument expansion in expression trees
+    public ManufacturerDto(int id, string name) : this(id, name, false, false) {}
 
     /// <inheritdoc />
     public ManufacturerDto(string name) : this(0, name) {}
