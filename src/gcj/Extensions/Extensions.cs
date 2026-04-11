@@ -78,4 +78,19 @@ public static partial class Program
 
         return selectedFilaments;
     }
+
+    static async Task<PrinterDto?> SelectPrinterAsync(this List<PrinterDto> printers, ILogger appLogger, PrinterDto? currentPrinter = null)
+    {
+        //var selectedPrinter = currentPrinter;
+        var selected = await printers.GetEntitySelectionAsync().ConfigureAwait(false);
+        if (selected is null)
+        {
+            // User chose to return immediately -> cancel project creation.
+            return currentPrinter;
+        }
+
+        appLogger.LogInformation(Emoji.Known.OkButton + " Selected printer {Printer}", selected);
+
+        return selected;
+    }
 }
