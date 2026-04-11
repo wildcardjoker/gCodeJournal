@@ -281,7 +281,7 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
             return new DbUpdateResult(validation, AddRecordResult.Failed);
         }
 
-        var existing = await GetPrintingProjectAsync(projectDto.Id).ConfigureAwait(false);
+        var existing = await GetPrintingProjectAsync(projectDto).ConfigureAwait(false);
         if (existing is not null)
         {
             return new DbUpdateResult(ValidationResult.Success, AddRecordResult.Exists);
@@ -724,7 +724,7 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
                             f.ReorderLink,
                             new FilamentColourDto(f.Colour.Id, f.Colour.Description),
                             new FilamentTypeDto(f.Type.Id, f.Type.Description),
-                            new ManufacturerDto(f.Manufacturer.Id, f.Manufacturer.Name)))
+                            new ManufacturerDto(f.Manufacturer)))
             .ToListAsync();
 
     /// <inheritdoc />
@@ -733,7 +733,7 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
 
     /// <inheritdoc />
     public Task<List<ManufacturerDto>> GetAllManufacturersAsync() =>
-        _db.Manufacturers.OrderBy(m => m.Name).Select(m => new ManufacturerDto(m.Id, m.Name)).ToListAsync();
+        _db.Manufacturers.OrderBy(m => m.Name).Select(m => new ManufacturerDto(m)).ToListAsync();
 
     /// <inheritdoc />
     public Task<List<ModelDesignDto>> GetAllModelDesignsAsync() => _db
@@ -775,7 +775,7 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
                                                           f.ReorderLink,
                                                           new FilamentColourDto(f.Colour.Id, f.Colour.Description),
                                                           new FilamentTypeDto(f.Type.Id, f.Type.Description),
-                                                          new ManufacturerDto(f.Manufacturer.Id, f.Manufacturer.Name)))
+                                                          new ManufacturerDto(f.Manufacturer)))
                                 .ToList()))
             .ToListAsync();
 
@@ -936,6 +936,26 @@ public class GCodeJournalViewModel : IGCodeJournalViewModel
         }
     }
     #endregion
+
+    public static PrintingProjectDto? GetPrintingProjectAsync(List<PrintingProjectDto> projects, PrintingProjectDto dto) =>
+        projects.FirstOrDefault(p =>
+                                    p.Customer?.Name                 == dto.Customer?.Name
+                                    && p.ModelDesign?.Summary        == dto.ModelDesign?.Summary
+                                    && p.Printer?.Manufacturer?.Name == dto.Printer?.Manufacturer?.Name
+                                    && p.Printer?.Model              == dto.Printer?.Model
+                                    && p.Submitted                   == dto.Submitted);
+
+    public async Task<PrintingProjectDto?> GetPrintingProjectAsync(PrintingProjectDto dto) => GetPrintingProjectAsync(await GetAllPrintingProjectsAsync(), dto);
+
+    IQueryable<PrintingProject> GetPrintingProjects() => _db
+                                                         .PrintingProjects.Include(pr => pr.Customer)
+                                                         .Include(pr => pr.Model)
+                                                         .Include(pr => pr.Filaments)
+                                                         .ThenInclude(f => f.Manufacturer)
+                                                         .Include(pr => pr.Filaments)
+                                                         .ThenInclude(f => f.Colour)
+                                                         .Include(pr => pr.Filaments)
+                                                         .ThenInclude(f => f.Type);
 
     #region Validation helpers
     static ValidationResult ValidateCustomerDto(CustomerDto dto)
