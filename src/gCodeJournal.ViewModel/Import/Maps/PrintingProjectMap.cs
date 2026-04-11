@@ -70,6 +70,50 @@ public sealed class PrintingProjectMap : ClassMap<PrintingProjectDto>
                          return new ModelDesignDto(0, string.Empty, 0m, field.Trim(), null);
                      });
 
+        Map(m => m.Printer)
+            .Convert(args =>
+                     {
+                         var row = args.Row;
+
+                         // Prefer explicit id if present
+                         var idField = TryGetField(row, "PrinterId");
+                         if (!string.IsNullOrWhiteSpace(idField))
+                         {
+                             var id = ParseIntOrZero(idField);
+                             if (id != 0)
+                             {
+                                 return new PrinterDto(id, string.Empty);
+                             }
+                         }
+
+                         // If provided as separate Manufacturer + Model columns, prefer those
+                         var manuField  = TryGetField(row, "PrinterManufacturer") ?? TryGetField(row, "PrinterMaker") ?? TryGetField(row, "PrinterBrand");
+                         var modelField = TryGetField(row, "PrinterModel");
+                         _ = decimal.TryParse(TryGetField(row, "CostPerHour"), out var costPerHour);
+                         if (!string.IsNullOrWhiteSpace(manuField) || !string.IsNullOrWhiteSpace(modelField))
+                         {
+                             var manu  = new ManufacturerDto(0, (manuField ?? string.Empty).Trim());
+                             var model = (modelField ?? string.Empty).Trim();
+
+                             return new PrinterDto(manu, model, costPerHour);
+                         }
+
+                         // Fallback to single 'Printer' column (may be id or model)
+                         var printerIdField = TryGetField(row, "Printer");
+                         if (string.IsNullOrWhiteSpace(printerIdField))
+                         {
+                             return null;
+                         }
+
+                         var printerId = ParseIntOrZero(printerIdField);
+                         if (printerId != 0)
+                         {
+                             return new PrinterDto(printerId, null, string.Empty, costPerHour);
+                         }
+
+                         return new PrinterDto(0, null, printerIdField.Trim(), costPerHour);
+                     });
+
         Map(m => m.Filaments)
             .Convert(args =>
                      {

@@ -592,6 +592,7 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                         }
 
                         break;
+
                     case ImportEntity.Printers:
                         var printers = csv.GetRecords<PrinterDto>().ToList();
                         foreach (var p in printers)
@@ -599,55 +600,54 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                             appLogger.LogDebug("Processing Printer DTO: {@Dto}", p);
                             var sourceId = p.Id != 0 ? p.Id.ToString() : null;
 
-                            // Resolve manufacturer if provided as a nested DTO
-                            if (p.Manufacturer != null && p.Manufacturer.Id == 0 && !string.IsNullOrWhiteSpace(p.Manufacturer.Name))
+                            var r = await vm.AddPrinterAsync(p).ConfigureAwait(false);
+                            switch (r)
                             {
-                                await vm.AddManufacturerAsync(new ManufacturerDto(0, p.Manufacturer.Name)).ConfigureAwait(false);
-                                var all     = await vm.GetAllManufacturersAsync().ConfigureAwait(false);
-                                var matched = all.FirstOrDefault(m => string.Equals(m.Name, p.Manufacturer.Name, StringComparison.OrdinalIgnoreCase));
-                                if (matched != null)
-                                {
-                                    p.Manufacturer =
-                                        new ManufacturerDto(matched.Id, matched.Name, matched.IsFilamentManufacturer, matched.IsPrinterManufacturer);
-                                }
-                            }
+                                case (var v, AddRecordResult.Added) when v == ValidationResult.Success:
+                                    // added
+                                    result.Created++;
 
-                            // Create or update via ViewModel API. Add/Edit methods for Printer are not present yet on VM,
-                            // fall back to direct DB operations to create entries.
-                            if (p.Id != 0 && updateExisting)
-                            {
-                                var existing = await db.Printers.FindAsync(p.Id).ConfigureAwait(false);
-                                if (existing != null)
-                                {
-                                    existing.Model = p.Model;
-                                    if (p.Manufacturer != null)
+                                    break;
+
+                                case (var v, AddRecordResult.Exists) when v == ValidationResult.Success:
+                                    // Exists - check that properties match
+                                    var printerDto = await vm.GetPrinterAsync(p.Id).ConfigureAwait(false);
+                                    if (printerDto is null)
                                     {
-                                        existing.ManufacturerId = p.Manufacturer.Id;
+                                        result.Errors.Add($"Model with ID {p.Id} not found");
+                                        result.Failed++;
+
+                                        break;
                                     }
 
-                                    await db.SaveChangesAsync().ConfigureAwait(false);
+                                    var comparisonResult = printerDto.CompareTo(p);
+                                    if (comparisonResult.IsMatch)
+                                    {
+                                        result.Skipped++;
+
+                                        break;
+                                    }
+
+                                    // Modify existing printer
+                                    appLogger.LogDebug("Modifying existing printer {@Printer}",   printerDto);
+                                    appLogger.LogDebug("Properties to be updated: {@Properties}", string.Join(',', comparisonResult.MismatchedProperties));
+                                    printerDto.Model        = p.Model;
+                                    printerDto.Manufacturer = p.Manufacturer;
+                                    printerDto.CostPerHour  = p.CostPerHour;
+                                    await vm.EditPrinterAsync(printerDto).ConfigureAwait(false);
                                     result.Updated++;
 
-                                    continue;
-                                }
-                            }
+                                    break;
 
-                            // Create new printer
-                            var printerEntity = new Printer {Model = p.Model, ManufacturerId = p.Manufacturer?.Id ?? 0};
+                                case var (v, _) when v != ValidationResult.Success:
+                                    // validation error
+                                    result.Errors.Add(v.ErrorMessage ?? $"{nameof(vm.AddPrinterAsync)} failed");
 
-                            await db.Printers.AddAsync(printerEntity).ConfigureAwait(false);
-                            await db.SaveChangesAsync().ConfigureAwait(false);
-                            result.Created++;
-
-                            if (p.Id != 0)
-                            {
-                                result.RecordMapping("printers", p.Id.ToString(), printerEntity.Id);
+                                    break;
                             }
                         }
 
                         break;
-
-                    // (printing projects case is further below)
 
                     case ImportEntity.PrintingProjects:
                         var projects = csv.GetRecords<PrintingProjectDto>().ToList();
@@ -1417,6 +1417,7 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                     var cost           = ParseDecimalOrZero(GetString(dict,     "Cost"));
                     var submitted      = ParseDateOnlyOrDefault(GetString(dict, "Submitted"));
                     var completed      = ParseDateOnlyOrDefault(GetString(dict, "Completed"));
+                    var costPerHour    = ParseDecimalOrZero(GetString(dict,     "CostPerHour"));
                     var customerId     = ParseIntOrZero(GetString(dict, "CustomerId")    ?? GetString(dict, "Customer"));
                     var modelId        = ParseIntOrZero(GetString(dict, "ModelDesignId") ?? GetString(dict, "ModelDesign"));
                     var filamentIdsRaw = GetString(dict, "FilamentIds") ?? GetString(dict, "FilamentId") ?? GetString(dict, "Filaments");
@@ -1431,6 +1432,33 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                     if (modelId != 0)
                     {
                         modelDto = new ModelDesignDto(modelId, string.Empty, 0m, string.Empty, null);
+                    }
+
+                    // Parse printer information: prefer explicit id, then separate Manufacturer/Model columns, then single Printer column
+                    var         printerId  = ParseIntOrZero(GetString(dict, "PrinterId") ?? GetString(dict, "Printer"));
+                    PrinterDto? printerDto = null;
+                    if (printerId != 0)
+                    {
+                        printerDto = new PrinterDto(printerId, string.Empty);
+                    }
+                    else
+                    {
+                        var printerManufacturer = GetString(dict, "PrinterManufacturer") ?? GetString(dict, "PrinterMaker") ?? GetString(dict, "PrinterBrand");
+                        var printerModel        = GetString(dict, "PrinterModel");
+
+                        if (!string.IsNullOrWhiteSpace(printerManufacturer) || !string.IsNullOrWhiteSpace(printerModel))
+                        {
+                            if (!string.IsNullOrWhiteSpace(printerManufacturer))
+                            {
+                                var manu = new ManufacturerDto(0, printerManufacturer!.Trim());
+                                printerDto = new PrinterDto(manu, printerModel?.Trim() ?? string.Empty, costPerHour);
+                            }
+                            else
+                            {
+                                // Manufacturer missing - use model only
+                                printerDto = new PrinterDto(0, null, printerModel?.Trim() ?? string.Empty, costPerHour);
+                            }
+                        }
                     }
 
                     var filamentDtos = new List<FilamentDto>();
@@ -1468,6 +1496,7 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                                 completed == DateOnly.MinValue ? null : completed,
                                 customerDto,
                                 modelDto,
+                                printerDto,
                                 filamentDtos)
                             : new PrintingProjectDto(
                                 cost,
@@ -1475,6 +1504,7 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                                 completed == DateOnly.MinValue ? null : completed,
                                 customerDto,
                                 modelDto,
+                                printerDto,
                                 filamentDtos);
 
                     if (id != 0 && updateExisting)
