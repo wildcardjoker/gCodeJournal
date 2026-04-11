@@ -4,6 +4,7 @@ namespace gCodeJournal.Model;
 
 #region Using Directives
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 #endregion
 
 /// <summary>
@@ -47,6 +48,15 @@ public class Printer
     ///     between the printer and its manufacturer in the database.
     /// </remarks>
     public int ManufacturerId {get; set;}
+
+    /// <summary>
+    ///     Gets or sets the labour cost per hour for using this printer.
+    /// </summary>
+    /// <remarks>
+    ///     This value is stored as a currency/money value in the database.
+    /// </remarks>
+    [Column(TypeName = "money")]
+    public decimal CostPerHour { get; set; } = 0m;
 
     /// <summary>
     ///     Gets or sets the model name of the 3D printer.
