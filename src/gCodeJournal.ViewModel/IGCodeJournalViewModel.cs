@@ -1,381 +1,417 @@
-namespace gCodeJournal.ViewModel
+// gCodeJournal.ViewModel
+
+namespace gCodeJournal.ViewModel;
+
+#region Using Directives
+using System.ComponentModel.DataAnnotations;
+using DTOs;
+using Import;
+using Microsoft.Extensions.Logging;
+using Model;
+#endregion
+
+/// <summary>
+///     Represents the view model interface for managing GCode Journal operations.
+///     Provides methods to add and retrieve data related to customers, filaments, filament colors, filament types, model
+///     designs, and printing projects.
+/// </summary>
+public interface IGCodeJournalViewModel
 {
-    #region Using Directives
-    using System.ComponentModel.DataAnnotations;
-    using DTOs;
-    using Import;
-    using Microsoft.Extensions.Logging;
-    using Model;
-    #endregion
+    // Add operations (entity-based)
+    /// <summary>
+    ///     Adds a new customer asynchronously.
+    /// </summary>
+    /// <param name="customer">The customer to add.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    Task AddCustomerAsync(Customer customer);
+
+    // Add operations (DTO-based overloads) - return ValidationResult instead of throwing
+    /// <summary>
+    ///     Adds a new customer asynchronously using DTO.
+    /// </summary>
+    /// <param name="customerDto">The customer DTO to add.</param>
+    /// <returns>
+    ///     A task representing the asynchronous operation; returns a ValidationResult indicating success or validation
+    ///     errors.
+    /// </returns>
+    Task<DbUpdateResult> AddCustomerAsync(CustomerDto customerDto);
 
     /// <summary>
-    ///     Represents the view model interface for managing GCode Journal operations.
-    ///     Provides methods to add and retrieve data related to customers, filaments, filament colors, filament types, model
-    ///     designs, and printing projects.
+    ///     Adds a new filament asynchronously.
     /// </summary>
-    public interface IGCodeJournalViewModel
-    {
-        // Add operations (entity-based)
-        /// <summary>
-        ///     Adds a new customer asynchronously.
-        /// </summary>
-        /// <param name="customer">The customer to add.</param>
-        /// <returns>A task representing the asynchronous operation.</returns>
-        Task AddCustomerAsync(Customer customer);
+    /// <param name="filament">The filament to add.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    Task AddFilamentAsync(Filament filament);
 
-        // Add operations (DTO-based overloads) - return ValidationResult instead of throwing
-        /// <summary>
-        ///     Adds a new customer asynchronously using DTO.
-        /// </summary>
-        /// <param name="customerDto">The customer DTO to add.</param>
-        /// <returns>
-        ///     A task representing the asynchronous operation; returns a ValidationResult indicating success or validation
-        ///     errors.
-        /// </returns>
-        Task<DbUpdateResult> AddCustomerAsync(CustomerDto customerDto);
+    /// <summary>
+    ///     Adds a new filament asynchronously using DTO.
+    /// </summary>
+    /// <param name="filamentDto">The filament DTO to add.</param>
+    /// <returns>
+    ///     A task representing the asynchronous operation; returns a ValidationResult indicating success or validation
+    ///     errors.
+    /// </returns>
+    Task<DbUpdateResult> AddFilamentAsync(FilamentDto filamentDto);
 
-        /// <summary>
-        ///     Adds a new filament asynchronously.
-        /// </summary>
-        /// <param name="filament">The filament to add.</param>
-        /// <returns>A task representing the asynchronous operation.</returns>
-        Task AddFilamentAsync(Filament filament);
+    /// <summary>
+    ///     Adds a new filament color asynchronously.
+    /// </summary>
+    /// <param name="filamentColour">The filament color to add.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    Task AddFilamentColourAsync(FilamentColour filamentColour);
 
-        /// <summary>
-        ///     Adds a new filament asynchronously using DTO.
-        /// </summary>
-        /// <param name="filamentDto">The filament DTO to add.</param>
-        /// <returns>
-        ///     A task representing the asynchronous operation; returns a ValidationResult indicating success or validation
-        ///     errors.
-        /// </returns>
-        Task<DbUpdateResult> AddFilamentAsync(FilamentDto filamentDto);
+    /// <summary>
+    ///     Adds a new filament color asynchronously using DTO.
+    /// </summary>
+    /// <param name="filamentColourDto">The filament color DTO to add.</param>
+    /// <returns>
+    ///     A task representing the asynchronous operation; returns a ValidationResult indicating success or validation
+    ///     errors.
+    /// </returns>
+    Task<DbUpdateResult> AddFilamentColourAsync(FilamentColourDto filamentColourDto);
 
-        /// <summary>
-        ///     Adds a new filament color asynchronously.
-        /// </summary>
-        /// <param name="filamentColour">The filament color to add.</param>
-        /// <returns>A task representing the asynchronous operation.</returns>
-        Task AddFilamentColourAsync(FilamentColour filamentColour);
+    /// <summary>
+    ///     Adds a new filament type asynchronously.
+    /// </summary>
+    /// <param name="filamentType">The filament type to add.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    Task AddFilamentTypeAsync(FilamentType filamentType);
 
-        /// <summary>
-        ///     Adds a new filament color asynchronously using DTO.
-        /// </summary>
-        /// <param name="filamentColourDto">The filament color DTO to add.</param>
-        /// <returns>
-        ///     A task representing the asynchronous operation; returns a ValidationResult indicating success or validation
-        ///     errors.
-        /// </returns>
-        Task<DbUpdateResult> AddFilamentColourAsync(FilamentColourDto filamentColourDto);
+    /// <summary>
+    ///     Adds a new filament type asynchronously using DTO.
+    /// </summary>
+    /// <param name="filamentTypeDto">The filament type DTO to add.</param>
+    /// <returns>
+    ///     A task representing the asynchronous operation; returns a ValidationResult indicating success or validation
+    ///     errors.
+    /// </returns>
+    Task<DbUpdateResult> AddFilamentTypeAsync(FilamentTypeDto filamentTypeDto);
 
-        /// <summary>
-        ///     Adds a new filament type asynchronously.
-        /// </summary>
-        /// <param name="filamentType">The filament type to add.</param>
-        /// <returns>A task representing the asynchronous operation.</returns>
-        Task AddFilamentTypeAsync(FilamentType filamentType);
+    /// <summary>
+    ///     Adds a new manufacturer asynchronously.
+    /// </summary>
+    /// <param name="manufacturer">The manufacturer entity to add.</param>
+    /// <remarks>
+    ///     The <paramref name="manufacturer" /> represents a vendor or brand of 3D printing filament.
+    ///     Typical examples include "Prusament" or "Hatchbox".
+    /// </remarks>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="manufacturer" /> is <c>null</c>.</exception>
+    Task AddManufacturerAsync(Manufacturer manufacturer);
 
-        /// <summary>
-        ///     Adds a new filament type asynchronously using DTO.
-        /// </summary>
-        /// <param name="filamentTypeDto">The filament type DTO to add.</param>
-        /// <returns>
-        ///     A task representing the asynchronous operation; returns a ValidationResult indicating success or validation
-        ///     errors.
-        /// </returns>
-        Task<DbUpdateResult> AddFilamentTypeAsync(FilamentTypeDto filamentTypeDto);
+    /// <summary>
+    ///     Adds a new manufacturer asynchronously using a DTO.
+    /// </summary>
+    /// <param name="manufacturer">The manufacturer DTO to add.</param>
+    /// <returns>
+    ///     A task representing the asynchronous operation; returns a <see cref="ValidationResult" /> indicating success or
+    ///     validation errors.
+    /// </returns>
+    Task<DbUpdateResult> AddManufacturerAsync(ManufacturerDto manufacturer);
 
-        /// <summary>
-        ///     Adds a new manufacturer asynchronously.
-        /// </summary>
-        /// <param name="manufacturer">The manufacturer entity to add.</param>
-        /// <remarks>
-        ///     The <paramref name="manufacturer" /> represents a vendor or brand of 3D printing filament.
-        ///     Typical examples include "Prusament" or "Hatchbox".
-        /// </remarks>
-        /// <returns>A task representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="manufacturer" /> is <c>null</c>.</exception>
-        Task AddManufacturerAsync(Manufacturer manufacturer);
+    /// <summary>
+    ///     Adds a new model design asynchronously.
+    /// </summary>
+    /// <param name="modelDesign">The model design to add.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    Task AddModelDesignAsync(ModelDesign modelDesign);
 
-        /// <summary>
-        ///     Adds a new manufacturer asynchronously using a DTO.
-        /// </summary>
-        /// <param name="manufacturer">The manufacturer DTO to add.</param>
-        /// <returns>
-        ///     A task representing the asynchronous operation; returns a <see cref="ValidationResult" /> indicating success or
-        ///     validation errors.
-        /// </returns>
-        Task<DbUpdateResult> AddManufacturerAsync(ManufacturerDto manufacturer);
+    /// <summary>
+    ///     Adds a new model design asynchronously using DTO.
+    /// </summary>
+    /// <param name="modelDesignDto">The model design DTO to add.</param>
+    /// <returns>
+    ///     A task representing the asynchronous operation; returns a ValidationResult indicating success or validation
+    ///     errors.
+    /// </returns>
+    Task<DbUpdateResult> AddModelDesignAsync(ModelDesignDto modelDesignDto);
 
-        /// <summary>
-        ///     Adds a new model design asynchronously.
-        /// </summary>
-        /// <param name="modelDesign">The model design to add.</param>
-        /// <returns>A task representing the asynchronous operation.</returns>
-        Task AddModelDesignAsync(ModelDesign modelDesign);
+    /// <summary>
+    ///     Adds a new printer to the system asynchronously.
+    /// </summary>
+    /// <param name="printerDto">
+    ///     The data transfer object containing the details of the printer to be added.
+    /// </param>
+    /// <returns>
+    ///     A <see cref="Task{TResult}" /> representing the asynchronous operation,
+    ///     with a <see cref="DbUpdateResult" /> indicating the result of the operation.
+    /// </returns>
+    Task<DbUpdateResult> AddPrinterAsync(PrinterDto printerDto);
 
-        /// <summary>
-        ///     Adds a new model design asynchronously using DTO.
-        /// </summary>
-        /// <param name="modelDesignDto">The model design DTO to add.</param>
-        /// <returns>
-        ///     A task representing the asynchronous operation; returns a ValidationResult indicating success or validation
-        ///     errors.
-        /// </returns>
-        Task<DbUpdateResult> AddModelDesignAsync(ModelDesignDto modelDesignDto);
+    /// <summary>
+    ///     Adds a new printing project asynchronously.
+    /// </summary>
+    /// <param name="project">The printing project to add.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    Task AddPrintingProjectAsync(PrintingProject project);
 
-        /// <summary>
-        ///     Adds a new printing project asynchronously.
-        /// </summary>
-        /// <param name="project">The printing project to add.</param>
-        /// <returns>A task representing the asynchronous operation.</returns>
-        Task AddPrintingProjectAsync(PrintingProject project);
+    /// <summary>
+    ///     Adds a new printing project asynchronously using DTO.
+    /// </summary>
+    /// <param name="projectDto">The printing project DTO to add.</param>
+    /// <returns>
+    ///     A task representing the asynchronous operation; returns a ValidationResult indicating success or validation
+    ///     errors.
+    /// </returns>
+    Task<DbUpdateResult> AddPrintingProjectAsync(PrintingProjectDto projectDto);
 
-        /// <summary>
-        ///     Adds a new printing project asynchronously using DTO.
-        /// </summary>
-        /// <param name="projectDto">The printing project DTO to add.</param>
-        /// <returns>
-        ///     A task representing the asynchronous operation; returns a ValidationResult indicating success or validation
-        ///     errors.
-        /// </returns>
-        Task<DbUpdateResult> AddPrintingProjectAsync(PrintingProjectDto projectDto);
+    // Delete operations (DTO-based)
+    /// <summary>
+    ///     Deletes the specified customer represented by a DTO.
+    /// </summary>
+    Task<ValidationResult> DeleteCustomerAsync(CustomerDto customerDto);
 
-        // Delete operations (DTO-based)
-        /// <summary>
-        ///     Deletes the specified customer represented by a DTO.
-        /// </summary>
-        Task<ValidationResult> DeleteCustomerAsync(CustomerDto customerDto);
+    /// <summary>
+    ///     Deletes the specified filament represented by a DTO.
+    /// </summary>
+    Task<ValidationResult> DeleteFilamentAsync(FilamentDto filamentDto);
 
-        /// <summary>
-        ///     Deletes the specified filament represented by a DTO.
-        /// </summary>
-        Task<ValidationResult> DeleteFilamentAsync(FilamentDto filamentDto);
+    /// <summary>
+    ///     Deletes the specified filament colour represented by a DTO.
+    /// </summary>
+    Task<ValidationResult> DeleteFilamentColourAsync(FilamentColourDto filamentColourDto);
 
-        /// <summary>
-        ///     Deletes the specified filament colour represented by a DTO.
-        /// </summary>
-        Task<ValidationResult> DeleteFilamentColourAsync(FilamentColourDto filamentColourDto);
+    /// <summary>
+    ///     Deletes the specified filament type represented by a DTO.
+    /// </summary>
+    Task<ValidationResult> DeleteFilamentTypeAsync(FilamentTypeDto filamentTypeDto);
 
-        /// <summary>
-        ///     Deletes the specified filament type represented by a DTO.
-        /// </summary>
-        Task<ValidationResult> DeleteFilamentTypeAsync(FilamentTypeDto filamentTypeDto);
+    /// <summary>
+    ///     Deletes the specified manufacturer represented by a DTO.
+    /// </summary>
+    Task<ValidationResult> DeleteManufacturerAsync(ManufacturerDto manufacturerDto);
 
-        /// <summary>
-        ///     Deletes the specified manufacturer represented by a DTO.
-        /// </summary>
-        Task<ValidationResult> DeleteManufacturerAsync(ManufacturerDto manufacturerDto);
+    /// <summary>
+    ///     Deletes the specified model design represented by a DTO.
+    /// </summary>
+    Task<ValidationResult> DeleteModelDesignAsync(ModelDesignDto modelDesignDto);
 
-        /// <summary>
-        ///     Deletes the specified model design represented by a DTO.
-        /// </summary>
-        Task<ValidationResult> DeleteModelDesignAsync(ModelDesignDto modelDesignDto);
+    /// <summary>
+    ///     Deletes the specified printing project represented by a DTO.
+    /// </summary>
+    Task<ValidationResult> DeletePrintingProjectAsync(PrintingProjectDto printingProjectDto);
 
-        /// <summary>
-        ///     Deletes the specified printing project represented by a DTO.
-        /// </summary>
-        Task<ValidationResult> DeletePrintingProjectAsync(PrintingProjectDto printingProjectDto);
+    // Edit operations (DTO-based)
+    /// <summary>
+    ///     Edits an existing customer asynchronously using DTO.
+    /// </summary>
+    /// <param name="customerDto">The customer DTO with updated values.</param>
+    /// <returns>
+    ///     A task representing the asynchronous operation; returns a ValidationResult indicating success or validation
+    ///     errors.
+    /// </returns>
+    Task<ValidationResult> EditCustomerAsync(CustomerDto customerDto);
 
-        // Edit operations (DTO-based)
-        /// <summary>
-        ///     Edits an existing customer asynchronously using DTO.
-        /// </summary>
-        /// <param name="customerDto">The customer DTO with updated values.</param>
-        /// <returns>
-        ///     A task representing the asynchronous operation; returns a ValidationResult indicating success or validation
-        ///     errors.
-        /// </returns>
-        Task<ValidationResult> EditCustomerAsync(CustomerDto customerDto);
+    /// <summary>
+    ///     Edits an existing filament asynchronously using DTO.
+    /// </summary>
+    /// <param name="filamentDto">The filament DTO with updated values.</param>
+    /// <returns>
+    ///     A task representing the asynchronous operation; returns a ValidationResult indicating success or validation
+    ///     errors.
+    /// </returns>
+    Task<ValidationResult> EditFilamentAsync(FilamentDto filamentDto);
 
-        /// <summary>
-        ///     Edits an existing filament asynchronously using DTO.
-        /// </summary>
-        /// <param name="filamentDto">The filament DTO with updated values.</param>
-        /// <returns>
-        ///     A task representing the asynchronous operation; returns a ValidationResult indicating success or validation
-        ///     errors.
-        /// </returns>
-        Task<ValidationResult> EditFilamentAsync(FilamentDto filamentDto);
+    /// <summary>
+    ///     Edits an existing filament color asynchronously using DTO.
+    /// </summary>
+    /// <param name="filamentColourDto">The filament color DTO with updated values.</param>
+    /// <returns>
+    ///     A task representing the asynchronous operation; returns a ValidationResult indicating success or validation
+    ///     errors.
+    /// </returns>
+    Task<ValidationResult> EditFilamentColourAsync(FilamentColourDto filamentColourDto);
 
-        /// <summary>
-        ///     Edits an existing filament color asynchronously using DTO.
-        /// </summary>
-        /// <param name="filamentColourDto">The filament color DTO with updated values.</param>
-        /// <returns>
-        ///     A task representing the asynchronous operation; returns a ValidationResult indicating success or validation
-        ///     errors.
-        /// </returns>
-        Task<ValidationResult> EditFilamentColourAsync(FilamentColourDto filamentColourDto);
+    /// <summary>
+    ///     Edits an existing filament type asynchronously using DTO.
+    /// </summary>
+    /// <param name="filamentTypeDto">The filament type DTO with updated values.</param>
+    /// <returns>
+    ///     A task representing the asynchronous operation; returns a ValidationResult indicating success or validation
+    ///     errors.
+    /// </returns>
+    Task<ValidationResult> EditFilamentTypeAsync(FilamentTypeDto filamentTypeDto);
 
-        /// <summary>
-        ///     Edits an existing filament type asynchronously using DTO.
-        /// </summary>
-        /// <param name="filamentTypeDto">The filament type DTO with updated values.</param>
-        /// <returns>
-        ///     A task representing the asynchronous operation; returns a ValidationResult indicating success or validation
-        ///     errors.
-        /// </returns>
-        Task<ValidationResult> EditFilamentTypeAsync(FilamentTypeDto filamentTypeDto);
+    /// <summary>
+    ///     Edits an existing manufacturer asynchronously using DTO.
+    /// </summary>
+    /// <param name="manufacturerDto">The manufacturer DTO with updated values.</param>
+    /// <returns>
+    ///     A task representing the asynchronous operation; returns a ValidationResult indicating success or validation
+    ///     errors.
+    /// </returns>
+    Task<ValidationResult> EditManufacturerAsync(ManufacturerDto manufacturerDto);
 
-        /// <summary>
-        ///     Edits an existing manufacturer asynchronously using DTO.
-        /// </summary>
-        /// <param name="manufacturerDto">The manufacturer DTO with updated values.</param>
-        /// <returns>
-        ///     A task representing the asynchronous operation; returns a ValidationResult indicating success or validation
-        ///     errors.
-        /// </returns>
-        Task<ValidationResult> EditManufacturerAsync(ManufacturerDto manufacturerDto);
+    /// <summary>
+    ///     Edits an existing model design asynchronously using DTO.
+    /// </summary>
+    /// <param name="modelDesignDto">The model design DTO with updated values.</param>
+    /// <returns>
+    ///     A task representing the asynchronous operation; returns a ValidationResult indicating success or validation
+    ///     errors.
+    /// </returns>
+    Task<ValidationResult> EditModelDesignAsync(ModelDesignDto modelDesignDto);
 
-        /// <summary>
-        ///     Edits an existing model design asynchronously using DTO.
-        /// </summary>
-        /// <param name="modelDesignDto">The model design DTO with updated values.</param>
-        /// <returns>
-        ///     A task representing the asynchronous operation; returns a ValidationResult indicating success or validation
-        ///     errors.
-        /// </returns>
-        Task<ValidationResult> EditModelDesignAsync(ModelDesignDto modelDesignDto);
+    /// <summary>
+    ///     Edits an existing printer asynchronously using DTO.
+    /// </summary>
+    /// <param name="printerDto">The printer DTO with updated values.</param>
+    /// <returns>
+    ///     A task representing the asynchronous operation; returns a ValidationResult indicating success or validation
+    ///     errors.
+    /// </returns>
+    Task<ValidationResult> EditPrinterAsync(PrinterDto printerDto);
 
-        /// <summary>
-        ///     Edits an existing printing project asynchronously using DTO.
-        /// </summary>
-        /// <param name="printingProjectDto">The printing project DTO with updated values.</param>
-        /// <returns>
-        ///     A task representing the asynchronous operation; returns a ValidationResult indicating success or validation
-        ///     errors.
-        /// </returns>
-        Task<ValidationResult> EditPrintingProjectAsync(PrintingProjectDto printingProjectDto);
+    /// <summary>
+    ///     Edits an existing printing project asynchronously using DTO.
+    /// </summary>
+    /// <param name="printingProjectDto">The printing project DTO with updated values.</param>
+    /// <returns>
+    ///     A task representing the asynchronous operation; returns a ValidationResult indicating success or validation
+    ///     errors.
+    /// </returns>
+    Task<ValidationResult> EditPrintingProjectAsync(PrintingProjectDto printingProjectDto);
 
-        // Retrieval operations (DTO-based)
-        /// <summary>
-        ///     Retrieves all customers asynchronously.
-        /// </summary>
-        /// <returns>A task representing the asynchronous operation, with a list of customers as the result.</returns>
-        Task<List<CustomerDto>> GetAllCustomersAsync();
+    // Retrieval operations (DTO-based)
+    /// <summary>
+    ///     Retrieves all customers asynchronously.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation, with a list of customers as the result.</returns>
+    Task<List<CustomerDto>> GetAllCustomersAsync();
 
-        /// <summary>
-        ///     Retrieves all filament colors asynchronously.
-        /// </summary>
-        /// <returns>A task representing the asynchronous operation, with a list of filament colors as the result.</returns>
-        Task<List<FilamentColourDto>> GetAllFilamentColoursAsync();
+    /// <summary>
+    ///     Retrieves all filament colors asynchronously.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation, with a list of filament colors as the result.</returns>
+    Task<List<FilamentColourDto>> GetAllFilamentColoursAsync();
 
-        /// <summary>
-        ///     Retrieves all filaments asynchronously.
-        /// </summary>
-        /// <returns>A task representing the asynchronous operation, with a list of filaments as the result.</returns>
-        Task<List<FilamentDto>> GetAllFilamentsAsync();
+    /// <summary>
+    ///     Retrieves all filaments asynchronously.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation, with a list of filaments as the result.</returns>
+    Task<List<FilamentDto>> GetAllFilamentsAsync();
 
-        /// <summary>
-        ///     Retrieves all filament types asynchronously.
-        /// </summary>
-        /// <returns>A task representing the asynchronous operation, with a list of filament types as the result.</returns>
-        Task<List<FilamentTypeDto>> GetAllFilamentTypesAsync();
+    /// <summary>
+    ///     Retrieves all filament types asynchronously.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation, with a list of filament types as the result.</returns>
+    Task<List<FilamentTypeDto>> GetAllFilamentTypesAsync();
 
-        /// <summary>
-        ///     Retrieves all manufacturers asynchronously.
-        /// </summary>
-        /// <returns>A task representing the asynchronous operation, with a list of manufacturers as the result.</returns>
-        Task<List<ManufacturerDto>> GetAllManufacturersAsync();
+    /// <summary>
+    ///     Retrieves all manufacturers asynchronously.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation, with a list of manufacturers as the result.</returns>
+    Task<List<ManufacturerDto>> GetAllManufacturersAsync();
 
-        /// <summary>
-        ///     Retrieves all model designs asynchronously.
-        /// </summary>
-        /// <returns>A task representing the asynchronous operation, with a list of model designs as the result.</returns>
-        Task<List<ModelDesignDto>> GetAllModelDesignsAsync();
+    /// <summary>
+    ///     Retrieves all model designs asynchronously.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation, with a list of model designs as the result.</returns>
+    Task<List<ModelDesignDto>> GetAllModelDesignsAsync();
 
-        /// <summary>
-        ///     Retrieves all printing projects asynchronously.
-        /// </summary>
-        /// <returns>A task representing the asynchronous operation, with a list of printing projects as the result.</returns>
-        Task<List<PrintingProjectDto>> GetAllPrintingProjectsAsync();
+    /// <summary>
+    ///     Retrieves all printers asynchronously.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation, with a list of printers as the result.</returns>
+    Task<List<PrinterDto>> GetAllPrintersAsync();
 
-        /// <summary>
-        ///     Retrieves a single customer DTO by identifier.
-        /// </summary>
-        /// <param name="id">The customer identifier.</param>
-        /// <returns>A task that returns the matching <see cref="CustomerDto"/> or <c>null</c> if not found.</returns>
-        Task<CustomerDto?> GetCustomerAsync(int id);
+    /// <summary>
+    ///     Retrieves all printing projects asynchronously.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation, with a list of printing projects as the result.</returns>
+    Task<List<PrintingProjectDto>> GetAllPrintingProjectsAsync();
 
-        /// <summary>
-        ///     Retrieves a single filament DTO by identifier.
-        /// </summary>
-        /// <param name="id">The filament identifier.</param>
-        /// <returns>A task that returns the matching <see cref="FilamentDto"/> or <c>null</c> if not found.</returns>
-        Task<FilamentDto?> GetFilamentAsync(int id);
+    /// <summary>
+    ///     Retrieves a single customer DTO by identifier.
+    /// </summary>
+    /// <param name="id">The customer identifier.</param>
+    /// <returns>A task that returns the matching <see cref="CustomerDto" /> or <c>null</c> if not found.</returns>
+    Task<CustomerDto?> GetCustomerAsync(int id);
 
-        /// <summary>
-        ///     Retrieves a single filament colour DTO by identifier.
-        /// </summary>
-        /// <param name="id">The filament colour identifier.</param>
-        /// <returns>A task that returns the matching <see cref="FilamentColourDto"/> or <c>null</c> if not found.</returns>
-        Task<FilamentColourDto?> GetFilamentColourAsync(int id);
+    /// <summary>
+    ///     Retrieves a single filament DTO by identifier.
+    /// </summary>
+    /// <param name="id">The filament identifier.</param>
+    /// <returns>A task that returns the matching <see cref="FilamentDto" /> or <c>null</c> if not found.</returns>
+    Task<FilamentDto?> GetFilamentAsync(int id);
 
-        /// <summary>
-        ///     Retrieves a single filament type DTO by identifier.
-        /// </summary>
-        /// <param name="id">The filament type identifier.</param>
-        /// <returns>A task that returns the matching <see cref="FilamentTypeDto"/> or <c>null</c> if not found.</returns>
-        Task<FilamentTypeDto?> GetFilamentTypeAsync(int id);
+    /// <summary>
+    ///     Retrieves a single filament colour DTO by identifier.
+    /// </summary>
+    /// <param name="id">The filament colour identifier.</param>
+    /// <returns>A task that returns the matching <see cref="FilamentColourDto" /> or <c>null</c> if not found.</returns>
+    Task<FilamentColourDto?> GetFilamentColourAsync(int id);
 
-        /// <summary>
-        ///     Retrieves a single manufacturer DTO by identifier.
-        /// </summary>
-        /// <param name="id">The manufacturer identifier.</param>
-        /// <returns>A task that returns the matching <see cref="ManufacturerDto"/> or <c>null</c> if not found.</returns>
-        Task<ManufacturerDto?> GetManufacturerAsync(int id);
+    /// <summary>
+    ///     Retrieves a single filament type DTO by identifier.
+    /// </summary>
+    /// <param name="id">The filament type identifier.</param>
+    /// <returns>A task that returns the matching <see cref="FilamentTypeDto" /> or <c>null</c> if not found.</returns>
+    Task<FilamentTypeDto?> GetFilamentTypeAsync(int id);
 
-        /// <summary>
-        ///     Retrieves a single model design DTO by identifier.
-        /// </summary>
-        /// <param name="id">The model design identifier.</param>
-        /// <returns>A task that returns the matching <see cref="ModelDesignDto"/> or <c>null</c> if not found.</returns>
-        Task<ModelDesignDto?> GetModelDesignAsync(int id);
+    /// <summary>
+    ///     Retrieves the path of the last imported file, if available.
+    /// </summary>
+    /// <returns>
+    ///     A string representing the path of the last imported file, or <c>null</c> if no import has been performed.
+    /// </returns>
+    string? GetLastImportPath();
 
-        /// <summary>
-        ///     Retrieves a single printing project DTO by identifier.
-        /// </summary>
-        /// <param name="id">The printing project identifier.</param>
-        /// <returns>A task that returns the matching <see cref="PrintingProjectDto"/> or <c>null</c> if not found.</returns>
-        Task<PrintingProjectDto?> GetPrintingProjectAsync(int id);
+    /// <summary>
+    ///     Retrieves a single manufacturer DTO by identifier.
+    /// </summary>
+    /// <param name="id">The manufacturer identifier.</param>
+    /// <returns>A task that returns the matching <see cref="ManufacturerDto" /> or <c>null</c> if not found.</returns>
+    Task<ManufacturerDto?> GetManufacturerAsync(int id);
 
-        /// <summary>
-        ///     Retrieves the path of the last imported file, if available.
-        /// </summary>
-        /// <returns>
-        ///     A string representing the path of the last imported file, or <c>null</c> if no import has been performed.
-        /// </returns>
-        string? GetLastImportPath();
+    /// <summary>
+    ///     Retrieves a single model design DTO by identifier.
+    /// </summary>
+    /// <param name="id">The model design identifier.</param>
+    /// <returns>A task that returns the matching <see cref="ModelDesignDto" /> or <c>null</c> if not found.</returns>
+    Task<ModelDesignDto?> GetModelDesignAsync(int id);
 
-        // Import operations
-        /// <summary>
-        ///     Import data from CSV (file path). Supports a directory containing per-entity CSV files or a single CSV file.
-        ///     Returns per-file results.
-        /// </summary>
-        Task<List<CsvImporter.ImportFileResult>> ImportFromCsvAsync(
-            string            csvPath,
-            ILogger           appLogger,
-            bool              updateExisting = true,
-            char              delimiter      = ',',
-            CancellationToken ct             = default);
+    /// <summary>
+    ///     Retrieves a single printer DTO by identifier.
+    /// </summary>
+    /// <param name="id">The printer identifier.</param>
+    /// <returns>A task that returns the matching <see cref="PrinterDto" /> or <c>null</c> if not found.</returns>
+    Task<PrinterDto?> GetPrinterAsync(int id);
 
-        /// <summary>
-        ///     Import data from a CSV stream. Optional fileName helps infer entity from the file name.
-        /// </summary>
-        Task<CsvImporter.ImportFileResult> ImportFromCsvAsync(
-            Stream            stream,
-            ILogger           appLogger,
-            string?           fileName       = null,
-            bool              updateExisting = true,
-            char              delimiter      = ',',
-            CancellationToken ct             = default);
+    /// <summary>
+    ///     Retrieves a single printing project DTO by identifier.
+    /// </summary>
+    /// <param name="id">The printing project identifier.</param>
+    /// <returns>A task that returns the matching <see cref="PrintingProjectDto" /> or <c>null</c> if not found.</returns>
+    Task<PrintingProjectDto?> GetPrintingProjectAsync(int id);
 
-        /// <summary>
-        ///     Sets the import path for the application.
-        /// </summary>
-        /// <param name="path">The file system path to set as the import path.</param>
-        /// <returns>The previously set import path, or <c>null</c> if no path was previously set.</returns>
-        void SetImportPath(string path);
-    }
+    // Import operations
+    /// <summary>
+    ///     Import data from CSV (file path). Supports a directory containing per-entity CSV files or a single CSV file.
+    ///     Returns per-file results.
+    /// </summary>
+    Task<List<CsvImporter.ImportFileResult>> ImportFromCsvAsync(
+        string            csvPath,
+        ILogger           appLogger,
+        bool              updateExisting = true,
+        char              delimiter      = ',',
+        CancellationToken ct             = default);
+
+    /// <summary>
+    ///     Import data from a CSV stream. Optional fileName helps infer entity from the file name.
+    /// </summary>
+    Task<CsvImporter.ImportFileResult> ImportFromCsvAsync(
+        Stream            stream,
+        ILogger           appLogger,
+        string?           fileName       = null,
+        bool              updateExisting = true,
+        char              delimiter      = ',',
+        CancellationToken ct             = default);
+
+    /// <summary>
+    ///     Sets the import path for the application.
+    /// </summary>
+    /// <param name="path">The file system path to set as the import path.</param>
+    /// <returns>The previously set import path, or <c>null</c> if no path was previously set.</returns>
+    void SetImportPath(string path);
 }
