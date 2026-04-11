@@ -18,7 +18,7 @@ public sealed class PrinterMap : ClassMap<PrinterDto>
     public PrinterMap()
     {
         Map(m => m.Id).Name("Id").Optional();
-
+        Map(m => m.CostPerHour).Name("CostPerHour").Optional();
         Map(m => m.Manufacturer)
             .Convert(args =>
                      {
