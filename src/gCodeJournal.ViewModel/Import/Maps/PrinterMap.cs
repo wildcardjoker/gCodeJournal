@@ -34,7 +34,7 @@ public sealed class PrinterMap : ClassMap<PrinterDto>
                          return id != 0 ? new ManufacturerDto(id, string.Empty) : new ManufacturerDto(field.Trim());
                      });
 
-        Map(m => m.Model).Name("Model").Name("PrinterModel");
+        Map(m => m.Model).Name("Model", "PrinterModel");
     }
     #endregion
 

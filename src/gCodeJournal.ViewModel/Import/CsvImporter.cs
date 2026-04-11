@@ -63,6 +63,7 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
                     ImportEntity.FilamentTypes,
                     ImportEntity.Filaments,
                     ImportEntity.ModelDesigns,
+                    ImportEntity.Printers,
                     ImportEntity.PrintingProjects
                 };
 
@@ -167,6 +168,7 @@ public class CsvImporter(GCodeJournalDbContext db, GCodeJournalViewModel vm)
 
                                 case (var v, AddRecordResult.Exists) when v == ValidationResult.Success:
                                     // Exists - check that properties match
+                                    // TODO: Match by name or use existing record returned by AddCustomerAsync when record exists to avoid extra DB call here. This requires changing the AddCustomerAsync API to return the existing record DTO when record exists, or at least its properties for comparison.
                                     var customer = await vm.GetCustomerAsync(c.Id).ConfigureAwait(false);
                                     if (customer is null)
                                     {
